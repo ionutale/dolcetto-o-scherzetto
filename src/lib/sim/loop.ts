@@ -35,6 +35,14 @@
  * mirrors `bag`/`record`/`tricks`/`furthestK`; this module never imports it.
  */
 
+import { TRICKS, TRICK_ORDER, burstFor, canBuy, priceFor, rollValue, treatCount } from './economy';
+import type { Trick, TrickId } from './economy';
+
+// The trick catalogue and its price/burst helpers live in `economy.ts`; they are
+// re-exported here so scene modules keep importing them from `loop.ts`.
+export { TRICKS, TRICK_ORDER };
+export type { Trick, TrickId };
+
 /** Distance in px between one doorstep and the next. */
 export const SPACING = 620;
 
@@ -53,41 +61,6 @@ export const REGIFT_P = 0.3;
 /** Candy skins are cosmetic only (spec §8); the sim only stores the id. */
 export const CANDY_TYPES = ['lolli', 'gummy', 'choco', 'toffee', 'corn', 'star'] as const;
 export type CandyType = (typeof CANDY_TYPES)[number];
-
-/** The Bottega's eight tricks in price order (spec §7). */
-export const TRICK_ORDER = [
-	'boo',
-	'ragnetto',
-	'serpente',
-	'cuscino',
-	'maschera',
-	'topolino',
-	'fantasmino',
-	'mano'
-] as const;
-
-export type TrickId = (typeof TRICK_ORDER)[number];
-
-export interface Trick {
-	/** Candy price; ladder `0/15/30/45/60/75/90/110` (BALANCE may tune). */
-	price: number;
-	/** Candies dropped when the show's climax fires (4–8 by tier, spec §7). */
-	burst: number;
-	/** Display name; the sim only ever echoes `name.it` in `note`. */
-	name: Record<'it' | 'en', string>;
-}
-
-/** The eight tricks by id: free `boo` plus seven purchasable ones. */
-export const TRICKS: Record<TrickId, Trick> = {
-	boo: { price: 0, burst: 4, name: { it: 'BOO!', en: 'BOO!' } },
-	ragnetto: { price: 15, burst: 5, name: { it: 'Ragnetto', en: 'Rubber Spider' } },
-	serpente: { price: 30, burst: 6, name: { it: 'Serpente', en: 'Spring Snake' } },
-	cuscino: { price: 45, burst: 6, name: { it: 'Cuscino', en: 'Whoopee Cushion' } },
-	maschera: { price: 60, burst: 7, name: { it: 'Maschera', en: 'Silly Mask' } },
-	topolino: { price: 75, burst: 7, name: { it: 'Topolino', en: 'Rubber Mouse' } },
-	fantasmino: { price: 90, burst: 8, name: { it: 'Fantasmino', en: 'Ghost Puppet' } },
-	mano: { price: 110, burst: 8, name: { it: 'Mano pelosa', en: 'Furry Hand' } }
-};
 
 /** UI language (spec §13: IT default, EN toggle). */
 export type Lang = 'it' | 'en';
@@ -293,7 +266,7 @@ function spawnCandies(s: GameState, n: number): GameState {
 			tx,
 			ty,
 			type: CANDY_TYPES[(rand() * CANDY_TYPES.length) | 0],
-			value: 1 + ((rand() * 10) | 0)
+			value: rollValue(rand)
 		});
 	}
 	return { ...s, candies, nextId: s.nextId + n };
@@ -332,7 +305,7 @@ export function reduce(s: GameState, a: Action): GameState {
 					homes: { ...s.homes, [k]: { done: true, used: false, kind: 'treat' } }
 				};
 				return {
-					...spawnCandies(n, 1 + ((rand() * 2) | 0)),
+					...spawnCandies(n, treatCount(rand)),
 					phase: 'collect',
 					pending: 'treat',
 					note: 'Dolcetto!'
@@ -401,7 +374,7 @@ export function reduce(s: GameState, a: Action): GameState {
 
 		case 'TRICK_RESOLVE': {
 			if (s.phase !== 'trick' || !s.trickPlayed) return s;
-			const burst = TRICKS[s.trickPlayed].burst;
+			const burst = burstFor(s.trickPlayed);
 			return {
 				...spawnCandies(s, burst),
 				phase: 'collect',
@@ -434,14 +407,13 @@ export function reduce(s: GameState, a: Action): GameState {
 		case 'SHOP_CLOSE':
 			return { ...s, shopOpen: false };
 		case 'BUY': {
-			const t = TRICKS[a.id];
-			if (!t || s.tricks.includes(a.id) || s.bag < t.price) return s;
+			if (!canBuy(s.bag, s.tricks, a.id)) return s;
 			// Quirk kept: the note always uses the Italian name.
 			return {
 				...s,
-				bag: s.bag - t.price,
+				bag: s.bag - priceFor(a.id),
 				tricks: [...s.tricks, a.id],
-				note: 'Comprato: ' + t.name.it + '!'
+				note: 'Comprato: ' + TRICKS[a.id].name.it + '!'
 			};
 		}
 
