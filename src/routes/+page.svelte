@@ -1,6 +1,6 @@
 <script lang="ts">
 	/**
-	 * The game page — the T08 + T09 + T10 + T11 + T12 + T13 + T14 + T15
+	 * The game page — the T08 + T09 + T10 + T11 + T12 + T13 + T14 + T15 + T17
 	 * composition: the sprite motion stylesheet, the night sky, the two
 	 * parallax bands, the endless street (world bands + the recycling window
 	 * of houses and yards), the kids duo, the glowing candy layer, the
@@ -34,6 +34,17 @@
 	 * feet); `homes={{}}` → `NO_HOMES` is the one seam still open — the store
 	 * does not expose `homes`, so a done home's windows do not dim yet. The
 	 * night background and cream ink come from `body` in `app.css`.
+	 *
+	 * **The title menu (T17).** `<TitleScreen/>` mounts over everything (its
+	 * own `z-200`, above the rotate prompt's `z-100`) and owns the Gioca /
+	 * Impostazioni swap; the page only answers Gioca. The first-gesture audio
+	 * unlock is the prototype's once-`pointerdown` listener
+	 * (`scene-prototype.html` ~874): any first interaction — the Gioca tap
+	 * included — flips the latch, and T23/T25/T27 will create/resume the
+	 * `AudioContext` there (no audio module exists yet, so the pattern is in
+	 * place and silent). The landscape lock is the prototype's
+	 * `tryLandscapeLock()` (~1790): a guarded `screen.orientation.lock` that
+	 * iOS refuses and the rotate prompt covers (spec §13).
 	 */
 	import { onDestroy, onMount } from 'svelte';
 	import MotionStyles from '$lib/art/sprites/MotionStyles.svelte';
@@ -50,6 +61,7 @@
 	import Theatre from '$lib/play/Theatre.svelte';
 	import Bubbles from '$lib/play/Bubbles.svelte';
 	import Hud from '$lib/ui/Hud.svelte';
+	import TitleScreen from '$lib/ui/TitleScreen.svelte';
 	import { showBubble } from '$lib/play/bubble.svelte';
 	import {
 		SHOW_DOOR_Y,
@@ -166,10 +178,62 @@
 		).addEventListener('finish', () => nb.classList.remove('bounce'));
 	}
 
-	/** One loop for the whole page: rAF on mount, cancelled on destroy. */
+	/**
+	 * The audio unlock latch (spec §6 · Review Focus #1). The prototype runs a
+	 * once-`pointerdown` listener that inits its WebAudio modules (~874); here
+	 * there are none yet, so this only flips the latch the audio tasks will
+	 * consult. It is idempotent on purpose: the mount listener and Gioca can
+	 * both reach it for the same first tap.
+	 */
+	let audioUnlocked = false;
+	function unlockAudio(): void {
+		if (audioUnlocked) return;
+		audioUnlocked = true;
+		// T23/T25/T27: create/resume the AudioContext and start music/ambience/
+		// SFX here. Deliberately nothing today — no real audio wiring (T17 scope).
+	}
+
+	/**
+	 * The prototype's `tryLandscapeLock()` (~1790): ask the platform for a real
+	 * landscape lock where it permits one (installed PWA / Android). iOS refuses
+	 * and the rotate prompt stands in (spec §13), so every failure is swallowed.
+	 */
+	function tryLandscapeLock(): void {
+		try {
+			const orientation = screen.orientation as ScreenOrientation & {
+				lock?: (o: string) => Promise<void>;
+			};
+			if (orientation && typeof orientation.lock === 'function') {
+				const attempt = orientation.lock('landscape');
+				if (attempt && typeof attempt.catch === 'function') attempt.catch(() => {});
+			}
+		} catch {
+			/* No ScreenOrientation API, or a refusal: the rotate prompt covers it. */
+		}
+	}
+
+	/** Gioca: the tap itself is the unlock gesture, then we ask for landscape. */
+	function play(): void {
+		unlockAudio();
+		tryLandscapeLock();
+	}
+
+	/**
+	 * One loop for the whole page: rAF on mount, cancelled on destroy. The
+	 * once-`pointerdown` listener is the prototype's "any first interaction
+	 * unlocks audio" (~874) — Gioca included, and idempotent with `play()`.
+	 */
 	onMount(() => {
 		start();
-		return () => stop();
+		const onFirstGesture = (): void => {
+			unlockAudio();
+			tryLandscapeLock();
+		};
+		window.addEventListener('pointerdown', onFirstGesture, { once: true });
+		return () => {
+			window.removeEventListener('pointerdown', onFirstGesture);
+			stop();
+		};
 	});
 
 	/** A show cancelled early owes no payoff line (the theatre kills its climax). */
@@ -195,6 +259,8 @@
 </div>
 
 <RotateOverlay />
+
+<TitleScreen onPlay={play} />
 
 <style>
 	/* Full-page: the stage frame takes the whole viewport and centres inside it,

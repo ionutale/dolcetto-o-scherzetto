@@ -1,0 +1,180 @@
+<script lang="ts">
+	/**
+	 * The title screen (T17) — the opening menu over the scene: the night card
+	 * with the eyebrow, the game's name, the pulsing **Gioca** and the ghost
+	 * **Impostazioni**, and the settings card swapped in behind it.
+	 *
+	 * Port of the prototype's `#menu` overlay (`prototypes/scene-prototype.html`,
+	 * CSS ~331-355, markup ~444-457, the three clicks ~900-909): the fixed
+	 * full-viewport wash, the frosted `.menu-card`, the `.menu-eyebrow`, the
+	 * 36 px `.menu-title`, the amber `.menu-play` with its `menuInvite` pulse,
+	 * the ghost `.menu-settings` pill, and the `hidden` swap between the home
+	 * and settings cards. The overlay hides with a `.hide` class (`opacity:0` +
+	 * `pointer-events:none`) rather than unmounting, exactly as the prototype
+	 * did — so the swap is a fade, not a pop.
+	 *
+	 * Adaptations (reported, not silent):
+	 *   1. The settings card is the `Settings.svelte` component (the sliders +
+	 *      the IT/EN toggle); here it is just a sibling card in the same swap.
+	 *   2. The wash and the card are re-keyed to §3 tokens (`--night-0/1/2`,
+	 *      `--cream-line`, `--r-lg`) instead of the prototype's literal purples.
+	 *   3. The `menuInvite` pulse carries the repo's `.reduce-motion-off`
+	 *      utility (T02's policy) instead of a local `animation:none` block.
+	 *   4. The language is owned here (read from the settings envelope) so the
+	 *      card's own copy flips with the toggle; `Settings` reports changes up.
+	 *
+	 * **Play does not unlock anything here.** `Gioca` only fades the overlay and
+	 * calls `onPlay`; the audio unlock and the landscape-lock attempt belong to
+	 * the page (`+page.svelte`), which owns the process-wide gesture listener.
+	 */
+	import { settings } from '$lib/persist/settings';
+	import type { Lang } from '$lib/sim/loop';
+	import Settings from './Settings.svelte';
+
+	interface Props {
+		/**
+		 * Gioca. The page uses this to run its first-gesture audio unlock and the
+		 * guarded `screen.orientation.lock('landscape')` attempt (spec §6).
+		 */
+		onPlay?: () => void;
+	}
+	let { onPlay }: Props = $props();
+
+	/** The overlay's open latch — `.hide` fades it out and drops pointer events. */
+	let open = $state(true);
+	/** Which card shows: the home card or the settings card. */
+	let panel = $state<'home' | 'settings'>('home');
+	/** The live language; the settings envelope holds it, `Settings` writes it. */
+	let lang = $state<Lang>(settings.read().lang);
+
+	const copy = $derived(
+		lang === 'it'
+			? { eyebrow: '🎃 Una notte di caramelle', play: 'Gioca ▶', settings: '⚙️ Impostazioni' }
+			: { eyebrow: '🎃 A night of candy', play: 'Play ▶', settings: '⚙️ Settings' }
+	);
+
+	/** Gioca: fade the menu, then hand the gesture to the page. */
+	function play(): void {
+		open = false;
+		onPlay?.();
+	}
+
+	/** `Impostazioni`: swap the settings card in. */
+	function showSettings(): void {
+		panel = 'settings';
+	}
+
+	/** `Indietro`: swap the home card back. */
+	function showHome(): void {
+		panel = 'home';
+	}
+</script>
+
+<div class="menu" class:hide={!open}>
+	<div class="menu-card" hidden={panel !== 'home'}>
+		<p class="menu-eyebrow">{copy.eyebrow}</p>
+		<h1 class="menu-title">Dolcetto o Scherzetto</h1>
+		<button type="button" class="menu-play reduce-motion-off" onclick={play}>{copy.play}</button>
+		<button type="button" class="menu-settings" onclick={showSettings}>{copy.settings}</button>
+	</div>
+
+	<div class="menu-card" hidden={panel !== 'settings'}>
+		<Settings {lang} onLang={(next) => (lang = next)} onBack={showHome} />
+	</div>
+</div>
+
+<style>
+	/* `.menu` (prototype ~332-335): the fixed, full-viewport night wash. */
+	.menu {
+		position: fixed;
+		inset: 0;
+		z-index: 200;
+		display: flex;
+		align-items: center;
+		justify-content: center;
+		background:
+			radial-gradient(1200px 600px at 70% -10%, var(--night-2) 0%, transparent 60%),
+			linear-gradient(180deg, var(--night-0), var(--night-1) 45%, var(--night-2));
+		transition: opacity 0.35s ease;
+	}
+
+	.menu.hide {
+		opacity: 0;
+		pointer-events: none;
+	}
+
+	/* `.menu-card` (prototype ~336-338): the frosted night card. */
+	.menu-card {
+		display: flex;
+		flex-direction: column;
+		align-items: center;
+		gap: 14px;
+		padding: 34px 42px;
+		background: color-mix(in srgb, var(--night-0) 55%, transparent);
+		border: 1px solid var(--cream-line);
+		border-radius: var(--r-lg);
+		box-shadow: 0 30px 80px var(--shadow-night);
+		backdrop-filter: blur(6px);
+	}
+
+	/* `.menu-card[hidden]` (prototype ~354): the swap must beat the card's own
+	 * `display:flex`, so the rule is explicit rather than relying on the UA sheet. */
+	.menu-card[hidden] {
+		display: none;
+	}
+
+	/* `.menu-eyebrow` (prototype ~339). */
+	.menu-eyebrow {
+		font-size: 13px;
+		letter-spacing: 0.12em;
+		text-transform: uppercase;
+		opacity: 0.7;
+	}
+
+	/* `.menu-title` (prototype ~340). */
+	.menu-title {
+		font-size: 36px;
+		color: var(--cream);
+	}
+
+	/* `.menu-play` (prototype ~342-345): the amber CTA with the invite pulse. */
+	.menu-play {
+		font-family: inherit;
+		font-size: 22px;
+		font-weight: 700;
+		color: var(--ink);
+		background: linear-gradient(180deg, var(--amber), var(--amber-deep));
+		border: none;
+		border-radius: var(--r-pill);
+		padding: 14px 54px;
+		cursor: pointer;
+		box-shadow: 0 12px 30px var(--amber-glow);
+		animation: menuInvite 1.6s ease-in-out infinite alternate;
+	}
+
+	/* `.menu-settings` (prototype ~347-350): the ghost settings pill. */
+	.menu-settings {
+		font-family: inherit;
+		font-size: 15px;
+		font-weight: 600;
+		color: var(--cream);
+		background: rgba(247, 236, 217, 0.1);
+		border: 1px solid var(--cream-line);
+		border-radius: var(--r-pill);
+		padding: 9px 26px;
+		cursor: pointer;
+	}
+
+	.menu-settings:hover {
+		background: rgba(247, 236, 217, 0.18);
+	}
+
+	@keyframes menuInvite {
+		from {
+			transform: scale(1);
+		}
+		to {
+			transform: scale(1.05);
+		}
+	}
+</style>

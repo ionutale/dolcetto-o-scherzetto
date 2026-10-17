@@ -1,6 +1,7 @@
 /**
- * The player's settings in localStorage — the IT/EN language choice and the
- * sound toggle (spec §4/§13: "IT default + EN toggle, settings persisted").
+ * The player's settings in localStorage — the IT/EN language choice, the
+ * sound toggle and (T17) the separate Music/SFX volume sliders
+ * (spec §4/§6/§13: "IT default + EN toggle, settings persisted").
  *
  * Settings are **not run state**: `persist.ts` mirrors the run, while a
  * preference like "this child plays without sound" belongs on the device and
@@ -17,7 +18,19 @@
  * Validation is minimal on purpose: version + the type of every field. A
  * future setting joins `Settings` as an optional field with a default at the
  * call site rather than a new key, so an envelope written before it existed
- * still loads.
+ * still loads — the one exception being **T17's volume pair**, which was added
+ * as *required* fields on purpose: the sliders are a whole feature (spec §6/§13)
+ * and a half-remembered volume is worse than the default. A pre-T17 envelope
+ * without them is therefore refused as a whole and the device falls back to
+ * defaults — there is no shipped player data to lose yet.
+ *
+ * **T17 (volumes):** `musicVolume` and `sfxVolume` are two independent 0..1
+ * gains (the title menu's Music/SFX sliders). `read()` **clamps** any
+ * in-range-violating finite number back into 0..1 (a hand-edited `"2"` in the
+ * JSON becomes full volume rather than nuking every other preference);
+ * missing, mistyped or non-finite values still refuse the whole payload, as
+ * every other field does. The store itself (the runes-side `volumes` seam the
+ * audio tasks consume) lives in `src/lib/audio/volumes.svelte.ts`.
  */
 
 import { readLocalStorage } from './persist.js';
@@ -38,23 +51,52 @@ export interface Settings {
 	lang: Lang;
 	/** The master mute: false keeps the AudioContext out of the page. */
 	sound: boolean;
+	/** Music (ambience + street loop) gain, 0..1 — T17's Music slider (spec §6). */
+	musicVolume: number;
+	/** Synth SFX gain, 0..1 — T17's SFX slider (spec §6). */
+	sfxVolume: number;
 }
 
-/** First-run defaults: Italian voice, sound on. */
-export const DEFAULT_SETTINGS: Settings = { version: 1, lang: 'it', sound: true };
+/**
+ * First-run defaults: Italian voice, sound on, both volume sliders at full.
+ * The 1.0 here is a *linear gain*, not a peak: the owner-tuned `MUSIC_MAX`
+ * (0.143) and the SFX peak ceilings (≤0.18) scale with it in the audio
+ * modules (T23/T25/T27), so "full" is as loud as the mix was authored.
+ */
+export const DEFAULT_SETTINGS: Settings = {
+	version: 1,
+	lang: 'it',
+	sound: true,
+	musicVolume: 1,
+	sfxVolume: 1
+};
+
+/**
+ * Clamps a volume into the 0..1 band the sliders own. Values outside the band
+ * are clamped rather than refused: a hand-edited `"musicVolume": 5` should cost
+ * the player the edit, not their language and mute preferences.
+ */
+function clampVolume(volume: number): number {
+	return Math.max(0, Math.min(1, volume));
+}
 
 /**
  * True for a v1 settings payload holding every setting, correctly typed.
- * Anything else — a future schema, a truncated write, a hand-edited value —
- * is refused and the game falls back to defaults instead of booting into a
- * broken preference.
+ * Anything else — a future schema, a truncated write, a hand-edited value, a
+ * pre-T17 envelope with no volume pair — is refused and the game falls back to
+ * defaults instead of booting into a broken preference. Volumes must be
+ * *finite* numbers (`1e999` parses to `Infinity` and a hand edit can hold
+ * `NaN`, either of which would poison every gain downstream of a slider).
  */
 export function isSettings(value: unknown): value is Settings {
 	if (typeof value !== 'object' || value === null) return false;
 	const settings = value as Partial<Settings>;
 	if (settings.version !== SETTINGS_VERSION) return false;
 	if (settings.lang !== 'it' && settings.lang !== 'en') return false;
-	return typeof settings.sound === 'boolean';
+	if (typeof settings.sound !== 'boolean') return false;
+	if (typeof settings.musicVolume !== 'number' || !Number.isFinite(settings.musicVolume))
+		return false;
+	return typeof settings.sfxVolume === 'number' && Number.isFinite(settings.sfxVolume);
 }
 
 export interface SettingsStore {
@@ -93,8 +135,16 @@ export function createSettings(storage: Storage | null): SettingsStore {
 	return {
 		read(): Settings {
 			// A fresh copy, so a caller that mutates what it read cannot poison
-			// the defaults for the rest of the session.
-			return readStored() ?? { ...DEFAULT_SETTINGS };
+			// the defaults for the rest of the session. The volume pair is
+			// clamped on the way out (T17): an out-of-band finite value costs
+			// the edit, not the whole payload.
+			const stored = readStored();
+			if (!stored) return { ...DEFAULT_SETTINGS };
+			return {
+				...stored,
+				musicVolume: clampVolume(stored.musicVolume),
+				sfxVolume: clampVolume(stored.sfxVolume)
+			};
 		},
 
 		write(settings: Settings): void {
