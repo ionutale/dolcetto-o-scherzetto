@@ -1,0 +1,260 @@
+/*
+ * Global styles + design tokens for *Dolcetto o Scherzetto*.
+ *
+ * The world is a "plush storybook night": deep indigo sky, cream ink, warm
+ * amber lamps, pastel candy, soft shapes. Every value here comes from
+ * `ART-STYLE.md` §3 — the palette is the source of truth, so change it there
+ * first, then here. Every accent a component uses must come from a token, never
+ * from a literal hex: that is what lets a later task re-key a swatch once and
+ * have the whole night follow.
+ *
+ * Structure mirrors the sibling project (`restaurant-manager-game/src/app.css`):
+ * tokens in `:root`, a small reset, the night base on `body`, then the shared
+ * motion policy. The one deliberate difference is the reduced-motion policy at
+ * the foot of this file — see the note there for why it is opt-in, not a
+ * blanket `*` kill switch.
+ */
+
+/*
+ * Fredoka is self-hosted through `@fontsource/fredoka` (bundled woff2, four
+ * weights — the same mechanism the sibling uses). It is imported here rather
+ * than in a `+layout.svelte` because this task owns `src/app.css` and not the
+ * layout; when the layout lands it will `import '../app.css'` and this stays
+ * put. These `@import`s must stay first — content before an `@import` is
+ * invalid CSS and the browser would drop the declaration.
+ */
+@import '@fontsource/fredoka/400.css';
+@import '@fontsource/fredoka/500.css';
+@import '@fontsource/fredoka/600.css';
+@import '@fontsource/fredoka/700.css';
+
+:root {
+	color-scheme: dark;
+
+	/* ---------- Sky: Notte 0–4 (deep → warm horizon) ---------- */
+	--night-0: #191231;
+	--night-1: #241d45;
+	--night-2: #3a2c5f;
+	--night-3: #59406b;
+	--night-4: #7a5166;
+
+	/* ---------- Light: luna / bagliore / lampada ----------
+	 * The only "high" values in the palette — moonlight, window glow, lamps. */
+	--moon: #fff6dd;
+	--glow: #ffeccf;
+	--lamp: #ffd9a0;
+
+	/* ---------- Ink ----------
+	 * Faces, eyes and dark shapes (never pure black); `--ink` is the dark text
+	 * on paper UI. */
+	--ink-night: #3a2f4e;
+	--ink: #4a3728;
+
+	/* ---------- Carta: bubbles, panels, cards ---------- */
+	--cream: #fff6e5;
+	--paper: #fffdf8;
+
+	/* ---------- Accents: CTA, scherzo, coins, warmth ---------- */
+	--amber: #ffd166;
+	--amber-deep: #e8a93a;
+	--pumpkin: #ff9e57;
+	--pumpkin-deep: #e8874a;
+	--stem: #7fb069;
+
+	/* ---------- World bands, front to back ---------- */
+	--road: #3a2e4c;
+	--sidewalk: #57446c;
+	--grass: #443a63;
+	--fence: #6b5785;
+
+	/* ---------- Cast: skin & hair ---------- */
+	--skin-kid: #ffd9b8;
+	--skin-witch: #cfe8d2;
+	--skin-pale: #efe6f7;
+	--hair-blond: #f2d0a0;
+
+	/* ---------- Milo (wizard robe / hat) ---------- */
+	--milo-robe: #6672df;
+	--milo-robe-deep: #4a54b0;
+	--milo-hat: #7c5cff;
+	--milo-band: #5d43d6;
+
+	/* ---------- Tino (pumpkin costume) ---------- */
+	--tino-robe: #ff9e57;
+	--tino-robe-deep: #e8874a;
+
+	/* ---------- Fantasmino (sheet ghost) ---------- */
+	--ghost: #f6f0ff;
+	--ghost-shade: #e4d9f5;
+
+	/* ---------- Strega (the witch / Bottega keeper) ---------- */
+	--witch-hat: #43326b;
+	--witch-hair: #7a5cff;
+	--witch-skin: #cfe8d2;
+
+	/* ---------- Conte Vlad (polite vampire) ---------- */
+	--vampire-cape: #6d3a5e;
+	--vampire-skin: #efe6f7;
+	--vampire-hair: #2e2751;
+
+	/* ---------- Lupo Gentile (gentle werewolf) ---------- */
+	--wolf-fur: #9a8fc0;
+	--wolf-belly: #cbbfdd;
+
+	/* ---------- Caramelle: the six candy pastels ----------
+	 * Shape and colour are visual variety only — a drop's value is rolled, not
+	 * carried by its hue (ART-STYLE §6). */
+	--candy-1: #ff9ec7;
+	--candy-2: #ff7a59;
+	--candy-3: #c98a4b;
+	--candy-4: #ffd166;
+	--candy-5: #ffb347;
+	--candy-6: #7fd7ff;
+
+	/*
+	 * Translucent washes: palette swatches at an alpha, kept here so components
+	 * never invent a translucent literal. `--shadow-night` is the soft contact
+	 * shadow of ART-STYLE §4 rule 1, tinted with the deepest sky stop so depth
+	 * is never pure black.
+	 */
+	--cream-soft: rgba(255, 246, 229, 0.16);
+	--cream-line: rgba(255, 246, 229, 0.28);
+	--amber-glow: rgba(255, 209, 102, 0.28);
+	--shadow-night: rgba(25, 18, 49, 0.35);
+
+	/* ---------- Spacing scale (4 px base) ---------- */
+	--space-1: 0.25rem;
+	--space-2: 0.5rem;
+	--space-3: 0.75rem;
+	--space-4: 1rem;
+	--space-5: 1.5rem;
+	--space-6: 2rem;
+
+	/* ---------- Shape: round everything; pills for UI ---------- *
+	 * Sprite radii live in the 6–24 px band, UI pills are full-round
+	 * (ART-STYLE §4 rule 2). */
+	--r-sm: 6px;
+	--r-md: 14px;
+	--r-lg: 24px;
+	--r-pill: 999px;
+
+	/* Fredoka is the base face everywhere; text is always HTML/SVG, never baked
+	 * into raster art (ART-STYLE §4 rule 5). */
+	--font-body: 'Fredoka', 'Baloo 2', 'Trebuchet MS', system-ui, sans-serif;
+}
+
+*,
+*::before,
+*::after {
+	box-sizing: border-box;
+}
+
+html {
+	-webkit-text-size-adjust: 100%;
+	/* Double-tap zoom off; panning and pinch-zoom stay on. */
+	touch-action: manipulation;
+}
+
+body {
+	margin: 0;
+	min-height: 100vh;
+	min-height: 100dvh;
+	color: var(--cream);
+	font-family: var(--font-body);
+	font-size: 18px;
+	line-height: 1.4;
+	overflow-wrap: break-word;
+	background-color: var(--night-0);
+	/*
+	 * The night-sky stack from `prototypes/scene-prototype.html`, re-keyed to
+	 * the §3 palette: a violet glow high-right and a deep indigo lift low-left
+	 * over the darkest sky stop. The prototype's two washes were slightly
+	 * lighter off-palette purples; here they are the nearest §3 stops
+	 * (`--night-2` and `--night-1`), so the visual smoke stays true to the
+	 * token set.
+	 */
+	background-image:
+		radial-gradient(1200px 600px at 70% -10%, var(--night-2) 0%, transparent 60%),
+		radial-gradient(900px 500px at 10% 110%, var(--night-1) 0%, transparent 55%);
+	background-repeat: no-repeat;
+	background-attachment: fixed;
+	-webkit-font-smoothing: antialiased;
+	overscroll-behavior: none;
+}
+
+h1,
+h2,
+h3 {
+	margin: 0;
+	line-height: 1.2;
+}
+
+p {
+	margin: 0;
+}
+
+button,
+input {
+	font-family: inherit;
+	color: inherit;
+}
+
+img,
+video,
+canvas {
+	max-width: 100%;
+	height: auto;
+}
+
+svg {
+	max-width: 100%;
+}
+
+/* Announced by screen readers, never painted. */
+.visually-hidden {
+	position: absolute;
+	width: 1px;
+	height: 1px;
+	margin: -1px;
+	padding: 0;
+	overflow: hidden;
+	clip-path: inset(50%);
+	white-space: nowrap;
+	border: 0;
+}
+
+/*
+ * ---------------------------------------------------------------------------
+ * Reduced-motion policy (ART-STYLE §4 rule 4 · spec §12)
+ * ---------------------------------------------------------------------------
+ * This is deliberately NOT a blanket `*` kill switch like the sibling's. Here
+ * the setting is allowed to keep fades and crossings — the world still plays,
+ * it just stops bobbing, trembling and flashing (`prefers-reduced-motion: reduce`
+ * kills bobs/trembles/flashes everywhere; fades and crossings stay). A blanket
+ * rule would erase exactly the translations the spec wants to keep, so the
+ * switch is opt-in per element:
+ *
+ *   - Ambient loops (bobs, trembles, flicker, twinkle, drift) carry the
+ *     `.reduce-motion-off` utility. Nothing changes while motion is allowed;
+ *     under `prefers-reduced-motion: reduce` their own animation and transition
+ *     are switched off, leaving the element parked at its rest state.
+ *
+ *   - Anything that sets its own animation WITHOUT the utility MUST ship its own
+ *     `@media (prefers-reduced-motion: reduce)` block, and decide there whether
+ *     the motion is a fade/crossing (keep, at most shorten) or an ambient loop
+ *     (kill). The door swing, the trick shows and the scary-moment crossing all
+ *     own their kill switches this way.
+ *
+ * This is a convention, not a safety net: a component that forgets both the
+ * utility and its own media query will keep animating for a reduced-motion
+ * user, and that is a bug to fix in the component. `prefers-reduced-motion` is
+ * honoured on every ambient loop (T32 pins the full-flow-with-all-motion-off
+ * case).
+ */
+@media (prefers-reduced-motion: reduce) {
+	.reduce-motion-off {
+		animation-duration: 0.001ms !important;
+		animation-iteration-count: 1 !important;
+		transition-duration: 0.001ms !important;
+	}
+}

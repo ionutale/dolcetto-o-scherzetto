@@ -1,0 +1,62 @@
+<svg width="512" height="512" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512">
+	<defs>
+		<linearGradient id="night" x1="0" y1="0" x2="0" y2="1">
+			<stop offset="0" stop-color="#241d45"/>
+			<stop offset="1" stop-color="#191231"/>
+		</linearGradient>
+		<linearGradient id="pumpkin" x1="0" y1="0" x2="0" y2="1">
+			<stop offset="0" stop-color="#ff9e57"/>
+			<stop offset="1" stop-color="#e8874a"/>
+		</linearGradient>
+		<radialGradient id="moonGlow" cx="0.5" cy="0.5" r="0.5">
+			<stop offset="0" stop-color="#fff6dd" stop-opacity="0.45"/>
+			<stop offset="1" stop-color="#fff6dd" stop-opacity="0"/>
+		</radialGradient>
+	</defs>
+
+	<!-- rounded night tile -->
+	<rect x="0" y="0" width="512" height="512" rx="116" fill="url(#night)"/>
+
+	<!-- star sparkles -->
+	<path d="M112 76 Q114.9 89.1 128 92 Q114.9 94.9 112 108 Q109.1 94.9 96 92 Q109.1 89.1 112 76 Z" fill="#fff6dd"/>
+	<path d="M96 159 Q97.6 166.4 105 168 Q97.6 169.6 96 177 Q94.4 169.6 87 168 Q94.4 166.4 96 159 Z" fill="#fff6dd"/>
+	<path d="M436 203 Q438 212 447 214 Q438 216 436 225 Q434 216 425 214 Q434 212 436 203 Z" fill="#fff6dd"/>
+	<path d="M124 383 Q126.3 393.7 137 396 Q126.3 398.3 124 409 Q121.7 398.3 112 396 Q121.7 393.7 124 383 Z" fill="#fff6dd"/>
+
+	<!-- moon with soft glow -->
+	<circle cx="392" cy="110" r="66" fill="url(#moonGlow)"/>
+	<circle cx="392" cy="110" r="44" fill="#fff6dd"/>
+	<circle cx="378" cy="100" r="8" fill="#ffeccf"/>
+	<circle cx="404" cy="120" r="5.5" fill="#ffeccf"/>
+	<circle cx="398" cy="92" r="4" fill="#ffeccf"/>
+
+	<!-- contact shadow -->
+	<ellipse cx="256" cy="436" rx="122" ry="16" fill="rgba(10,6,30,0.32)"/>
+
+	<!-- bucket handle -->
+	<path d="M176 244 C176 110 336 110 336 244" fill="none" stroke="#e8a93a" stroke-width="16" stroke-linecap="round"/>
+
+	<!-- candies peeking out of the bucket -->
+	<circle cx="214" cy="152" r="19" fill="#ff9ec7"/>
+	<circle cx="256" cy="140" r="19" fill="#7fd7ff"/>
+	<circle cx="298" cy="152" r="19" fill="#ffd166"/>
+	<circle cx="208" cy="146" r="5" fill="rgba(255,255,255,0.35)"/>
+	<circle cx="250" cy="134" r="5" fill="rgba(255,255,255,0.35)"/>
+	<circle cx="292" cy="146" r="5" fill="rgba(255,255,255,0.35)"/>
+
+	<!-- pumpkin stem -->
+	<rect x="241" y="172" width="30" height="42" rx="13" fill="#7fb069" transform="rotate(10 256 193)"/>
+
+	<!-- jack-o'-lantern bucket body -->
+	<ellipse cx="256" cy="318" rx="148" ry="112" fill="url(#pumpkin)"/>
+	<ellipse cx="256" cy="318" rx="94" ry="110" fill="none" stroke="#e8874a" stroke-opacity="0.38" stroke-width="9"/>
+	<ellipse cx="256" cy="318" rx="38" ry="112" fill="none" stroke="#e8874a" stroke-opacity="0.38" stroke-width="9"/>
+
+	<!-- carved face, glowing from inside -->
+	<path d="M184 302 Q199 264 218 302 Q199 316 184 302 Z" fill="#ffd166"/>
+	<path d="M294 302 Q313 264 328 302 Q313 316 294 302 Z" fill="#ffd166"/>
+	<path d="M186 346 Q256 404 326 346 Q302 378 256 378 Q210 378 186 346 Z" fill="#ffd166"/>
+
+	<!-- scherzo sparkle accent -->
+	<path d="M358 228 Q359.8 236.2 368 238 Q359.8 239.8 358 248 Q356.2 239.8 348 238 Q356.2 236.2 358 228 Z" fill="#fff6dd"/>
+</svg>
