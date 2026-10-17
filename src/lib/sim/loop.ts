@@ -495,7 +495,7 @@ export function tick(s: GameState, dt: number): GameState {
 			}
 			return cc;
 		});
-		n = { ...n, candies, justLanded: landedNow ? (n.justLanded || 0) + 1 : (n.justLanded || 0) };
+		n = { ...n, candies, justLanded: landedNow ? (n.justLanded || 0) + 1 : n.justLanded || 0 };
 	}
 	return n;
 }
