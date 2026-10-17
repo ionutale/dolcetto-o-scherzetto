@@ -9,8 +9,9 @@
 	 * `bagpulse` pop whenever the bag grows — the candy the tap sent home
 	 * landing in the bucket.
 	 *
-	 * **Minimal on purpose.** T16 extends this same file with the Bottega and
-	 * mute buttons (its `.top-right` cluster); nothing else belongs here yet.
+	 * **Minimal on purpose.** T16 extends this same file with the Bottega pill
+	 * (its `.top-right` cluster) and mounts the shop panel; nothing else
+	 * belongs here yet.
 	 * The chip is a `<button>` with `id="bagChip"` because T12's candy ghost
 	 * measures it by that id to know where the bag is (`CandyLayer`).
 	 *
@@ -19,7 +20,8 @@
 	 */
 	import { onDestroy } from 'svelte';
 	import { bucketIcon } from '$lib/art/sprites/candy';
-	import { bag } from '$lib/state/game.svelte';
+	import { bag, dispatch } from '$lib/state/game.svelte';
+	import Bottega from './Bottega.svelte';
 
 	/** `bagpulse` duration (prototype `#bagChip.pulse`). */
 	const BAG_PULSE_MS = 350;
@@ -43,6 +45,11 @@
 	});
 
 	onDestroy(() => clearTimeout(timer));
+
+	/** The Bottega pill opens the shop panel (prototype `#bottegaBtn`, ~1617). */
+	function openShop(): void {
+		dispatch({ type: 'SHOP_OPEN' });
+	}
 </script>
 
 <div class="hud">
@@ -52,7 +59,18 @@
 		{@html bucketIcon(24)}
 		<span class="count">{bag()}</span>
 	</button>
+
+	<!-- The prototype's `.top-right` cluster (markup ~411-415). T17 adds the
+	     language/mute pills here; T16 ships the Bottega pill alone. -->
+	<div class="top-right">
+		<button type="button" id="bottegaBtn" class="pill" onclick={openShop}>🏪 Bottega</button>
+	</div>
 </div>
+
+<!-- The shop panel is a **sibling** of `.hud`, not a child: its `z-15` then
+     resolves against the stage's stacking context and covers the bubbles
+     (`z-14`), exactly as the prototype's `#shop` did. -->
+<Bottega />
 
 <style>
 	/* Full-stage, click-through: only the pills take pointers. */
@@ -94,6 +112,23 @@
 
 	#bagChip.pulse {
 		animation: bagpulse 0.35s ease;
+	}
+
+	/* `.hud .top-right` (prototype ~207): the pill cluster top-right. */
+	.top-right {
+		position: absolute;
+		right: 14px;
+		top: 12px;
+		display: flex;
+		gap: 8px;
+	}
+
+	/* `#bottegaBtn` (prototype ~209-210): the amber CTA pill. */
+	#bottegaBtn {
+		background: linear-gradient(180deg, var(--amber), var(--amber-deep));
+		color: var(--ink);
+		border: none;
+		box-shadow: 0 6px 18px var(--amber-glow);
 	}
 
 	@keyframes bagpulse {

@@ -112,6 +112,15 @@ export function fanOpen(): boolean {
 }
 
 /**
+ * Whether the Bottega panel is open (T16). Read-only seam, like `fanOpen()`:
+ * the shop overlay renders on it and the pill/shop both only ever *dispatch*
+ * `SHOP_OPEN`/`SHOP_CLOSE`, so the panel never has to know the reducer.
+ */
+export function shopOpen(): boolean {
+	return state.shopOpen;
+}
+
+/**
  * The trick a `PLAY_TRICK` has just put on stage, or `null` outside a show.
  * Read-only seam for the display layer (T15): `Theatre.start` takes the id,
  * and no other seam carries which card the fan picked.
