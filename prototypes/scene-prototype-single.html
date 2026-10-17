@@ -926,22 +926,48 @@
 
     /* ------------------------------- scares (§10) --------------------------- */
 
-    // scare:witch — intent: a PROPER cartoon witch cackle as she crosses the sky (§10) — six
-    //   staccato sawtooth "ka-ka-ka" bursts, each bending fast downward on irregular spacing,
-    //   finishing on a longer rising "heee" that gets sillier as it climbs. Reads funny on the
-    //   way up, never menacing; gone in ~0.68 s.
-    //   bursts: sawtooth, 55 ms each, pitch ×0.65 down-bend, lowpass 2.5 kHz, attack 4 ms,
-    //     starts 720/690/750/700/760/680 Hz at irregular 0/.052/.10/.163/.221/.285 s, gain .085
-    //   heee: triangle 520→900 Hz over 0.28 s from t=0.40, 6 Hz vibrato (±30 decaying to ±14),
-    //     lowpass 2.8 kHz, peak gain .10
+    // scare:witch — intent: an EVIL cartoon witch laugh in two rounds — literally "hahaha
+    //   hahaha", delightfully mean so a 7-year-old grins instead of flinching (§10). ~1.30 s.
+    //   phrase 1: five staccato "ha" pulses at 0/.11/.22/.33/.44 s, bases DESCENDING
+    //     760→740→720→700→680 Hz; each "ha" is a FAST high→low bend (×0.68 in the first
+    //     28 ms, settling ×0.62) — the classic cackle scoop
+    //   120 ms of silence between rounds, then phrase 2: four staccato "ha" at
+    //     .64/.74/.84/.94 s (bases 735→720→705→690 Hz, same bend, slightly quicker spacing)
+    //   finale: a HELD "haaah" from 1.06 s — pitch RISING 680→840 Hz then FALLING to 545 Hz
+    //     over 0.24 s, with an 8 Hz vibrato (±26 decaying to ±10); attack 35 ms, hold, release
+    //   body: sawtooth main + a faint TRIANGLE layer detuned +9 cents for chorus-y
+    //     wickedness, both through a 2.2 kHz lowpass so it stays rounded, never harsh
+    //   per-pulse envelope (`env`): 30 ms attack, quick decay to silence by 80 ms
+    //   gains: main .110 + layer .035 = nominal stack .145 (held uses the same pair)
     'scare:witch': function (a) {
-      var at = [0, 0.052, 0.100, 0.163, 0.221, 0.285];
-      var f = [720, 690, 750, 700, 760, 680];
-      for (var i = 0; i < at.length; i++)
-        tone(a, f[i], f[i] * 0.65, 0.055, { type: 'sawtooth', vol: 0.085, attack: 0.004, cutoff: 2500, at: at[i] });
-      tone(a, 520, 900, 0.28, {
-        type: 'triangle', vol: 0.10, attack: 0.03, cutoff: 2800, at: 0.40,
-        lfo: { rate: 6, depth: 30 }, lfo2: 14
+      var at = [0, 0.11, 0.22, 0.33, 0.44, 0.64, 0.74, 0.84, 0.94];
+      var fq = [760, 740, 720, 700, 680, 735, 720, 705, 690];
+      var det = Math.pow(2, 9 / 1200);           // +9 cents — the faint chorus layer
+      for (var i = 0; i < at.length; i++) {
+        var f = fq[i], fd = f * det;
+        tone(a, f, null, 0.08, {
+          type: 'sawtooth', cutoff: 2200, at: at[i],
+          points: [[f * 0.68, 0.028], [f * 0.62, 0.080]],
+          env: [[0, 0], [0.110, 0.030], [0.050, 0.058], [0.0001, 0.080]]
+        });
+        tone(a, fd, null, 0.08, {
+          type: 'triangle', cutoff: 2200, at: at[i],
+          points: [[fd * 0.68, 0.028], [fd * 0.62, 0.080]],
+          env: [[0, 0], [0.035, 0.030], [0.016, 0.058], [0.0001, 0.080]]
+        });
+      }
+      // the held "haaah" — rises then falls, with a 7–9 Hz vibrato on top
+      tone(a, 680, null, 0.24, {
+        type: 'sawtooth', cutoff: 2200, at: 1.06,
+        points: [[840, 0.10], [545, 0.24]],
+        lfo: { rate: 8, depth: 26 }, lfo2: 10,
+        env: [[0, 0], [0.110, 0.035], [0.110, 0.145], [0.055, 0.200], [0.0001, 0.240]]
+      });
+      tone(a, 680 * det, null, 0.24, {
+        type: 'triangle', cutoff: 2200, at: 1.06,
+        points: [[840 * det, 0.10], [545 * det, 0.24]],
+        lfo: { rate: 8, depth: 27 }, lfo2: 11,
+        env: [[0, 0], [0.035, 0.035], [0.035, 0.145], [0.017, 0.200], [0.0001, 0.240]]
       });
     },
 
@@ -3793,6 +3819,7 @@ const legacy = {
 };
 function snd(name) {
   if (!state.sound) return;
+  if (name === 'scare:witch' && !witchFileBroken) { playWitchFile(); return; }
   if (name && name.indexOf('theatre-fire:') === 0) name = 'fire:' + name.slice('theatre-fire:'.length);
   if (window.SFX && SFX.play) { try { SFX.play(name); return; } catch (e) {} }
   if (legacy[name]) { legacy[name](); return; }
@@ -3876,6 +3903,22 @@ music.preload = 'auto';
 music.volume = 0;
 let musicStarted = false;
 window.__music = music; /* validation handle (detached audio element) */
+
+/* owner-provided witch laugh: scare:witch plays this file; the synth cue stays the fallback */
+const witchFile = new Audio('sfx/scare-witch.v1.mp3');
+witchFile.preload = 'auto';
+witchFile.volume = 1;
+let witchFileBroken = false;
+witchFile.addEventListener('error', () => { witchFileBroken = true; });
+window.__witchFile = witchFile; /* validation handle */
+function playWitchFile() {
+  try {
+    witchFile.volume = window.__vols ? __vols.sfx : 1;
+    witchFile.currentTime = 0;
+    const p = witchFile.play();
+    if (p && p.catch) p.catch(() => {});
+  } catch (e) {}
+}
 function musicStart() {
   if (musicStarted) return;
   musicStarted = true;
@@ -3910,6 +3953,7 @@ window.__vols = vols;
 function volsSave() { try { localStorage.setItem(MENU_KEY, JSON.stringify(vols)); } catch (e) {} }
 function volsApply() {
   if (window.SFX && SFX.setVolume) SFX.setVolume(vols.sfx);
+  try { witchFile.volume = vols.sfx; } catch (e) {}
   const m = document.getElementById('musicVol'), s = document.getElementById('sfxVol');
   if (m) { m.value = Math.round(vols.music * 100); document.getElementById('musicVolVal').textContent = m.value; }
   if (s) { s.value = Math.round(vols.sfx * 100); document.getElementById('sfxVolVal').textContent = s.value; }

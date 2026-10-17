@@ -45,7 +45,7 @@
 | T24 | P5 | Scary moments (crossings + hug beat) | free-art+coder | T15, T23 | Walking-only; ≥60 s gap; reduced-motion safe |
 | T25 | P6 | Music: street loop wired (`a-winters-night.v1.mp3` — owner track, 95.9 s/112 k, trimmed+normalized); title + optional loops/stingers via SA3 | studio | T23 | Loop gap-free via WebAudio decode; rotation decided; verify track license before public deploy |
 | T26 | P6 | Ambience loops ×4 (SA3) | studio | T23 | 4 beds replace synth; duck verified |
-| T27 | P6 | **Port `pieces/sfx.js` to `src/lib/audio/sfx.ts`** (WebAudio synth, same 26-cue contract — no bake needed) + wire into the hooks | free-coder | T23 | All 26 cues schedule; peaks ≤0.18; mute + per-slider volume |
+| T27 | P6 | **Port `pieces/sfx.js` to `src/lib/audio/sfx.ts`** (WebAudio synth, same 26-cue contract — no bake needed) + wire into the hooks; **`scare:witch` plays `static/sfx/scare-witch.v1.mp3`** (owner file, synth fallback) | free-coder | T23 | All 26 cues schedule; peaks ≤0.18; mute + per-slider volume |
 | T28 | P6 | Voice lines IT+EN via game_voice (+ CI completeness check) | studio | T17 | Every line in both langs; CI check green |
 | T29 | P6 | flux2 stills + facade spike | studio | T02 | Hero+OG live; spike verdict recorded |
 | T30 | P7 | Playwright e2e suite (incl. pre-gesture silence) | free-coder | T24, T28 | Suite green against build; note: the Play button carries an infinite invite animation — click it `force:true` or with reduced-motion emulation |

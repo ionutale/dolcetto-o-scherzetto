@@ -758,6 +758,7 @@ const legacy = {
 };
 function snd(name) {
   if (!state.sound) return;
+  if (name === 'scare:witch' && !witchFileBroken) { playWitchFile(); return; }
   if (name && name.indexOf('theatre-fire:') === 0) name = 'fire:' + name.slice('theatre-fire:'.length);
   if (window.SFX && SFX.play) { try { SFX.play(name); return; } catch (e) {} }
   if (legacy[name]) { legacy[name](); return; }
@@ -841,6 +842,22 @@ music.preload = 'auto';
 music.volume = 0;
 let musicStarted = false;
 window.__music = music; /* validation handle (detached audio element) */
+
+/* owner-provided witch laugh: scare:witch plays this file; the synth cue stays the fallback */
+const witchFile = new Audio('sfx/scare-witch.v1.mp3');
+witchFile.preload = 'auto';
+witchFile.volume = 1;
+let witchFileBroken = false;
+witchFile.addEventListener('error', () => { witchFileBroken = true; });
+window.__witchFile = witchFile; /* validation handle */
+function playWitchFile() {
+  try {
+    witchFile.volume = window.__vols ? __vols.sfx : 1;
+    witchFile.currentTime = 0;
+    const p = witchFile.play();
+    if (p && p.catch) p.catch(() => {});
+  } catch (e) {}
+}
 function musicStart() {
   if (musicStarted) return;
   musicStarted = true;
@@ -875,6 +892,7 @@ window.__vols = vols;
 function volsSave() { try { localStorage.setItem(MENU_KEY, JSON.stringify(vols)); } catch (e) {} }
 function volsApply() {
   if (window.SFX && SFX.setVolume) SFX.setVolume(vols.sfx);
+  try { witchFile.volume = vols.sfx; } catch (e) {}
   const m = document.getElementById('musicVol'), s = document.getElementById('sfxVol');
   if (m) { m.value = Math.round(vols.music * 100); document.getElementById('musicVolVal').textContent = m.value; }
   if (s) { s.value = Math.round(vols.sfx * 100); document.getElementById('sfxVolVal').textContent = s.value; }
