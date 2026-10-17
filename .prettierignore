@@ -13,3 +13,9 @@ prototypes/
 .scratch/
 .superpowers/
 *.md
+
+# The T28 voice tree: authored line inventories plus the generated clips and
+# manifests, written by the studio tooling (`json.dumps(..., indent=2)`), not
+# the app code style. Checking them here would fail on every render.
+voice/
+static/voice/

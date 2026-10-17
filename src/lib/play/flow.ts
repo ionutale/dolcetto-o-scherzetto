@@ -6,7 +6,9 @@
  * knock (`prototypes/scene-prototype.html`, ~1428-1455): the shout over the
  * kids' heads, the neighbour's greeting in the doorway, `RESOLVE` at exactly
  * 2 s, and the outcome line 150 ms later — with the outcome's sound cue
- * injected through the T27 `sound` seam and the timings lifted verbatim:
+ * injected through the T27 `sound` seam and each said line (the shout, the
+ * greeting and the outcome) voiced through T28b's `say` seam beside its bubble,
+ * and the timings lifted verbatim:
  *
  * ```
  *  +  420  shout  (250, 262)  small, 900 ms   "Dolcetto o scherzetto!"
@@ -81,7 +83,9 @@ import { settings } from '../persist/settings';
 import { SPACING } from '../sim/loop';
 import type { Action, KnockOutcome, Lang, Phase } from '../sim/loop';
 import { archOf } from '../art/sprites/neighbors';
+import type { NeighborArch } from '../art/sprites/neighbors';
 import { t as line } from '../i18n/lines';
+import type { ArchLineKey } from '../i18n/lines';
 
 /** `setTimeout`, injected so the chain is testable without a real clock. */
 export type SetTimeoutLike = (fn: () => void, ms: number) => unknown;
@@ -98,6 +102,17 @@ export type PlayCue = (cue: string) => void;
 
 /** The default SFX sink — deliberately silent, so a chain never needs audio. */
 const NO_CUE: PlayCue = () => {};
+
+/**
+ * The voice sink — T28b's `voice.svelte.ts` `say`, or a test recorder. Optional
+ * everywhere, like {@link PlayCue}: a chain with no voice is a no-op. The
+ * `(lang, key, arch?)` shape is exactly `say`'s, so the page passes the real
+ * module straight in.
+ */
+export type SayLine = (lang: Lang, key: 'shout' | ArchLineKey, arch?: NeighborArch) => void;
+
+/** The default voice sink — silent, so a chain never needs the voice engine. */
+const NO_SAY: SayLine = () => {};
 
 /**
  * The cue each resolved outcome plays with its line — the prototype's
@@ -168,23 +183,34 @@ export function doorScreenX(store: FlowStore, k: number): number {
  *
  * `k` and the greeting's x are read at knock time, the outcome's x at resolve
  * time — the same moments the prototype read them (`state` was global there,
- * so its closures captured exactly these). `sound` is T27's cue sink; when it
- * is omitted the chain is silent (the shape the unit tests use).
+ * so its closures captured exactly these). `sound` is T27's cue sink and `say`
+ * is T28b's voice sink; when either is omitted that half is silent (the shape
+ * the unit tests use).
  */
 export function scheduleKnock(
 	store: FlowStore,
 	showBubble: ShowBubble,
 	t: SetTimeoutLike,
-	sound: PlayCue = NO_CUE
+	sound: PlayCue = NO_CUE,
+	say: SayLine = NO_SAY
 ): void {
 	const k = store.activeK();
 	const greetX = doorScreenX(store, k);
 
-	t(() => showBubble(line(store.lang(), 'shout'), SHOUT_X, SHOUT_Y, true, SHOUT_MS), SHOUT_AT);
-	t(() => showBubble(line(store.lang(), 'greet', archOf(k)), greetX, DOOR_Y), GREET_AT);
+	t(() => {
+		const lang = store.lang();
+		showBubble(line(lang, 'shout'), SHOUT_X, SHOUT_Y, true, SHOUT_MS);
+		say(lang, 'shout');
+	}, SHOUT_AT);
+	t(() => {
+		const lang = store.lang();
+		const arch = archOf(k);
+		showBubble(line(lang, 'greet', arch), greetX, DOOR_Y);
+		say(lang, 'greet', arch);
+	}, GREET_AT);
 	t(() => {
 		store.dispatch({ type: 'RESOLVE' });
-		scheduleResolve(store, showBubble, t, sound);
+		scheduleResolve(store, showBubble, t, sound, say);
 	}, RESOLVE_AT);
 }
 
@@ -192,13 +218,15 @@ export function scheduleKnock(
  * The outcome half of the chain — the prototype's `if (a.type === 'RESOLVE')`
  * block. Called right after `RESOLVE` is dispatched, so the outcome it reads
  * is the reducer's answer; a `null` means nothing resolved (a stray chain, a
- * knock frozen by something else) and neither the line nor its cue is played.
+ * knock frozen by something else) and neither the line, its cue nor its voice
+ * is played.
  */
 export function scheduleResolve(
 	store: FlowStore,
 	showBubble: ShowBubble,
 	t: SetTimeoutLike,
-	sound: PlayCue = NO_CUE
+	sound: PlayCue = NO_CUE,
+	say: SayLine = NO_SAY
 ): void {
 	const outcome = store.resolvedOutcome();
 	if (!outcome) return;
@@ -215,6 +243,7 @@ export function scheduleResolve(
 		// The prototype says the line, then plays its cue (both in the same beat).
 		showBubble(line(lang, outcome, arch), x, DOOR_Y, false, OUTCOME_MS[outcome]);
 		sound(OUTCOME_CUE[outcome]);
+		say(lang, outcome, arch);
 	}, OUTCOME_AT);
 }
 
@@ -253,7 +282,7 @@ export interface TrickShow {
  * ```
  *  climax    hooks.onClimax() once  → the page dispatches TRICK_RESOLVE
  *            hooks.bounce()         → the neighbour's classList toggle
- *  +  300    scherzo[archOf(k)] (door x, 175), 2200 ms
+ *  +  300    scherzo[archOf(k)] (door x, 175), 2200 ms · say('scherzo', arch)
  * ```
  *
  * `k` is read at climax time and `worldX`/`lang` when the line is said — the
@@ -268,7 +297,8 @@ export function scheduleTrickResolve(
 	store: FlowStore,
 	showBubble: ShowBubble,
 	t: SetTimeoutLike,
-	hooks: TrickHooks = {}
+	hooks: TrickHooks = {},
+	say: SayLine = NO_SAY
 ): TrickShow {
 	let fired = false;
 	let cancelled = false;
@@ -280,15 +310,17 @@ export function scheduleTrickResolve(
 			hooks.onClimax?.();
 			hooks.bounce?.();
 			const k = store.activeK();
+			const arch = archOf(k);
 			t(() => {
 				if (cancelled) return;
 				showBubble(
-					line(store.lang(), 'scherzo', archOf(k)),
+					line(store.lang(), 'scherzo', arch),
 					doorScreenX(store, k),
 					DOOR_Y,
 					false,
 					SCHERZO_MS
 				);
+				say(store.lang(), 'scherzo', arch);
 			}, SCHERZO_AT);
 		},
 		cancel(): void {

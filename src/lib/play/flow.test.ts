@@ -1,6 +1,6 @@
 import { afterEach, beforeEach, describe, expect, it } from 'vitest';
 import { SPACING, setRand } from '../sim/loop';
-import type { InitialOpts } from '../sim/loop';
+import type { InitialOpts, Lang } from '../sim/loop';
 import { activeK, candies, dispatch, phase, step, worldX } from '../state/game.svelte';
 import { L, t } from '../i18n/lines';
 import { NEIGHBOR_ARCHES, NEIGHBORS, archOf, neighborFor } from '../art/sprites/neighbors';
@@ -21,7 +21,7 @@ import {
 	scheduleResolve,
 	scheduleTrickResolve
 } from './flow';
-import type { FlowStore, PlayCue, SetTimeoutLike, ShowBubble } from './flow';
+import type { FlowStore, PlayCue, SayLine, SetTimeoutLike, ShowBubble } from './flow';
 
 /**
  * Pinning suite for the T11 knock chain and the T15 trick resolve beat
@@ -356,6 +356,125 @@ describe('the outcome sound cue (T27)', () => {
 	});
 });
 
+describe('the voice line (T28b)', () => {
+	/** One recorded `say` call, in the shape `voice.svelte.ts` takes. */
+	interface Said {
+		lang: Lang;
+		key: string;
+		arch?: string;
+	}
+
+	/** A recorder standing in for `voice.svelte.ts`'s `say`. */
+	function sayRecorder(): { said: Said[]; say: SayLine } {
+		const said: Said[] = [];
+		return { said, say: (lang, key, arch) => said.push({ lang, key, arch }) };
+	}
+
+	it('says the shout at +420 ms, in the store’s language, once', () => {
+		const clock = new FakeClock();
+		const { show } = recorder();
+		const v = sayRecorder();
+		knockOn(0, { force: { 0: 'treat' } });
+
+		scheduleKnock(createFlowStore(), show, clock.set, () => {}, v.say);
+		clock.advance(SHOUT_AT - 1);
+		expect(v.said).toHaveLength(0);
+
+		clock.advance(1);
+		expect(v.said).toEqual([{ lang: 'it', key: 'shout', arch: undefined }]);
+	});
+
+	it('says the greeting at +900 ms with the house’s archetype', () => {
+		const clock = new FakeClock();
+		const { show } = recorder();
+		const v = sayRecorder();
+		knockOn(2, { force: { 2: 'treat' } }); // archOf(2) is the strega
+
+		scheduleKnock(createFlowStore(), show, clock.set, () => {}, v.say);
+		clock.advance(GREET_AT - 1);
+		expect(v.said).toHaveLength(1); // the shout only, so far
+
+		clock.advance(1); // +900
+		expect(v.said[1]).toEqual({ lang: 'it', key: 'greet', arch: 'strega' });
+	});
+
+	it('says the outcome line at +2150 ms with the resolved key and archetype', () => {
+		const clock = new FakeClock();
+		const { show } = recorder();
+		const v = sayRecorder();
+		knockOn(2, { force: { 2: 'treat' } }); // archOf(2) is the strega
+
+		scheduleKnock(createFlowStore(), show, clock.set, () => {}, v.say);
+		clock.advance(RESOLVE_AT + OUTCOME_AT - 1);
+		expect(v.said).toHaveLength(2); // the shout and the greeting, so far
+
+		clock.advance(1); // +2150
+		expect(v.said[2]).toEqual({ lang: 'it', key: 'treat', arch: 'strega' });
+	});
+
+	it.each([
+		['refuse', 4],
+		['seen', 3]
+	] as const)('says `%s` for the resolved outcome (house %i)', (outcome, k) => {
+		const clock = new FakeClock();
+		const { show } = recorder();
+		const v = sayRecorder();
+		if (outcome === 'seen')
+			knockOn(k, {
+				homes: { [k]: { done: true, used: true, kind: 'treat' } },
+				force: { [k]: 'seen' }
+			});
+		else knockOn(k, { force: { [k]: 'refuse' } });
+
+		scheduleKnock(createFlowStore(), show, clock.set, () => {}, v.say);
+		clock.advance(RESOLVE_AT + OUTCOME_AT);
+		expect(v.said[2]).toEqual({ lang: 'it', key: outcome, arch: archOf(k) });
+	});
+
+	it('says exactly one line per bubble, in chain order', () => {
+		const clock = new FakeClock();
+		const { show } = recorder();
+		const v = sayRecorder();
+		knockOn(5, { force: { 5: 'treat' } });
+
+		scheduleKnock(createFlowStore(), show, clock.set, () => {}, v.say);
+		clock.advance(RESOLVE_AT + OUTCOME_AT + 500);
+		expect(v.said.map((s) => s.key)).toEqual(['shout', 'greet', 'treat']);
+
+		dispatch({ type: 'RESOLVE' }); // a stray second resolve
+		clock.advance(500);
+		expect(v.said).toHaveLength(3); // the chain still said each line once
+	});
+
+	it('follows the settings language and says nothing when nothing resolved', () => {
+		const clock = new FakeClock();
+		const { show } = recorder();
+		const v = sayRecorder();
+		const en: FlowStore = {
+			dispatch: () => {},
+			activeK: () => 6,
+			worldX: () => 6 * SPACING,
+			phase: () => 'door',
+			lang: () => 'en',
+			resolvedOutcome: () => 'refuse'
+		};
+
+		scheduleKnock(en, show, clock.set, () => {}, v.say); // archOf(6) is the ghost
+		clock.advance(RESOLVE_AT + OUTCOME_AT);
+		expect(v.said).toEqual([
+			{ lang: 'en', key: 'shout', arch: undefined },
+			{ lang: 'en', key: 'greet', arch: 'ghost' },
+			{ lang: 'en', key: 'refuse', arch: 'ghost' }
+		]);
+
+		const v2 = sayRecorder();
+		dispatch({ type: 'RESET' }); // nothing resolved here
+		scheduleResolve(createFlowStore(), show, clock.set, () => {}, v2.say);
+		clock.advance(OUTCOME_AT);
+		expect(v2.said).toHaveLength(0);
+	});
+});
+
 describe('scheduleTrickResolve — the show’s resolve beat (T15)', () => {
 	/** Refuses house `k`, then plays `id` on it — the state the fan's card lands in. */
 	function playTrickAt(k: number, id: 'boo' = 'boo'): void {
@@ -463,6 +582,24 @@ describe('scheduleTrickResolve — the show’s resolve beat (T15)', () => {
 		expect(calls).toEqual([
 			{ text: L.en.scherzo.wolf, x: DOOR_X, y: 175, small: false, ms: SCHERZO_MS }
 		]);
+	});
+
+	it('says the scherzo line at +300 ms with the climax archetype, once', () => {
+		const clock = new FakeClock();
+		const { show } = recorder();
+		playTrickAt(2); // archOf(2) is the strega
+		const said: { lang: string; key: string; arch?: string }[] = [];
+
+		const trick = scheduleTrickResolve(createFlowStore(), show, clock.set, {}, (lang, key, arch) =>
+			said.push({ lang, key, arch })
+		);
+		trick.onClimax();
+		trick.onClimax(); // a replayed climax says nothing again
+		clock.advance(SCHERZO_AT - 1);
+		expect(said).toHaveLength(0);
+
+		clock.advance(1);
+		expect(said).toEqual([{ lang: 'it', key: 'scherzo', arch: 'strega' }]);
 	});
 
 	it('closes the loop: refuse → show → climax → burst → collect → roam', () => {

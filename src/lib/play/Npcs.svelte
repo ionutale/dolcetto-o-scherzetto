@@ -26,8 +26,9 @@
 	 *   and keeps playing.
 	 * - **The shout.** Every `SHOUT_FIRST_MS` (24 s) and then every
 	 *   `shoutDelay()` (26–46 s), one **on-screen** kid (model-picked) shows the
-	 *   small bubble with the `shout` line for 1200 ms and fires a `giggle` cue
-	 *   through the injected `sound` hook — a no-op until T23/T27 own audio.
+	 *   small bubble with the `shout` line for 1200 ms, fires a `giggle` cue
+	 *   through the injected `sound` hook and says the `shout` clip through the
+	 *   injected `say` hook (T28b) — both no-ops until T23/T27/T28b own audio.
 	 *
 	 * Layout: the layer sits inside the 852×393 stage at `bottom:56px`, exactly
 	 * where the prototype's `#lNpcs` did — after the street and **before** the
@@ -41,6 +42,7 @@
 	import { showBubble } from '$lib/play/bubble.svelte';
 	import { t } from '$lib/i18n/lines';
 	import { lang, worldX } from '$lib/state/game.svelte';
+	import type { SayLine } from '$lib/audio/voice.svelte';
 	import {
 		SHOUT_BUBBLE_DX,
 		SHOUT_BUBBLE_MS,
@@ -63,8 +65,14 @@
 		 * `sound` hook, so a shout never crashes without audio.
 		 */
 		sound?: (cue: string) => void;
+		/**
+		 * Voice hook for the on-screen kid's shout. Deliberately a no-op by
+		 * default — T28b replaces it with `voice.svelte.ts`'s `say`, so the
+		 * distant shout speaks the same `shout` clip the duo does.
+		 */
+		say?: SayLine;
 	}
-	let { sound = () => {} }: Props = $props();
+	let { sound = () => {}, say = () => {} }: Props = $props();
 
 	/** The five costumes' markup, resolved once (the pack is a static string). */
 	const SPRITES: Record<NpcKind, string> = {
@@ -119,6 +127,7 @@
 			SHOUT_BUBBLE_MS
 		);
 		sound('giggle');
+		say(lang(), 'shout');
 	}
 
 	/** One ambience frame: walk the pool, latch the waves, maybe shout. */

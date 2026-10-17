@@ -98,6 +98,7 @@
 	import { duckAmbience, startAmbience } from '$lib/audio/ambience.svelte';
 	import { duckMusic, startMusic, stopMusic } from '$lib/audio/music.svelte';
 	import { initSfx, playCue, setSfxVolume } from '$lib/audio/sfx';
+	import { say } from '$lib/audio/voice.svelte';
 	import { volumes } from '$lib/audio/volumes.svelte';
 	import Hud from '$lib/ui/Hud.svelte';
 	import TitleScreen from '$lib/ui/TitleScreen.svelte';
@@ -167,7 +168,8 @@
 	$effect(() => {
 		const p = phase();
 		// One chain per knock: the reducer only ever opens a door from `roam`.
-		if (prevPhase === 'roam' && p === 'door') scheduleKnock(flow, showBubble, setTimeout, playCue);
+		if (prevPhase === 'roam' && p === 'door')
+			scheduleKnock(flow, showBubble, setTimeout, playCue, say);
 		// One show per trick: the reducer only ever starts one from `refuse`.
 		if (prevPhase === 'refuse' && p === 'trick') startShow();
 		prevPhase = p;
@@ -245,13 +247,19 @@
 		if (!id) return;
 
 		trick?.cancel();
-		const show = scheduleTrickResolve(flow, showBubble, setTimeout, {
-			onClimax: () => {
-				dispatch({ type: 'TRICK_RESOLVE' });
-				ghosts?.hop();
+		const show = scheduleTrickResolve(
+			flow,
+			showBubble,
+			setTimeout,
+			{
+				onClimax: () => {
+					dispatch({ type: 'TRICK_RESOLVE' });
+					ghosts?.hop();
+				},
+				bounce: () => bounceNeighbor(k)
 			},
-			bounce: () => bounceNeighbor(k)
-		});
+			say
+		);
 		trick = show;
 
 		theatre?.start(id, doorScreenX(flow, k), SHOW_DOOR_Y, {
@@ -389,7 +397,7 @@
 		<ThemeLayer worldX={worldX()} />
 		<Street worldX={worldX()} homes={NO_HOMES} activeK={activeK()} {openK} />
 		<Cars worldX={worldX()} sound={playCue} />
-		<Npcs sound={playCue} />
+		<Npcs sound={playCue} {say} />
 		<Kids dir={dir()} />
 		<Scares {onScare} sound={playCue} />
 		<CandyLayer sound={playCue} />

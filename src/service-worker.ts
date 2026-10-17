@@ -10,12 +10,19 @@
  *   up; offline the shell cached at install (and refreshed on every
  *   navigation) answers the cold start. Query strings vary (`?seed=`),
  *   so the shell is stored under the canonical key `/`.
- * - Everything else (`/voice/`, `/music/`, `/ambience/`, future API
- *   routes): never intercepted. Audio assets are hashed build files and
- *   already precached with the rest, so a runtime rule would only add
- *   failure modes without adding offline coverage.
+ * - Voice clips (`/voice/`): cache-first, **runtime only**. There are 74 of
+ *   them (37 ids × 2 languages) and they are not hashed, so precaching the
+ *   whole tree at install would balloon the install for the handful of lines a
+ *   visit actually speaks; instead each clip is cached the first time it is
+ *   played (and re-cached if the cache is dropped) and served from that cache
+ *   after. The directory it lives in is the only thing that names a language,
+ *   so `/voice/it/...` and `/voice/en/...` are cached under their own keys.
+ * - Everything else (`/music/`, `/ambience/`, future API routes): never
+ *   intercepted. Those assets are single, versioned build files already
+ *   precached with the rest, so a runtime rule would only add failure modes
+ *   without adding offline coverage.
  *
- * Both caches are versioned by the SvelteKit build id, so activation can
+ * All caches are versioned by the SvelteKit build id, so activation can
  * drop every older cache and a deploy never leaks stale entries.
  */
 
@@ -23,13 +30,18 @@ import { build, files, version } from '$service-worker';
 
 const worker = self as unknown as ServiceWorkerGlobalScope;
 const CACHE = `dos-cache-${version}`;
-// Both caches are versioned, so activation can drop everything else.
+// All caches are versioned, so activation can drop everything else.
 const SHELL_CACHE = `dos-cache-${version}-shell`;
+// Voice clips cache-first at runtime (never precached); versioned like the rest.
+const VOICE_CACHE = `dos-cache-${version}-voice`;
 // The single canonical key every navigation is served from.
 const SHELL_URL = '/';
+// The voice tree, served cache-first at runtime rather than precached.
+const VOICE_PREFIX = '/voice/';
 // Everything SvelteKit ships: the hashed bundle plus static files
-// (manifest, icons, voice/music/ambience assets).
-const ASSETS = [...build, ...files];
+// (manifest, icons, music/ambience assets). Voice is deliberately excluded —
+// it caches on demand through VOICE_CACHE instead.
+const ASSETS = [...build, ...files].filter((path) => !path.startsWith(VOICE_PREFIX));
 
 worker.addEventListener('install', (event) => {
 	event.waitUntil(
@@ -51,7 +63,7 @@ worker.addEventListener('activate', (event) => {
 	event.waitUntil(
 		caches.keys().then(async (keys) => {
 			for (const key of keys) {
-				if (key !== CACHE && key !== SHELL_CACHE) await caches.delete(key);
+				if (key !== CACHE && key !== SHELL_CACHE && key !== VOICE_CACHE) await caches.delete(key);
 			}
 			await worker.clients.claim();
 		})
@@ -83,6 +95,29 @@ worker.addEventListener('fetch', (event) => {
 					return response;
 				})
 				.catch(async () => (await caches.match(SHELL_URL)) ?? Response.error())
+		);
+		return;
+	}
+
+	// Voice clips: cache-first, at runtime only (never precached — see the
+	// header). A clip is immutable per id + language, so a cached copy is always
+	// correct, and a miss fetches once and warms VOICE_CACHE for the next visit.
+	if (url.pathname.startsWith(VOICE_PREFIX)) {
+		event.respondWith(
+			caches.match(request).then(async (cached) => {
+				if (cached) return cached;
+				const response = await fetch(request);
+				if (response.ok) {
+					const copy = response.clone();
+					try {
+						const cache = await caches.open(VOICE_CACHE);
+						await cache.put(request, copy);
+					} catch {
+						// A cache write failure must never break the live fetch.
+					}
+				}
+				return response;
+			})
 		);
 		return;
 	}

@@ -13,7 +13,11 @@ export default ts.config(
 			'node_modules/',
 			'prototypes/',
 			'.scratch/',
-			'.superpowers/'
+			'.superpowers/',
+			// The T28 voice tree: authored inventories + generated clips/manifests
+			// and the studio's render helper, none governed by the app lint.
+			'voice/',
+			'static/voice/'
 		]
 	},
 	js.configs.recommended,
