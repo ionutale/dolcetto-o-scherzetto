@@ -69,7 +69,7 @@
 	const shift = $derived(-worldX);
 </script>
 
-<div class="street" aria-hidden="true">
+<div class="street" aria-hidden="true" style="--street-shift: {shift}px">
 	<div class="yards"></div>
 	<div class="sidewalk"></div>
 	<div class="road"></div>
@@ -124,6 +124,9 @@
 			transparent 0 84px,
 			var(--shadow-night) 84px 86px
 		);
+		/* The pavement seams ride with the world (the marks must scroll with the
+		   houses, not sit still under the kids' feet — owner feedback, T09b fix). */
+		background-position-x: var(--street-shift, 0px);
 	}
 
 	.sidewalk::before {
@@ -168,5 +171,7 @@
 			color-mix(in srgb, var(--cream) 18%, transparent) 0 26px,
 			transparent 26px 60px
 		);
+		/* Lane dashes ride with the world too (T09b fix, same as .sidewalk). */
+		background-position-x: var(--street-shift, 0px);
 	}
 </style>

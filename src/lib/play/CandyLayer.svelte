@@ -29,6 +29,11 @@
 	 * (0,0) as invisible tap targets), and the shadow/glow literals are the
 	 * palette tokens (`--shadow-night`, `--moon`) instead of raw `rgba()`.
 	 *
+	 * **The pick-me nudge** (owner feedback): a candy nobody taps within
+	 * `PICKME_MS` hops and its halo swells — an animation on the candy itself,
+	 * never a bubble — until it is collected. Reduced motion swaps the loop for
+	 * a bigger, brighter static halo.
+	 *
 	 * Reduced motion (spec §6): the halo goes **static** (still lit, no pulse)
 	 * and the landed idle bob stops — both ambient loops. The landpop, the
 	 * twinkle and the fly-to-bag hop are one-shot reveals/crossings and stay.
@@ -60,6 +65,9 @@
 		sound?: (cue: string) => void;
 	}
 	let { sound = () => {} }: Props = $props();
+
+	/** How long an unpicked candy waits before it starts asking to be picked. */
+	const PICKME_MS = 5000;
 
 	/** A landing spark, in stage-logical px. */
 	interface Sparkle {
@@ -93,6 +101,9 @@
 
 	/** Ids whose landing twinkle already fired (plain: bookkeeping, not UI). */
 	const landedSeen: number[] = [];
+
+	/** Candies past `PICKME_MS` unpicked — drives the `pickme` class. */
+	let nudging = $state<number[]>([]);
 	let sparkleSeq = 0;
 	let floaterSeq = 0;
 	let ghostSeq = 0;
@@ -138,6 +149,7 @@
 			if (landedIds.length === 0) {
 				// A fresh run (RESET) empties the pile: forget every id.
 				landedSeen.length = 0;
+				nudging = [];
 				return;
 			}
 			const landed = candies().filter((c) => hasLanded(c));
@@ -157,6 +169,13 @@
 						y: c.ty + (Math.random() * TWINKLE_SPREAD_Y - TWINKLE_SPREAD_Y / 2)
 					});
 				}
+				// Five seconds unpicked and the candy asks itself: one timer per
+				// landing; the class stays on until the tap clears it.
+				after(PICKME_MS, () => {
+					if (candies().some((live) => live.id === c.id) && !nudging.includes(c.id)) {
+						nudging = nudging.concat(c.id);
+					}
+				});
 			}
 			sparkles = sparkles.concat(born);
 			const ids = born.map((s) => s.id);
@@ -212,6 +231,7 @@
 	/** Tap a settled candy: ghost to the bag, `+N`, and the one sim action. */
 	function tapCandy(c: Candy, el: HTMLElement): void {
 		if (!hasLanded(c)) return;
+		nudging = nudging.filter((id) => id !== c.id);
 		launchGhost(c, el);
 		dispatch({ type: 'COLLECT', id: c.id });
 		pushFloater(c.tx + FLOATER_DX, c.ty + FLOATER_DY, '+' + c.value);
@@ -240,6 +260,7 @@
 			type="button"
 			class="candy"
 			class:landed={hasLanded(c)}
+			class:pickme={nudging.includes(c.id)}
 			style={candyStyle(c)}
 			onclick={(event) => tapCandy(c, event.currentTarget)}
 		>
@@ -359,6 +380,35 @@
 		}
 	}
 
+	/* Unpicked for `PICKME_MS`: the candy hops and its halo swells — how a
+	 * candy says "pick me!" without a bubble (owner feedback). The rule sits
+	 * after the idlebob block on purpose: at equal specificity, later wins. */
+	.candy.pickme :global(svg) {
+		animation: pickme 1.5s ease-in-out infinite;
+	}
+
+	@keyframes pickme {
+		0%,
+		50%,
+		100% {
+			transform: translateY(0) rotate(0deg) scale(1);
+		}
+		12% {
+			transform: translateY(-8px) rotate(-7deg) scale(1.14);
+		}
+		26% {
+			transform: translateY(0) rotate(5deg) scale(1.08);
+		}
+		38% {
+			transform: translateY(-3px) rotate(0deg) scale(1.04);
+		}
+	}
+
+	.candy.pickme::before {
+		inset: -11px;
+		animation-duration: 0.85s;
+	}
+
 	/* The collected candy's hop into the bag chip. */
 	.ghostfly {
 		pointer-events: none;
@@ -429,6 +479,17 @@
 
 		.candy.landed :global(svg) {
 			animation: none;
+		}
+
+		/* The nudge loop stops; the candy still asks — statically. */
+		.candy.pickme :global(svg) {
+			animation: none;
+		}
+
+		.candy.pickme::before {
+			animation: none;
+			opacity: 0.8;
+			inset: -10px;
 		}
 
 		.ghostfly {

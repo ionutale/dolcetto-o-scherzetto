@@ -22,6 +22,10 @@
 	 *      utility (T02's policy) instead of a local `animation:none` block.
 	 *   4. The language is owned here (read from the settings envelope) so the
 	 *      card's own copy flips with the toggle; `Settings` reports changes up.
+	 *   5. **Reopenable (owner feedback).** The open latch lives in the shared
+	 *      `menu-state.svelte.ts` runes store: Gioca closes it, the HUD's 🏠
+	 *      reopens it — the overlay returns with the same fade, reset to the
+	 *      home card.
 	 *
 	 * **Play does not unlock anything here.** `Gioca` only fades the overlay and
 	 * calls `onPlay`; the audio unlock and the landscape-lock attempt belong to
@@ -30,6 +34,7 @@
 	import { settings } from '$lib/persist/settings';
 	import type { Lang } from '$lib/sim/loop';
 	import Settings from './Settings.svelte';
+	import { menuState, closeMenu } from './menu-state.svelte';
 
 	interface Props {
 		/**
@@ -40,12 +45,15 @@
 	}
 	let { onPlay }: Props = $props();
 
-	/** The overlay's open latch — `.hide` fades it out and drops pointer events. */
-	let open = $state(true);
 	/** Which card shows: the home card or the settings card. */
 	let panel = $state<'home' | 'settings'>('home');
 	/** The live language; the settings envelope holds it, `Settings` writes it. */
 	let lang = $state<Lang>(settings.read().lang);
+
+	/** A reopened menu always comes back to the home card. */
+	$effect(() => {
+		if (menuState.open) panel = 'home';
+	});
 
 	const copy = $derived(
 		lang === 'it'
@@ -55,7 +63,7 @@
 
 	/** Gioca: fade the menu, then hand the gesture to the page. */
 	function play(): void {
-		open = false;
+		closeMenu();
 		onPlay?.();
 	}
 
@@ -70,7 +78,7 @@
 	}
 </script>
 
-<div class="menu" class:hide={!open}>
+<div class="menu" class:hide={!menuState.open}>
 	<div class="menu-card" hidden={panel !== 'home'}>
 		<p class="menu-eyebrow">{copy.eyebrow}</p>
 		<h1 class="menu-title">Dolcetto o Scherzetto</h1>

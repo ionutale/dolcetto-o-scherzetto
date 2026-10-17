@@ -20,7 +20,8 @@
 	 */
 	import { onDestroy } from 'svelte';
 	import { bucketIcon } from '$lib/art/sprites/candy';
-	import { bag, dispatch } from '$lib/state/game.svelte';
+	import { bag, dispatch, fanOpen, shopOpen } from '$lib/state/game.svelte';
+	import { openMenu } from './menu-state.svelte';
 	import Bottega from './Bottega.svelte';
 
 	interface Props {
@@ -59,6 +60,19 @@
 	function openShop(): void {
 		dispatch({ type: 'SHOP_OPEN' });
 	}
+
+	/**
+	 * The 🏠 pill (owner feedback): back to the main menu from anywhere. Stops
+	 * the walk and closes the shop/fan underneath, so the resumed game comes
+	 * back to a clean standing state. Audio keeps playing (the menu is a
+	 * pause, not a stop — and Settings stays reachable mid-game).
+	 */
+	function toMenu(): void {
+		dispatch({ type: 'STOP' });
+		if (shopOpen()) dispatch({ type: 'SHOP_CLOSE' });
+		if (fanOpen()) dispatch({ type: 'SCHERZO_CLOSE' });
+		openMenu();
+	}
 </script>
 
 <div class="hud">
@@ -72,6 +86,9 @@
 	<!-- The prototype's `.top-right` cluster (markup ~411-415). T17 adds the
 	     language/mute pills here; T16 ships the Bottega pill alone. -->
 	<div class="top-right">
+		<button type="button" id="menuBtn" class="pill" aria-label="Menu" title="Menu" onclick={toMenu}
+			>🏠</button
+		>
 		<button type="button" id="bottegaBtn" class="pill" onclick={openShop}>🏪 Bottega</button>
 	</div>
 </div>
