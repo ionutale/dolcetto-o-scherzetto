@@ -1,0 +1,375 @@
+<!doctype html>
+<!--
+  Dolcetto o Scherzetto — WORLD SPRITE PACK preview.
+  Throwaway contact sheet: the pack's own motion layer running live on top,
+  every sprite at ACTUAL game size below. No dependencies, no build.
+  Run: double-click this file.
+-->
+<html lang="it">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<title>Dolcetto o Scherzetto — world sprite pack</title>
+<style>
+  :root{
+    --cream:#f7ecd9; --cream-soft:rgba(247,236,217,.16); --cream-line:rgba(247,236,217,.26);
+    --grass:#443a63; --sidewalk:#57446c; --road:#3a2e4c;
+  }
+  *{ box-sizing:border-box; margin:0; padding:0; }
+  html,body{ min-height:100%; }
+  body{
+    background:linear-gradient(180deg, #241d45 0%, #3d2f5f 55%, #59406b 100%);
+    background-repeat:no-repeat; background-size:100% 100%; background-color:#241d45;
+    color:var(--cream);
+    font-family:ui-rounded,"SF Pro Rounded","Segoe UI",Roboto,system-ui,-apple-system,sans-serif;
+    padding:26px 24px 60px;
+  }
+  small{ font-size:11px; }
+  header{ max-width:1100px; margin:0 auto 18px; display:flex; flex-direction:column; gap:8px; }
+  header .row{ display:flex; align-items:center; gap:10px; flex-wrap:wrap; }
+  .badge{
+    font-size:11px; font-weight:700; letter-spacing:.12em; text-transform:uppercase;
+    background:#ffd166; color:#4a3728; padding:4px 10px; border-radius:999px;
+  }
+  h1{ font-size:24px; font-weight:700; }
+  h1 small{ display:block; font-size:13px; font-weight:500; opacity:.72; margin-top:3px; }
+  header p{ font-size:13px; line-height:1.55; opacity:.82; max-width:920px; }
+  code{ background:var(--cream-soft); border-radius:5px; padding:1px 5px; font-size:12px; }
+
+  /* ---------- motion strip ---------- */
+  .stripwrap{ max-width:1100px; margin:0 auto 26px; }
+  .stripbar{ display:flex; align-items:center; gap:12px; flex-wrap:wrap; margin-bottom:9px; }
+  .stripbar h2{ font-size:12px; font-weight:700; letter-spacing:.14em; text-transform:uppercase; opacity:.75; }
+  .stripbar p{ font-size:11.5px; opacity:.6; flex:1 1 260px; }
+  #motionBtn{
+    font-family:inherit; font-size:12.5px; font-weight:700; letter-spacing:.03em;
+    border:0; border-radius:999px; padding:9px 17px; cursor:pointer;
+    background:linear-gradient(180deg,#ffd166,#e8a93a); color:#4a3728;
+    box-shadow:0 6px 18px rgba(255,209,102,.28); transition:transform .12s ease;
+  }
+  #motionBtn:active{ transform:scale(.95); }
+  #motionBtn.off{ background:rgba(247,236,217,.16); color:var(--cream); box-shadow:none; }
+
+  .strip{
+    position:relative; width:100%; height:300px; overflow:hidden; border-radius:20px;
+    background:linear-gradient(180deg, #1d1638 0%, #2b2150 40%, #3d2f5f 70%, #59406b 100%);
+    box-shadow:inset 0 0 0 1px var(--cream-soft), 0 22px 60px rgba(5,2,20,.45);
+    user-select:none; touch-action:none;
+  }
+  .strip .band{ position:absolute; left:0; right:0; }
+  .strip .band.grass{ bottom:96px; height:52px; background:var(--grass); }
+  .strip .band.side{ bottom:74px; height:22px; background:var(--sidewalk); }
+  .strip .band.road{ bottom:0; height:74px; background:var(--road); }
+  .strip .band.road::after{
+    content:""; position:absolute; left:0; right:0; top:34px; height:2px; opacity:.28;
+    background:repeating-linear-gradient(90deg,#fff6dd 0 26px,transparent 26px 58px);
+  }
+  /* moon + haze: gives the sky a light source, so the bats read as silhouettes */
+  .strip .moon{
+    position:absolute; left:62%; top:24px; width:44px; height:44px; border-radius:50%;
+    background:radial-gradient(circle at 38% 34%, #fdf6e3 0%, #f2e3bf 58%, #dcc79c 100%);
+    box-shadow:0 0 44px 16px rgba(247,236,217,.14), 0 0 90px 34px rgba(247,236,217,.06);
+    z-index:0;
+  }
+  .strip .sky-item,.strip .yard-item,.strip .lane{ position:absolute; }
+  .strip .lane{ left:0; right:0; }
+  .strip .lane.yard{ top:0; bottom:0; }
+  .strip .yard-item,.strip .sky-item{ line-height:0; }
+  .strip .ghost{ opacity:.8; }
+  .strip .lane.kids{ bottom:82px; z-index:4; }
+  .strip .lane.car{ bottom:6px; z-index:3; }
+  /* strip-local drift is JS-driven (see script) so ghosts never leave the strip */
+
+  /* pause switch — freezes every animation inside the strip */
+  .strip.paused, .strip.paused *{ animation-play-state:paused !important; }
+
+  /* ---------- contact-sheet beds ---------- */
+  .bed{
+    position:relative; max-width:1100px; margin:0 auto 22px;
+    border-radius:20px; overflow:hidden;
+    background:linear-gradient(180deg, rgba(25,18,49,0) 0%, rgba(25,18,49,.42) 100%);
+    box-shadow:inset 0 0 0 1px var(--cream-soft);
+  }
+  .bed > h2{
+    position:relative; z-index:2; font-size:12px; font-weight:700; letter-spacing:.14em;
+    text-transform:uppercase; opacity:.7; padding:12px 18px 0;
+  }
+  .bed .bands{ position:absolute; left:0; right:0; bottom:0; height:46px; z-index:0; }
+  .bed .bands .grass{ position:absolute; left:0; right:0; bottom:16px; height:30px; background:var(--grass); }
+  .bed .bands .side{ position:absolute; left:0; right:0; bottom:0; height:16px; background:var(--sidewalk); }
+  .rowitems{
+    position:relative; z-index:1; display:flex; flex-wrap:wrap; align-items:flex-end;
+    gap:26px; padding:22px 20px 8px;
+  }
+  .item{ display:flex; flex-direction:column; align-items:center; gap:7px; padding-bottom:8px; }
+  .item .art{ display:flex; align-items:flex-end; line-height:0; }
+  .item .lbl{ font-size:11px; letter-spacing:.03em; opacity:.82; white-space:nowrap; }
+  svg.sprite{ display:block; }
+
+  .squintwrap{
+    max-width:1100px; margin:0 auto; border-radius:20px; padding:6px 14px 4px;
+    background:rgba(25,18,49,.35); box-shadow:inset 0 0 0 1px var(--cream-soft);
+  }
+  .squintwrap h2{ font-size:12px; font-weight:700; letter-spacing:.14em; text-transform:uppercase; opacity:.7; padding:12px 4px 0; }
+  table.squint{ max-width:1100px; margin:0 auto; border-collapse:collapse; width:100%; }
+  table.squint td{ vertical-align:bottom; text-align:center; padding:12px 6px 8px; }
+  table.squint .cap{ font-size:10.5px; opacity:.6; padding-top:4px; }
+  footer{ max-width:1100px; margin:22px auto 0; font-size:11.5px; opacity:.55; line-height:1.6; }
+</style>
+</head>
+<body>
+
+<header>
+  <div class="row">
+    <span class="badge">Contact sheet</span>
+    <h1>Dolcetto o Scherzetto — world sprite pack
+      <small>sprite + motion layer · palette per ART-STYLE.md §3</small>
+    </h1>
+  </div>
+  <p>
+    Sorgente unica: <code>sprites.js</code> — <code>window.SPRITES</code>, ogni voce restituisce una stringa
+    <code>&lt;svg&gt;</code> completa, <code>SPRITES.animCSS</code> è il foglio dei movimenti e
+    <code>SPRITES.injectAnimCSS()</code> lo infila una volta sola in <code>&lt;head&gt;</code>.
+    Il host aggiunge i wrapper <code>.walking</code> (ciclo di camminata) e <code>.rolling</code> (ruote che girano);
+    tutto il resto si muove da solo. Niente ombre a terra e niente testo: li aggiunge il gioco.
+  </p>
+</header>
+
+<div class="stripwrap">
+  <div class="stripbar">
+    <h2>Motion strip</h2>
+    <p>5 NPC kids che camminano · 2 fantasmi che fluttuano · lampione e lanterna che sfrigolano ·
+      pipistrelli e ragnatela · spaventapasseri che oscilla · passerCar in transito con ruote che girano.</p>
+    <button id="motionBtn" aria-pressed="true">Movimento: ON</button>
+  </div>
+  <div class="strip" id="strip">
+    <div class="band grass"></div>
+    <div class="band side"></div>
+    <div class="band road"></div>
+    <div class="moon"></div>
+    <div class="sky-item ghost g1" style="left:60px; bottom:196px"></div>
+    <div class="sky-item ghost g2" style="left:400px; bottom:206px"></div>
+    <div class="lane yard" id="stripYard"></div>
+    <div class="lane kids" id="stripKids"></div>
+    <div class="lane car" id="stripCar"></div>
+  </div>
+</div>
+
+<div class="bed">
+  <h2>NPC kids — 72 px, una posa calma</h2>
+  <div class="bands"><div class="grass"></div><div class="side"></div></div>
+  <div class="rowitems" id="rowNPC"></div>
+</div>
+
+<div class="bed">
+  <h2>Vehicles — parked (4 dusk-muted bodies) + glowing passer</h2>
+  <div class="bands"><div class="grass"></div><div class="side"></div></div>
+  <div class="rowitems" id="rowCars"></div>
+</div>
+
+<div class="bed">
+  <h2>Street &amp; yard — props</h2>
+  <div class="bands"><div class="grass"></div><div class="side"></div></div>
+  <div class="rowitems" id="rowProps"></div>
+</div>
+
+<div class="bed">
+  <h2>Ornaments — pure decor, never a hint</h2>
+  <div class="bands"><div class="grass"></div><div class="side"></div></div>
+  <div class="rowitems" id="rowOrn"></div>
+</div>
+
+<div class="squintwrap">
+  <h2>Squint test — kids scaled to 56 px (ART-STYLE §4.6)</h2>
+  <table class="squint"><tr id="rowSquint"></tr></table>
+</div>
+
+<footer>
+  Prototipo usa-e-getta. Se un elemento risulta tagliato, illeggibile o fermo, si corregge
+  <code>sprites.js</code> e si ricarica. Il pulsante <b>Movimento</b> mette in pausa tutti i movimenti della strip.
+</footer>
+
+<script src="sprites.js"></script>
+<script>
+(function () {
+  var S = window.SPRITES;
+  var reduced = window.matchMedia && window.matchMedia('(prefers-reduced-motion: reduce)').matches;
+
+  /* the whole motion layer lives in <head>, injected exactly once */
+  S.injectAnimCSS();
+
+  function html(key, args) { return S[key].apply(null, args || []); }
+
+  /* ============ 1. MOTION STRIP ====================================== */
+  var strip = document.getElementById('strip');
+  var W = 0;
+  function measure() { W = strip.clientWidth; }
+
+  /* yard + sky decor: they animate themselves via animCSS */
+  var YARD = [
+    ['cobweb',        '2.5%',  216, '0'],
+    ['lampPost',      '11%',   104, '1'],
+    ['candleLantern', '22.5%', 108, '1'],
+    ['mailbox',       '32%',   104, '1'],
+    ['gnome',         '42%',   104, '1'],
+    ['scarecrow',     '51%',   104, '1'],
+    ['pumpkinPair',   '69%',   104, '1'],
+    ['tombstone',     '81%',   104, '1'],
+    ['trashCan',      '92%',   104, '1'],
+    ['bats',          '58%',   236, '0'],
+    ['bats',          '18%',   258, '0']
+  ];
+  var yard = document.getElementById('stripYard');
+  YARD.forEach(function (d) {
+    var el = document.createElement('div');
+    el.className = 'yard-item';
+    el.style.left = d[1];
+    el.style.bottom = d[2] + 'px';
+    el.style.zIndex = d[3];
+    el.innerHTML = html(d[0]);
+    yard.appendChild(el);
+  });
+
+  /* two floating ghosts in the sky band — drift is JS so they stay inside the strip */
+  var ghosts = [
+    { el: strip.querySelector('.ghost.g1'), x: 40, dir: 1, speed: 26 },
+    { el: strip.querySelector('.ghost.g2'), x: 240, dir: 1, speed: 18 }
+  ];
+  ghosts.forEach(function (g) { g.el.innerHTML = html('npcGhost'); });
+  function placeGhosts() {
+    ghosts.forEach(function (g) {
+      g.el.style.transform = 'translateX(' + Math.round(g.x) + 'px)';
+    });
+  }
+
+  /* kids walk in both directions; same-direction kids share a speed so they never overlap */
+  var KID = [
+    { key: 'npcGhost',     x: 10,  dir: 1,  speed: 42 },
+    { key: 'npcPumpkin',   x: 300, dir: 1,  speed: 42 },
+    { key: 'npcSkeleton',  x: 620, dir: 1,  speed: 42 },
+    { key: 'npcWitchling', x: 980, dir: -1, speed: 34 },
+    { key: 'npcBat',       x: 440, dir: -1, speed: 34 }
+  ];
+  var kidsLane = document.getElementById('stripKids');
+  var kids = KID.map(function (k) {
+    var walker = document.createElement('div');
+    walker.style.position = 'absolute';
+    walker.style.left = '0px';
+    walker.style.bottom = '0px';
+    walker.style.lineHeight = '0';
+    var flip = document.createElement('div');
+    flip.className = 'flip';
+    flip.style.transformOrigin = 'center bottom';
+    var walking = document.createElement('div');
+    walking.className = 'walking';        /* <- the host-side hook */
+    walking.innerHTML = html(k.key);
+    flip.appendChild(walking);
+    walker.appendChild(flip);
+    kidsLane.appendChild(walker);
+    return { k: k, walker: walker, flip: flip, x: k.x, dir: k.dir };
+  });
+  function placeKids() {
+    kids.forEach(function (w) {
+      w.walker.style.transform = 'translateX(' + Math.round(w.x) + 'px)';
+      var s = w.dir > 0 ? 'scaleX(1)' : 'scaleX(-1)';
+      if (w.flip.dataset.s !== s) { w.flip.style.transform = s; w.flip.dataset.s = s; }
+    });
+  }
+
+  /* a passer car on the road, wheels rolling */
+  var carLane = document.getElementById('stripCar');
+  var rolling = document.createElement('div');
+  rolling.className = 'rolling';          /* <- the host-side hook */
+  rolling.style.lineHeight = '0';
+  rolling.innerHTML = html('passerCar');
+  carLane.appendChild(rolling);
+  var carX = 700;
+  function placeCar() { rolling.style.transform = 'translateX(' + Math.round(carX) + 'px)'; }
+
+  /* rAF loop: transform only, wraps around */
+  var paused = reduced;
+  var last = 0;
+  function frame(t) {
+    var dt = last ? Math.min(0.05, (t - last) / 1000) : 0;
+    last = t;
+    if (!paused) {
+      kids.forEach(function (w) {
+        w.x += w.dir * w.k.speed * dt;
+        if (w.dir > 0 && w.x > W + 90) { w.x = -90; }
+        if (w.dir < 0 && w.x < -90) { w.x = W + 90; }
+      });
+      ghosts.forEach(function (g) {
+        g.x += g.dir * g.speed * dt;
+        if (g.dir > 0 && g.x > W - 78) { g.dir = -1; }
+        if (g.dir < 0 && g.x < 8) { g.dir = 1; }
+      });
+      carX -= 118 * dt;
+      if (carX < -130) carX = W + 60;
+      placeKids();
+      placeGhosts();
+      placeCar();
+    }
+    requestAnimationFrame(frame);
+  }
+  function layout() { measure(); placeKids(); placeGhosts(); placeCar(); }
+  window.addEventListener('resize', layout);
+  layout();
+  requestAnimationFrame(frame);
+
+  var btn = document.getElementById('motionBtn');
+  function paintBtn() {
+    btn.textContent = 'Movimento: ' + (paused ? 'OFF' : 'ON');
+    btn.classList.toggle('off', paused);
+    btn.setAttribute('aria-pressed', String(!paused));
+    strip.classList.toggle('paused', paused);
+  }
+  btn.addEventListener('click', function () { paused = !paused; paintBtn(); });
+  paintBtn();
+
+  /* ============ 2. STATIC CONTACT SHEETS ============================= */
+  var GROUPS = [
+    ['rowNPC', [['npcGhost'], ['npcPumpkin'], ['npcWitchling'], ['npcSkeleton'], ['npcBat']]],
+    ['rowCars', [['car', 0], ['car', 1], ['car', 2], ['car', 3], ['passerCar']]],
+    ['rowProps', [['trashCan'], ['lampPost'], ['mailbox'], ['gnome']]],
+    ['rowOrn', [['cobweb'], ['bats'], ['tombstone'], ['scarecrow'], ['candleLantern'], ['pumpkinPair']]]
+  ];
+  function labelOf(e) { return e.length > 1 ? e[0] + '(' + e[1] + ')' : e[0] + '()'; }
+
+  GROUPS.forEach(function (g) {
+    var host = document.getElementById(g[0]);
+    g[1].forEach(function (e) {
+      var item = document.createElement('div');
+      item.className = 'item';
+      var art = document.createElement('div');
+      art.className = 'art';
+      art.innerHTML = html(e[0], e.slice(1));
+      var lbl = document.createElement('span');
+      lbl.className = 'lbl';
+      lbl.textContent = labelOf(e);
+      item.appendChild(art);
+      item.appendChild(lbl);
+      host.appendChild(item);
+    });
+  });
+
+  var squint = document.getElementById('rowSquint');
+  [['npcGhost'], ['npcPumpkin'], ['npcWitchling'], ['npcSkeleton'], ['npcBat']].forEach(function (e) {
+    var td = document.createElement('td');
+    var art = html(e[0]);
+    var h = parseInt(/height="(\d+)"/.exec(art)[1], 10);
+    td.innerHTML = '<div style="transform:scale(' + (56 / h).toFixed(4) + ');transform-origin:bottom center">' +
+      art + '</div><div class="cap">' + e[0] + ' → 56px</div>';
+    squint.appendChild(td);
+  });
+
+  /* sanity check — the page must stay silent */
+  var fns = Object.keys(S).filter(function (k) { return typeof S[k] === 'function'; });
+  if (fns.length < 17) { console.warn('SPRITES: expected at least 17 callable entries, found', fns.length); }
+  if (!document.querySelector('svg.sprite')) { console.error('SPRITES: nothing rendered'); }
+  if (getComputedStyle(document.querySelector('.strip .walking .s-body') || document.body).animationName === 'none') {
+    console.warn('SPRITES: animCSS does not seem to be applied');
+  }
+})();
+</script>
+</body>
+</html>
