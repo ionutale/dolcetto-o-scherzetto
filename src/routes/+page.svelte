@@ -94,6 +94,8 @@
 	import Bubbles from '$lib/play/Bubbles.svelte';
 	import Celebration from '$lib/play/Celebration.svelte';
 	import Scares from '$lib/play/Scares.svelte';
+	import ThemeLayer from '$lib/art/scene/ThemeLayer.svelte';
+	import { duckAmbience, startAmbience } from '$lib/audio/ambience.svelte';
 	import Hud from '$lib/ui/Hud.svelte';
 	import TitleScreen from '$lib/ui/TitleScreen.svelte';
 	import { showBubble } from '$lib/play/bubble.svelte';
@@ -273,6 +275,7 @@
 	 */
 	function onScare(active: boolean): void {
 		scareActive = active;
+		duckAmbience(active); // T23: the bed dips ~6 dB for the beat
 		if (active) dispatch({ type: 'STOP' });
 	}
 
@@ -319,8 +322,8 @@
 	function unlockAudio(): void {
 		if (audioUnlocked) return;
 		audioUnlocked = true;
-		// T23/T25/T27: create/resume the AudioContext and start music/ambience/
-		// SFX here. Deliberately nothing today — no real audio wiring (T17 scope).
+		startAmbience(); // T23: create/resume the AudioContext + give the bed a graph
+		// T25/T27: music + SFX join here when their modules land.
 	}
 
 	/**
@@ -377,6 +380,7 @@
 		<Sky />
 		<ParallaxLayers worldX={worldX()} />
 		<Ghosts worldX={worldX()} bind:this={ghosts} />
+		<ThemeLayer worldX={worldX()} />
 		<Street worldX={worldX()} homes={NO_HOMES} activeK={activeK()} {openK} />
 		<Cars worldX={worldX()} />
 		<Npcs />
