@@ -32,9 +32,9 @@
 	 *      (not nested inside it), so `z-15` resolves against the stage's own
 	 *      stacking context and covers the bubbles (`z-14`) exactly as the
 	 *      prototype's `#shop` did.
-	 *   3. The prototype played `snd('buy')` on a purchase; like every other
-	 *      T11–T15 component, sound is left to T23/T27, so the buy is silent
-	 *      for now.
+	 *   3. The prototype played `snd('buy')` on a purchase; here it is injected
+	 *      through the T27 `sound` hook (a no-op by default), threaded from
+	 *      `Hud.svelte`.
 	 *   4. Two off-palette prototype hexes (`#fff2cf` chip, `#efe6d8`/`#a8988a`
 	 *      poor wash, `#e9e0d0`/`#a898af` disabled) have no §3 swatch, so they
 	 *      are mixed from `--amber`/`--ink`/`--paper`/`--cream`, per T02's
@@ -51,6 +51,15 @@
 	import { NEIGHBORS } from '$lib/art/sprites/neighbors';
 	import { trickIcons } from '$lib/art/sprites/trick-icons';
 	import { bottegaRows, shopCopy } from './bottega-model';
+
+	interface Props {
+		/**
+		 * Cue hook for a purchase (T27's `playCue`) — a no-op by default, so the
+		 * shop never crashes without the SFX layer. Threaded from `Hud.svelte`.
+		 */
+		sound?: (cue: string) => void;
+	}
+	let { sound = () => {} }: Props = $props();
 
 	/** The live language — read like `Scherzo`'s card label (T17 wires the toggle). */
 	function lang(): Lang {
@@ -69,6 +78,7 @@
 
 	function buy(id: TrickId): void {
 		dispatch({ type: 'BUY', id });
+		sound('buy');
 	}
 
 	/** The scrim/close button's accessible name, both languages. */

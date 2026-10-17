@@ -23,6 +23,15 @@
 	import { bag, dispatch } from '$lib/state/game.svelte';
 	import Bottega from './Bottega.svelte';
 
+	interface Props {
+		/**
+		 * Cue hook (T27's `playCue`), threaded to the Bottega's `buy`. A no-op by
+		 * default, so the HUD never crashes without the SFX layer.
+		 */
+		sound?: (cue: string) => void;
+	}
+	let { sound = () => {} }: Props = $props();
+
 	/** `bagpulse` duration (prototype `#bagChip.pulse`). */
 	const BAG_PULSE_MS = 350;
 
@@ -70,7 +79,7 @@
 <!-- The shop panel is a **sibling** of `.hud`, not a child: its `z-15` then
      resolves against the stage's stacking context and covers the bubbles
      (`z-14`), exactly as the prototype's `#shop` did. -->
-<Bottega />
+<Bottega {sound} />
 
 <style>
 	/* Full-stage, click-through: only the pills take pointers. */

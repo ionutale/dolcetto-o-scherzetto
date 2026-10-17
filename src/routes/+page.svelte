@@ -48,9 +48,9 @@
 	 * Impostazioni swap; the page only answers Gioca. The first-gesture audio
 	 * unlock is the prototype's once-`pointerdown` listener
 	 * (`scene-prototype.html` ~874): any first interaction — the Gioca tap
-	 * included — flips the latch, and T23/T25/T27 will create/resume the
-	 * `AudioContext` there (no audio module exists yet, so the pattern is in
-	 * place and silent). The landscape lock is the prototype's
+	 * included — flips the latch, and T23/T25 create/resume their
+	 * `AudioContext`s there (the SFX engine joins in T27). The landscape lock
+	 * is the prototype's
 	 * `tryLandscapeLock()` (~1790): a guarded `screen.orientation.lock` that
 	 * iOS refuses and the rotate prompt covers (spec §13).
 	 *
@@ -96,6 +96,9 @@
 	import Scares from '$lib/play/Scares.svelte';
 	import ThemeLayer from '$lib/art/scene/ThemeLayer.svelte';
 	import { duckAmbience, startAmbience } from '$lib/audio/ambience.svelte';
+	import { duckMusic, startMusic, stopMusic } from '$lib/audio/music.svelte';
+	import { initSfx, playCue, setSfxVolume } from '$lib/audio/sfx';
+	import { volumes } from '$lib/audio/volumes.svelte';
 	import Hud from '$lib/ui/Hud.svelte';
 	import TitleScreen from '$lib/ui/TitleScreen.svelte';
 	import { showBubble } from '$lib/play/bubble.svelte';
@@ -164,7 +167,7 @@
 	$effect(() => {
 		const p = phase();
 		// One chain per knock: the reducer only ever opens a door from `roam`.
-		if (prevPhase === 'roam' && p === 'door') scheduleKnock(flow, showBubble, setTimeout);
+		if (prevPhase === 'roam' && p === 'door') scheduleKnock(flow, showBubble, setTimeout, playCue);
 		// One show per trick: the reducer only ever starts one from `refuse`.
 		if (prevPhase === 'refuse' && p === 'trick') startShow();
 		prevPhase = p;
@@ -252,16 +255,16 @@
 		trick = show;
 
 		theatre?.start(id, doorScreenX(flow, k), SHOW_DOOR_Y, {
-			sound: noopSound, // the cue names still arrive; T23/T27 play them
+			sound: playCue, // T27: theatre-setup + the eight fire:<id> + theatre-laugh
 			onClimax: () => show.onClimax(),
 			onDone: () => {}
 		});
 	}
 
-	/** The sound hook every show takes until the audio tasks land (T23/T27). */
-	const noopSound = (): void => {
-		/* intentionally silent — never throw, whatever the cue name */
-	};
+	/** T27 — the SFX slider scales the synth pack's master gain live. */
+	$effect(() => {
+		setSfxVolume(volumes().sfx);
+	});
 
 	/* ------------------------------------------------------------------ */
 	/* T24 — the scary moments: the page's side of the `onScare` contract   */
@@ -271,11 +274,12 @@
 	 * The page's half of `<Scares/>`'s `onScare(active)` hook. On `true` it
 	 * stops the duo (the prototype's `scareNow` dispatched `STOP` before the
 	 * cameo) and drops the walk lock; on `false` — exactly `SCARE_BEAT_MS` later
-	 * — it hands walking back. T23 will also wire its `duckAmbience` here.
+	 * — it hands walking back. T23 ducks the bed here, T25 ducks the loop.
 	 */
 	function onScare(active: boolean): void {
 		scareActive = active;
 		duckAmbience(active); // T23: the bed dips ~6 dB for the beat
+		duckMusic(active); // T25: the loop dips to its owner ducked mix
 		if (active) dispatch({ type: 'STOP' });
 	}
 
@@ -323,7 +327,8 @@
 		if (audioUnlocked) return;
 		audioUnlocked = true;
 		startAmbience(); // T23: create/resume the AudioContext + give the bed a graph
-		// T25/T27: music + SFX join here when their modules land.
+		startMusic(); // T25: decode + loop the owner's street track (own AudioContext)
+		initSfx(); // T27: resume the SFX context + build the master gate
 	}
 
 	/**
@@ -366,6 +371,7 @@
 		return () => {
 			window.removeEventListener('pointerdown', onFirstGesture);
 			stop();
+			stopMusic();
 		};
 	});
 
@@ -382,20 +388,20 @@
 		<Ghosts worldX={worldX()} bind:this={ghosts} />
 		<ThemeLayer worldX={worldX()} />
 		<Street worldX={worldX()} homes={NO_HOMES} activeK={activeK()} {openK} />
-		<Cars worldX={worldX()} />
-		<Npcs />
+		<Cars worldX={worldX()} sound={playCue} />
+		<Npcs sound={playCue} />
 		<Kids dir={dir()} />
-		<Scares {onScare} />
-		<CandyLayer />
+		<Scares {onScare} sound={playCue} />
+		<CandyLayer sound={playCue} />
 		{#if !scareActive}
 			<WalkControls />
 		{/if}
-		<KnockButton />
-		<Scherzo />
+		<KnockButton sound={playCue} />
+		<Scherzo sound={playCue} />
 		<Theatre bind:this={theatre} />
 		<Bubbles />
 		<Celebration {beat} onStinger={noopStinger} />
-		<Hud />
+		<Hud sound={playCue} />
 	</Stage>
 </div>
 

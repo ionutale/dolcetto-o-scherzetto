@@ -18,8 +18,8 @@
 	 *     hanging off the top-right corner;
 	 *   - the clicks: `SCHERZO_OPEN` from the button, `PLAY_TRICK` from a
 	 *     card, `SCHERZO_CLOSE` from the `✕` — the prototype's three
-	 *     dispatches (~1598, ~1388, ~1389). Its `snd('pop')` cue is left for
-	 *     T23/T27, as every other T11–T13 component leaves sound alone.
+	 *     dispatches (~1598, ~1388, ~1389). Its `snd('pop')` cue is injected
+	 *     through the T27 `sound` hook (a no-op by default).
 	 *
 	 * **What is read, and from where.** Only the three store seams this task
 	 * was given — `phase()`, `fanOpen()`, `tricks()` — through the pure
@@ -63,6 +63,15 @@
 	import { trickIcons } from '$lib/art/sprites/trick-icons';
 	import { fanList, showFan, showScherzoButton, tierDots } from './fan-model';
 
+	interface Props {
+		/**
+		 * Cue hook for the fan's opening (T27's `playCue`) — a no-op by default,
+		 * so the widget never crashes without the SFX layer. Mirrors `<Npcs>`'s.
+		 */
+		sound?: (cue: string) => void;
+	}
+	let { sound = () => {} }: Props = $props();
+
 	/** The invitation: at a refusing door, and only while the fan is shut. */
 	const showButton = $derived(showScherzoButton(phase(), fanOpen()));
 
@@ -80,6 +89,7 @@
 
 	function open(): void {
 		dispatch({ type: 'SCHERZO_OPEN' });
+		sound('pop');
 	}
 
 	function close(): void {

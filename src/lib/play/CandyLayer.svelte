@@ -50,6 +50,17 @@
 		hasLanded
 	} from './candy-motion';
 
+	interface Props {
+		/**
+		 * Cue hook for the layer's two cues (T27's `playCue`): `twinkle` when a
+		 * candy settles and `coin` when one is collected (the prototype's
+		 * `renderCandies`/`tapCandy` calls). A no-op by default, so the layer
+		 * never crashes without the SFX layer. Mirrors `<Npcs>`'s hook.
+		 */
+		sound?: (cue: string) => void;
+	}
+	let { sound = () => {} }: Props = $props();
+
 	/** A landing spark, in stage-logical px. */
 	interface Sparkle {
 		id: number;
@@ -136,6 +147,9 @@
 
 			const born: Sparkle[] = [];
 			for (const c of fresh) {
+				// The prototype's per-landing `snd('twinkle')`: one soft sparkle
+				// cue as each candy flips to `landed`.
+				sound('twinkle');
 				for (let i = 0; i < TWINKLE_COUNT; i++) {
 					born.push({
 						id: ++sparkleSeq,
@@ -201,6 +215,7 @@
 		launchGhost(c, el);
 		dispatch({ type: 'COLLECT', id: c.id });
 		pushFloater(c.tx + FLOATER_DX, c.ty + FLOATER_DY, '+' + c.value);
+		sound('coin');
 	}
 
 	/**

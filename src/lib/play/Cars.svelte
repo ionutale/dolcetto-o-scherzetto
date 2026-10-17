@@ -59,9 +59,19 @@
 		/** Delay before the first passer (defaults to the prototype's 45 s);
 		 * injectable so a mounted smoke can watch a crossing without waiting. */
 		firstDelayMs?: number;
+		/**
+		 * Cue hook for the passer (T27's `playCue`) — a no-op by default, so the
+		 * layer never crashes without the SFX layer. Mirrors `<Npcs>`'s hook.
+		 */
+		sound?: (cue: string) => void;
 	}
 
-	let { worldX, rng = Math.random, firstDelayMs = PASSER_FIRST_MS }: Props = $props();
+	let {
+		worldX,
+		rng = Math.random,
+		firstDelayMs = PASSER_FIRST_MS,
+		sound = () => {}
+	}: Props = $props();
 
 	/** Live parked cars — the prototype's `renderCars()` window. */
 	const slots = $derived(carSlots(worldX));
@@ -102,6 +112,7 @@
 	function fire(): void {
 		gapTimer = null;
 		passing = true;
+		sound('passer');
 		startedAt = now();
 		px = PASSER_FROM_X;
 		rafHandle = requestAnimationFrame(step);

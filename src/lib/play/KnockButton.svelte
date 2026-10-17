@@ -31,6 +31,15 @@
 	import { lang } from '../state/game.svelte';
 	import { t } from '../i18n/lines';
 
+	interface Props {
+		/**
+		 * Cue hook for the knock (T27's `playCue`) — a no-op by default, so the
+		 * pill never crashes without the SFX layer. Mirrors `<Npcs>`'s hook.
+		 */
+		sound?: (cue: string) => void;
+	}
+	let { sound = () => {} }: Props = $props();
+
 	/** Prototype constant: one home every 620 logical px. */
 	const SPACING = 620;
 	/** The glyph the prototype spliced into its label to animate it by hand. */
@@ -45,15 +54,15 @@
 	function labelHead(): string {
 		return t(lang(), 'knock').split(HAND)[0];
 	}
+
+	/** The prototype's `KNOCK` beat: answer the reducer, then the wooden cue. */
+	function knock(): void {
+		dispatch({ type: 'KNOCK' });
+		sound('knock');
+	}
 </script>
 
-<button
-	type="button"
-	class="knockbtn"
-	class:show
-	style="left: {left}px"
-	onclick={() => dispatch({ type: 'KNOCK' })}
->
+<button type="button" class="knockbtn" class:show style="left: {left}px" onclick={knock}>
 	{labelHead()}<span class="knock-hand">{HAND}</span>
 </button>
 

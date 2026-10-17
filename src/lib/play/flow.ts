@@ -5,8 +5,8 @@
  * Faithful port of the two `afterAction()` blocks the prototype runs around a
  * knock (`prototypes/scene-prototype.html`, ~1428-1455): the shout over the
  * kids' heads, the neighbour's greeting in the doorway, `RESOLVE` at exactly
- * 2 s, and the outcome line 150 ms later — with the sound cues left out (they
- * belong to T23/T27) and the timings lifted verbatim:
+ * 2 s, and the outcome line 150 ms later — with the outcome's sound cue
+ * injected through the T27 `sound` seam and the timings lifted verbatim:
  *
  * ```
  *  +  420  shout  (250, 262)  small, 900 ms   "Dolcetto o scherzetto!"
@@ -89,6 +89,29 @@ export type SetTimeoutLike = (fn: () => void, ms: number) => unknown;
 /** The bubble sink — `bubble.svelte.ts`'s `showBubble`, or a test recorder. */
 export type ShowBubble = (text: string, x: number, y: number, small?: boolean, ms?: number) => void;
 
+/**
+ * The SFX sink — T27's `sfx.ts` `playCue`, or a test recorder. Optional
+ * everywhere: a chain with no audio is a no-op, exactly like the bubble-less
+ * tests.
+ */
+export type PlayCue = (cue: string) => void;
+
+/** The default SFX sink — deliberately silent, so a chain never needs audio. */
+const NO_CUE: PlayCue = () => {};
+
+/**
+ * The cue each resolved outcome plays with its line — the prototype's
+ * `snd(…)` calls in the `RESOLVE` block (`scene-prototype.html` ~1459-1462):
+ * a treat and a re-gift both shimmer with `theatre-setup`, a refusal shrugs
+ * with `refuse`, and a seen visit wiggles with `seen`.
+ */
+const OUTCOME_CUE: Record<KnockOutcome, string> = {
+	treat: 'theatre-setup',
+	refuse: 'refuse',
+	regift: 'theatre-setup',
+	seen: 'seen'
+};
+
 /** What the chain needs from the sim. The real store is wrapped by `createFlowStore`. */
 export interface FlowStore {
 	dispatch(action: Action): void;
@@ -145,9 +168,15 @@ export function doorScreenX(store: FlowStore, k: number): number {
  *
  * `k` and the greeting's x are read at knock time, the outcome's x at resolve
  * time — the same moments the prototype read them (`state` was global there,
- * so its closures captured exactly these).
+ * so its closures captured exactly these). `sound` is T27's cue sink; when it
+ * is omitted the chain is silent (the shape the unit tests use).
  */
-export function scheduleKnock(store: FlowStore, showBubble: ShowBubble, t: SetTimeoutLike): void {
+export function scheduleKnock(
+	store: FlowStore,
+	showBubble: ShowBubble,
+	t: SetTimeoutLike,
+	sound: PlayCue = NO_CUE
+): void {
 	const k = store.activeK();
 	const greetX = doorScreenX(store, k);
 
@@ -155,7 +184,7 @@ export function scheduleKnock(store: FlowStore, showBubble: ShowBubble, t: SetTi
 	t(() => showBubble(line(store.lang(), 'greet', archOf(k)), greetX, DOOR_Y), GREET_AT);
 	t(() => {
 		store.dispatch({ type: 'RESOLVE' });
-		scheduleResolve(store, showBubble, t);
+		scheduleResolve(store, showBubble, t, sound);
 	}, RESOLVE_AT);
 }
 
@@ -163,9 +192,14 @@ export function scheduleKnock(store: FlowStore, showBubble: ShowBubble, t: SetTi
  * The outcome half of the chain — the prototype's `if (a.type === 'RESOLVE')`
  * block. Called right after `RESOLVE` is dispatched, so the outcome it reads
  * is the reducer's answer; a `null` means nothing resolved (a stray chain, a
- * knock frozen by something else) and no line is scheduled.
+ * knock frozen by something else) and neither the line nor its cue is played.
  */
-export function scheduleResolve(store: FlowStore, showBubble: ShowBubble, t: SetTimeoutLike): void {
+export function scheduleResolve(
+	store: FlowStore,
+	showBubble: ShowBubble,
+	t: SetTimeoutLike,
+	sound: PlayCue = NO_CUE
+): void {
 	const outcome = store.resolvedOutcome();
 	if (!outcome) return;
 
@@ -177,7 +211,11 @@ export function scheduleResolve(store: FlowStore, showBubble: ShowBubble, t: Set
 	// Scheduled at dispatch time (+2000), not with the bubble: the prototype's
 	// CLOSE_DOOR lands 2000 ms after RESOLVE either way.
 	if (outcome === 'seen') t(() => store.dispatch({ type: 'CLOSE_DOOR' }), CLOSE_DOOR_AT);
-	t(() => showBubble(line(lang, outcome, arch), x, DOOR_Y, false, OUTCOME_MS[outcome]), OUTCOME_AT);
+	t(() => {
+		// The prototype says the line, then plays its cue (both in the same beat).
+		showBubble(line(lang, outcome, arch), x, DOOR_Y, false, OUTCOME_MS[outcome]);
+		sound(OUTCOME_CUE[outcome]);
+	}, OUTCOME_AT);
 }
 
 /* ------------------------------------------------------------------ */

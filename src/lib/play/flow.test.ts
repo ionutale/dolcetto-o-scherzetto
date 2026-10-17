@@ -21,7 +21,7 @@ import {
 	scheduleResolve,
 	scheduleTrickResolve
 } from './flow';
-import type { FlowStore, SetTimeoutLike, ShowBubble } from './flow';
+import type { FlowStore, PlayCue, SetTimeoutLike, ShowBubble } from './flow';
 
 /**
  * Pinning suite for the T11 knock chain and the T15 trick resolve beat
@@ -282,6 +282,77 @@ describe('scheduleKnock — the chain the prototype runs on a knock', () => {
 
 		expect(calls).toHaveLength(0);
 		expect(clock.pending()).toBe(0);
+	});
+});
+
+describe('the outcome sound cue (T27)', () => {
+	/** A recorder standing in for `sfx.ts`'s `playCue`. */
+	function cueRecorder(): { cues: string[]; sound: PlayCue } {
+		const cues: string[] = [];
+		return { cues, sound: (cue) => cues.push(cue) };
+	}
+
+	it('shimmers `theatre-setup` on a treat and on a re-gift', () => {
+		// Treat.
+		const clock1 = new FakeClock();
+		const a = cueRecorder();
+		knockOn(0, { force: { 0: 'treat' } });
+		scheduleKnock(createFlowStore(), () => {}, clock1.set, a.sound);
+		clock1.advance(RESOLVE_AT + OUTCOME_AT);
+		expect(a.cues).toEqual(['theatre-setup']);
+
+		// Re-gift (a repeat visit).
+		const clock2 = new FakeClock();
+		const b = cueRecorder();
+		knockOn(0, {
+			homes: { 0: { done: true, used: false, kind: 'treat' } },
+			force: { 0: 'regift' }
+		});
+		scheduleKnock(createFlowStore(), () => {}, clock2.set, b.sound);
+		clock2.advance(RESOLVE_AT + OUTCOME_AT);
+		expect(b.cues).toEqual(['theatre-setup']);
+	});
+
+	it('shrugs `refuse` on a refusal and wiggles `seen` on a seen visit', () => {
+		const clock1 = new FakeClock();
+		const a = cueRecorder();
+		knockOn(1, { force: { 1: 'refuse' } });
+		scheduleKnock(createFlowStore(), () => {}, clock1.set, a.sound);
+		clock1.advance(RESOLVE_AT + OUTCOME_AT);
+		expect(a.cues).toEqual(['refuse']);
+
+		const clock2 = new FakeClock();
+		const b = cueRecorder();
+		knockOn(2, { homes: { 2: { done: true, used: true, kind: 'treat' } }, force: { 2: 'seen' } });
+		scheduleKnock(createFlowStore(), () => {}, clock2.set, b.sound);
+		clock2.advance(RESOLVE_AT + OUTCOME_AT);
+		expect(b.cues).toEqual(['seen']);
+	});
+
+	it('plays exactly one cue per resolve, and none when nothing resolved', () => {
+		const clock = new FakeClock();
+		const a = cueRecorder();
+		knockOn(3, { force: { 3: 'treat' } });
+		scheduleKnock(createFlowStore(), () => {}, clock.set, a.sound);
+		clock.advance(RESOLVE_AT + OUTCOME_AT + 500);
+		expect(a.cues).toHaveLength(1);
+
+		const c = cueRecorder();
+		dispatch({ type: 'RESET' }); // back to roam: nothing resolved here
+		scheduleResolve(createFlowStore(), () => {}, clock.set, c.sound);
+		clock.advance(OUTCOME_AT);
+		expect(c.cues).toHaveLength(0);
+	});
+
+	it('is silent when no cue sink is injected (the shape the other tests use)', () => {
+		const clock = new FakeClock();
+		const { calls, show } = recorder();
+		knockOn(4, { force: { 4: 'refuse' } });
+		expect(() => {
+			scheduleKnock(createFlowStore(), show, clock.set);
+			clock.advance(RESOLVE_AT + OUTCOME_AT);
+		}).not.toThrow();
+		expect(calls[2].text).toBe(L.it.refuse[archOf(4)]);
 	});
 });
 
