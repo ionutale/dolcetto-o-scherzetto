@@ -116,6 +116,31 @@ Rare (~60–120 s min gap), **only while freely walking**, never during door flo
 - **flux2 workflow** (mirrors Wurstel's proven mechanism): **reference images, never seeds** — pin style with a style-reference sheet, pin each subject with a character/asset sheet, 4–5 reference slots max per call, iterate by multi-turn editing, never claim hand-drawn. Generated at 1K–2K, shipped as WebP (hero ~1200 px wide, panels ~800, facades ~640×480+).
 - **Prompt skeleton:** `storybook plush night illustration, deep indigo Halloween palette, rounded shapes, soft shadows, no outlines, warm amber lamps, gentle gradients, cozy not creepy` + subject + "no text".
 
+### 11.1 The T29 run — results & verdicts (2026-10-17)
+
+Generated with `tools/gen-art.py` through `flux2-klein-mlx-studio` (4-step distilled
+design point, 1K–2K, keyed/shipped as WebP per §11 — with one adaptation recorded:
+**the studio's v1 is text-to-image only**, so the reference-image workflow (style
+sheets, multi-turn editing) was not available; prompts alone were used).
+
+- **Title hero (shipped):** `static/art/hero.v1.webp` (1152 px wide, 79 KB) — the two
+  brothers hand-in-hand down the lamp-lit street. Two candidates rendered; hero-2
+  accepted. The hero/OG register is *illustrated storybook* — soft ink outlines present.
+- **OG card (shipped):** `static/art/og.v1.webp` (1200×630 crop, 81 KB) — wired in
+  `src/app.html` (`og:image` absolute URL; verified live at T34).
+- **Bottega panel (shipped):** `static/art/bottega-strip.v1.webp` (640×325 strip of the
+  witch-at-her-stall render, 24 KB) for the shop card header.
+- **Facade spike — verdict:** cutouts are technically viable (chroma `#6b5785` keyed at
+  RGB distance < 34: maisonette 65% / tower 84% transparent, zero-alpha corners;
+  samples in `static/art/spike/`). Both read on-model (green-trim gable ≈ the
+  maisonette; conical tower ≈ the round-tower home). **NOT adopted in v1**: the §13
+  checklist's "no outlines" fails on the current text-only workflow, and raster facades
+  multiply assets against the parameterized SVG set. Revisit when the studio's
+  reference/editing phase lands — then re-judge against §13 at 56 px.
+- **Recorded deviation:** stills currently carry soft outlines; the in-world rule (SVG,
+  no hard outlines) is unchanged. If the stills should match the flat-shape style
+  exactly, re-render with the studio's future reference workflow.
+
 ## 12. Iconography
 
 - Jack-o'-lantern bucket = **bag/wallet**.
