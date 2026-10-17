@@ -6,7 +6,9 @@
  *  scene-prototype.html`, lines ~689-714): the same Italian and English
  *  strings, in the same shape — two flat lines (the kids' shout and the knock
  *  label) plus six archetype tables (greet / treat / refuse / regift / seen /
- *  scherzo), one row per neighbour archetype (`ghost`, `nonna`, `strega`).
+ *  scherzo), one row per neighbour archetype (T11/T15's `ghost`, `nonna`,
+ *  `strega`; T24b adds `wolf`, `vlad`, `scarecrow` — same tone, same length
+ *  band, IT + EN).
  *
  *  USAGE
  *    t('it', 'shout');                 // 'Dolcetto o scherzetto!'
@@ -53,33 +55,51 @@ export const L: Record<Lang, Lines> = {
 		greet: {
 			ghost: 'Buuu! Chi va là?... Ah, siete voi!',
 			nonna: 'Oh, che bei bimbi!',
-			strega: 'Ehehe, chi c’è alla porta?'
+			strega: 'Ehehe, chi c’è alla porta?',
+			wolf: 'Arf! Amici pelosi in visita!',
+			vlad: 'Buonasera, piccoli ospiti!',
+			scarecrow: 'Oh! Qualcuno mi ha parlato!'
 		},
 		treat: {
 			ghost: 'Dolcetti per voi... buuu!',
 			nonna: 'Che carini! Ecco i dolcetti!',
-			strega: 'Prendete, piccoli maghi!'
+			strega: 'Prendete, piccoli maghi!',
+			wolf: 'Tieni, tieni! Arf arf!',
+			vlad: 'Con piacere, prendete i dolcetti.',
+			scarecrow: 'Dolcetti freschi di paglia!'
 		},
 		refuse: {
 			ghost: 'Ooooh... ho finito i dolcetti!',
 			nonna: 'Stasera niente caramelle, mi dispiace!',
-			strega: 'Il mio calderone è vuoto stasera!'
+			strega: 'Il mio calderone è vuoto stasera!',
+			wolf: 'Ho già dato tutto, arf... peccato!',
+			vlad: 'Mille scuse: la dispensa è vuota.',
+			scarecrow: 'Ops! Ho la zucca di paglia, stasera!'
 		},
 		regift: {
 			ghost: 'Aspetta... una è rimasta!',
 			nonna: 'Tieni, ancora una!',
-			strega: 'Una scappata dal calderone!'
+			strega: 'Una scappata dal calderone!',
+			wolf: 'Aspetta! Una era nel pelo!',
+			vlad: 'Un ultimo dolcetto, con garbo.',
+			scarecrow: 'Una era qui tra la paglia!'
 		},
 		seen: {
 			ghost: 'Buuu... ci siamo già visti!',
 			nonna: 'Ci siamo già visti, aha!',
-			strega: 'Già passati di qui, ehehe!'
+			strega: 'Già passati di qui, ehehe!',
+			wolf: 'Arf! Ci eravamo già annusati!',
+			vlad: 'Ci siamo già presentati, rammento.',
+			scarecrow: 'Già visti, già visti! Che testa!'
 		},
 		// T15 — the trick payoff line, prototype `L.it.scherzo` (~695), verbatim.
 		scherzo: {
 			ghost: 'Ehehe! Mi avete fatto ridere! Tieni!',
 			nonna: 'Ah! Che burloni! Prendete!',
-			strega: 'Ehehe! Bei maghetti! Tutto per voi!'
+			strega: 'Ehehe! Bei maghetti! Tutto per voi!',
+			wolf: 'Arf arf! Che ridere! Tutto per voi!',
+			vlad: 'Ah! Spiritosi. Ve li siete meritati!',
+			scarecrow: 'Eh eh! Mi avete scompigliato la paglia!'
 		}
 	},
 	en: {
@@ -88,33 +108,51 @@ export const L: Record<Lang, Lines> = {
 		greet: {
 			ghost: 'Boo! Who goes there?.. Oh, it’s you!',
 			nonna: 'Oh, what sweet boys!',
-			strega: 'Ehehe, who’s at my door?'
+			strega: 'Ehehe, who’s at my door?',
+			wolf: 'Woof! Furry friends at the door!',
+			vlad: 'Good evening, little guests!',
+			scarecrow: 'Oh! Someone talked to me!'
 		},
 		treat: {
 			ghost: 'Candy for you... boo!',
 			nonna: 'How cute! Here’s some candy!',
-			strega: 'Take some, little wizards!'
+			strega: 'Take some, little wizards!',
+			wolf: 'Here, take some! Woof woof!',
+			vlad: 'With pleasure — do take some.',
+			scarecrow: 'Candy fresh out of the straw!'
 		},
 		refuse: {
 			ghost: 'Oooh... I ran out of candy!',
 			nonna: 'No candy tonight, sorry!',
-			strega: 'My cauldron is empty tonight!'
+			strega: 'My cauldron is empty tonight!',
+			wolf: 'All out, woof... sorry!',
+			vlad: 'A thousand pardons: the pantry is bare.',
+			scarecrow: 'Oops! My straw brain is empty!'
 		},
 		regift: {
 			ghost: 'Wait... one left!',
 			nonna: 'Here, one more!',
-			strega: 'One escaped my cauldron!'
+			strega: 'One escaped my cauldron!',
+			wolf: 'Wait! One was in my fur!',
+			vlad: 'One last candy, with grace.',
+			scarecrow: 'One was hiding in the straw!'
 		},
 		seen: {
 			ghost: 'Boo... we already met!',
 			nonna: 'We already met, haha!',
-			strega: 'Already been here, ehehe!'
+			strega: 'Already been here, ehehe!',
+			wolf: 'Woof! We sniffed noses already!',
+			vlad: 'We have met already, I recall.',
+			scarecrow: 'Seen you already! Silly me!'
 		},
 		// T15 — the trick payoff line, prototype `L.en.scherzo` (~707), verbatim.
 		scherzo: {
 			ghost: 'Ehehe! You made me laugh! Take!',
 			nonna: 'Ah! You rascals! Take these!',
-			strega: 'Ehehe! What little wizards! All yours!'
+			strega: 'Ehehe! What little wizards! All yours!',
+			wolf: 'Woof woof! That tickled! All yours!',
+			vlad: 'Ah! Droll. You have earned these!',
+			scarecrow: 'Heh heh! You ruffled my straw!'
 		}
 	}
 };

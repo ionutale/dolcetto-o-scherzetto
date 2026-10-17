@@ -346,7 +346,7 @@ describe('scheduleTrickResolve — the show’s resolve beat (T15)', () => {
 		const clock = new FakeClock();
 		const { calls, show } = recorder();
 		const bounces = { n: 0 };
-		playTrickAt(3); // archOf(3) is the ghost
+		playTrickAt(3); // archOf(3) is the wolf (T24b: the trio, then wolf/vlad/scarecrow)
 
 		const trick = trickBeat(show, clock, bounces);
 		trick.cancel();
@@ -376,7 +376,7 @@ describe('scheduleTrickResolve — the show’s resolve beat (T15)', () => {
 	it('says the payoff in the neighbour’s own words, in the store’s language', () => {
 		const clock = new FakeClock();
 		const { calls, show } = recorder();
-		// A language-reading stub — archOf(3) is the ghost; hooks are optional.
+		// A language-reading stub — archOf(3) is the wolf (T24b); hooks are optional.
 		const en: FlowStore = {
 			dispatch: () => {},
 			activeK: () => 3,
@@ -390,7 +390,7 @@ describe('scheduleTrickResolve — the show’s resolve beat (T15)', () => {
 		clock.advance(SCHERZO_AT);
 
 		expect(calls).toEqual([
-			{ text: L.en.scherzo.ghost, x: DOOR_X, y: 175, small: false, ms: SCHERZO_MS }
+			{ text: L.en.scherzo.wolf, x: DOOR_X, y: 175, small: false, ms: SCHERZO_MS }
 		]);
 	});
 
@@ -502,15 +502,50 @@ describe('the tables the chain speaks from', () => {
 		}
 	});
 
-	it('wraps the archetype map over repeat and negative house indexes', () => {
-		expect([archOf(-1), archOf(0), archOf(1), archOf(2), archOf(3)]).toEqual([
-			'strega',
-			'ghost',
-			'nonna',
-			'strega',
-			'ghost'
-		]);
+	it('cycles all six archetypes deterministically, wrapping negatives', () => {
+		// T24b order: the trio seeds the first three slots, the three spec §4.3
+		// neighbours take the rest.
+		expect(NEIGHBOR_ARCHES).toEqual(['ghost', 'nonna', 'strega', 'wolf', 'vlad', 'scarecrow']);
+
+		// A full sweep, negative and positive: positive modulo over the six.
+		for (let k = -13; k <= 13; k++) {
+			const i = ((k % 6) + 6) % 6;
+			expect(archOf(k)).toBe(NEIGHBOR_ARCHES[i]);
+			expect(neighborFor(k)).toBe(NEIGHBORS[NEIGHBOR_ARCHES[i]]);
+		}
+
+		// Every archetype is reached, exactly six of them.
+		const reached = new Set(Array.from({ length: 6 }, (_, k) => archOf(k)));
+		expect(reached.size).toBe(6);
+
+		// The trio keeps its slots: archOf(0..2) is unchanged by the widening.
+		expect([archOf(0), archOf(1), archOf(2)]).toEqual(['ghost', 'nonna', 'strega']);
 		expect(neighborFor(2)).toBe(NEIGHBORS.strega);
-		expect(neighborFor(-1)).toBe(NEIGHBORS.strega);
+		expect(neighborFor(-1)).toBe(NEIGHBORS.scarecrow);
+		expect(neighborFor(6)).toBe(NEIGHBORS.ghost);
+	});
+
+	it('ships all six door sprites, each a standalone inline <svg>', () => {
+		for (const arch of NEIGHBOR_ARCHES) {
+			const markup = NEIGHBORS[arch];
+			expect(markup).toContain('<svg ');
+			expect(markup).toContain('</svg>');
+			// The {@html} licence: no ids, no defs, no external refs (ART-STYLE §3/§4).
+			expect(markup).not.toContain('id=');
+			expect(markup).not.toContain('<defs');
+		}
+	});
+
+	it('says a distinct line per archetype — no copy leaked between neighbours', () => {
+		const keys = ['greet', 'treat', 'refuse', 'regift', 'seen', 'scherzo'] as const;
+		for (const lang of ['it', 'en'] as const) {
+			for (const key of keys) {
+				const said = NEIGHBOR_ARCHES.map((arch) => L[lang][key][arch]);
+				expect(said.every((line) => line.trim().length > 0)).toBe(true);
+				// A deliberate callback across archetypes would have to be listed
+				// here; today the six keep their voices apart.
+				expect(new Set(said).size).toBe(NEIGHBOR_ARCHES.length);
+			}
+		}
 	});
 });
