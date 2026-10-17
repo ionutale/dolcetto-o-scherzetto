@@ -33,7 +33,8 @@
  * frame clamp, and the start/stop lifecycle).
  */
 import { initial, reduce, tick } from '../sim/loop';
-import type { Action, Candy, Dir, GameState, Phase, TrickId } from '../sim/loop';
+import type { Action, Candy, Dir, GameState, Lang, Phase, TrickId } from '../sim/loop';
+import { settings } from '../persist/settings';
 
 /** Longest frame the sim digests — the prototype's `Math.min(.05, dt)`. */
 const MAX_DT = 0.05;
@@ -48,7 +49,7 @@ const FRAME_FALLBACK_MS = 16;
 type FrameHandle = number;
 
 /** The whole sim state, deeply reactive. One instance for the whole page. */
-let state = $state<GameState>(initial({}));
+let state = $state<GameState>(initial({ lang: settings.read().lang }));
 
 /** Single-loop latch: a second `start()` schedules nothing, `stop()` is safe. */
 let running = false;
@@ -99,6 +100,15 @@ export function bag(): number {
  */
 export function pending(): string | null {
 	return state.pending;
+}
+
+/**
+ * The run's language (reactive). Seeded from the settings envelope at boot and
+ * kept in lock-step by every LANG dispatch, so components that need a language
+ * that re-renders read THIS instead of `settings.read()` (T17 follow-up).
+ */
+export function lang(): Lang {
+	return state.lang;
 }
 
 /** The owned tricks, in catalogue order — the fan renders exactly this list. */

@@ -28,7 +28,7 @@
 	 * is not in range.
 	 */
 	import { activeK, canWalk, dispatch, phase, worldX } from '../state/game.svelte';
-	import { settings } from '../persist/settings';
+	import { lang } from '../state/game.svelte';
 	import { t } from '../i18n/lines';
 
 	/** Prototype constant: one home every 620 logical px. */
@@ -43,7 +43,7 @@
 
 	/** The label text before the hand glyph: 'Bussa ' / 'Knock '. */
 	function labelHead(): string {
-		return t(settings.read().lang, 'knock').split(HAND)[0];
+		return t(lang(), 'knock').split(HAND)[0];
 	}
 </script>
 

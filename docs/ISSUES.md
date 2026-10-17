@@ -36,7 +36,7 @@
 | T15 | P3 | Scherzo wiring (fan → theatre → burst → reaction) | free-coder | T14 | Refuse→show→collect→done; prefer `store.pending()`; ghost hop deferred to T21 (ghosts don't exist yet) |
 | T16 | P4 | Bottega panel (8 items, buy guards) | free-coder | T06,T12 | Buy/poor/owned states e2e |
 | T17 | P4 | Title menu (Gioca/Impostazioni) + settings: **separate Music & SFX sliders** (ships the `volumes` runes store; extend settings shape + tests), IT/EN, hidden reset | free-coder | T03, T16 | Play → last save; sliders persist; audibility acceptance deferred to T23/T25/T27 which consume `volumes` |
-| T18 | P4 | Celebration + neighborhood transition | free-coder | T07 | Once per boundary; never mid-flow |
+| T18 | P4 | Celebration + neighborhood transition (crossing a 10-home boundary shows the beat once; never during a flow) + **T18b: run persistence wiring** (autosave bag/record/tricks/furthestK to `dos.run.v1` on change; restore on boot; one slot) | free-coder | T07, T17 | Once per boundary; keys round-trip across reload; hidden-reset clears both |
 | T19 | P5 | NPC kids (roam/wave/shout hook) | free-art+coder | T10 | Bounded nodes; wave once per pass |
 | T20 | P5 | Cars + rare passer | free-art+coder | T09 | ≤1 passer per 60–90 s; `.rolling` while moving |
 | T21 | P5 | Sky ghosts + trash-can cameo (incl. **ghost hop on trick climax** via the T15 wiring) | free-art+coder | T08 | Drift behind roofs; cameo rate-limited; hop once per show |

@@ -45,16 +45,51 @@
 					music: '🎵 Musica',
 					sfx: '🔊 Effetti',
 					language: 'Lingua',
-					back: 'Indietro'
+					back: 'Indietro',
+					wipe: 'Cancella progressi (genitori)',
+					wipeConfirm: 'Sicuro? Tocca di nuovo'
 				}
 			: {
 					title: 'Settings',
 					music: '🎵 Music',
 					sfx: '🔊 Sound effects',
 					language: 'Language',
-					back: 'Back'
+					back: 'Back',
+					wipe: 'Erase progress (parents)',
+					wipeConfirm: 'Sure? Tap again'
 				}
 	);
+
+	/**
+	 * Parent reset (plan T17 acceptance): long-press the card title ~0.9 s to
+	 * reveal the wipe, then two taps to confirm — kid-proof by construction.
+	 * Clears the run AND the settings envelope, then reloads.
+	 */
+	let wipeArmed = $state(false);
+	let wipeConfirm = $state(false);
+	let pressTimer: number | null = null;
+	function pressStart(): void {
+		pressTimer = window.setTimeout(() => (wipeArmed = true), 900);
+	}
+	function pressEnd(): void {
+		if (pressTimer !== null) {
+			clearTimeout(pressTimer);
+			pressTimer = null;
+		}
+	}
+	function wipe(): void {
+		if (!wipeConfirm) {
+			wipeConfirm = true;
+			return;
+		}
+		try {
+			localStorage.removeItem('dos.run.v1');
+			localStorage.removeItem('dos.settings.v1');
+		} catch {
+			/* a hostile storage must not stop the reset */
+		}
+		location.reload();
+	}
 
 	/** The Music slider (0..100) → the store's `music` gain. */
 	function onMusic(event: Event): void {
@@ -78,7 +113,20 @@
 	}
 </script>
 
-<h2 class="settings-title">{copy.title}</h2>
+<h2
+	class="settings-title"
+	onpointerdown={pressStart}
+	onpointerup={pressEnd}
+	onpointerleave={pressEnd}
+>
+	{copy.title}
+</h2>
+
+{#if wipeArmed}
+	<button id="wipeBtn" class="wipe" onclick={wipe}
+		>{wipeConfirm ? copy.wipeConfirm : copy.wipe}</button
+	>
+{/if}
 
 <label class="slider-row">
 	<span>{copy.music}</span>
@@ -133,6 +181,19 @@
 	.settings-title {
 		font-size: 22px;
 		color: var(--cream);
+	}
+
+	/* The parent reset (plan T17): revealed by the title long-press. */
+	.wipe {
+		font-family: inherit;
+		font-size: 13.5px;
+		font-weight: 600;
+		color: var(--pumpkin-deep);
+		background: color-mix(in srgb, var(--pumpkin) 12%, transparent);
+		border: 1px solid color-mix(in srgb, var(--pumpkin-deep) 45%, transparent);
+		border-radius: var(--r-pill);
+		padding: 8px 18px;
+		cursor: pointer;
 	}
 
 	/* `.slider-row` (prototype ~351-353), verbatim: label · track · output. */
