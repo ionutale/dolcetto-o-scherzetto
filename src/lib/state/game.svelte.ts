@@ -33,7 +33,7 @@
  * frame clamp, and the start/stop lifecycle).
  */
 import { initial, reduce, tick } from '../sim/loop';
-import type { Action, Dir, GameState, Phase } from '../sim/loop';
+import type { Action, Candy, Dir, GameState, Phase } from '../sim/loop';
 
 /** Longest frame the sim digests — the prototype's `Math.min(.05, dt)`. */
 const MAX_DT = 0.05;
@@ -78,12 +78,37 @@ export function activeK(): number {
 }
 
 /**
+ * The sidewalk candies the sim is holding — flying ones and the landed pile
+ * (T12's candy layer renders exactly this list). Read-only like the rest of
+ * the seams: the layer never mutates it, it only positions each candy and
+ * dispatches `COLLECT` with the id it drew.
+ */
+export function candies(): Candy[] {
+	return state.candies;
+}
+
+/** Candies in the bag — the duo's wallet and the HUD chip's count (spec §8). */
+export function bag(): number {
+	return state.bag;
+}
+
+/**
  * The outcome decided at knock time (`treat`/`refuse`/`regift`/`seen`), or
  * `null` between flows. Read-only seam for the display layer: prefer this over
  * deriving outcomes from the post-resolve phase (T11 caveat, T15 note).
  */
 export function pending(): string | null {
 	return state.pending;
+}
+
+/** The owned tricks, in catalogue order — the fan renders exactly this list. */
+export function tricks(): string[] {
+	return state.tricks;
+}
+
+/** Whether the trick fan is open (T13's Scherzo widget). */
+export function fanOpen(): boolean {
+	return state.fanOpen;
 }
 
 /**

@@ -1,10 +1,11 @@
 <script lang="ts">
 	/**
-	 * The game page — the T08 + T09 + T10 + T11 composition: the sprite motion
-	 * stylesheet, the night sky, the two parallax bands, the endless street
-	 * (world bands + the recycling window of houses and yards), the kids duo,
-	 * the hold-to-walk controls, the knock cloud and the speech bubble, all
-	 * inside the 852×393 stage frame, with the portrait rotate prompt on top.
+	 * The game page — the T08 + T09 + T10 + T11 + T12 composition: the sprite
+	 * motion stylesheet, the night sky, the two parallax bands, the endless
+	 * street (world bands + the recycling window of houses and yards), the kids
+	 * duo, the glowing candy layer, the hold-to-walk controls, the knock cloud,
+	 * the speech bubble and the bag chip, all inside the 852×393 stage frame,
+	 * with the portrait rotate prompt on top.
 	 *
 	 * The page owns **no game logic**: it reads the store's derived getters
 	 * (`worldX` / `phase` / `activeK` / `dir`) into the scene props, renders
@@ -32,9 +33,11 @@
 	import Street from '$lib/art/scene/Street.svelte';
 	import RotateOverlay from '$lib/ui/RotateOverlay.svelte';
 	import Kids from '$lib/play/Kids.svelte';
+	import CandyLayer from '$lib/play/CandyLayer.svelte';
 	import WalkControls from '$lib/play/WalkControls.svelte';
 	import KnockButton from '$lib/play/KnockButton.svelte';
 	import Bubbles from '$lib/play/Bubbles.svelte';
+	import Hud from '$lib/ui/Hud.svelte';
 	import { showBubble } from '$lib/play/bubble.svelte';
 	import { createFlowStore, scheduleKnock } from '$lib/play/flow';
 	import { activeK, dir, phase, start, stop, worldX } from '$lib/state/game.svelte';
@@ -79,9 +82,11 @@
 		<ParallaxLayers worldX={worldX()} />
 		<Street worldX={worldX()} homes={NO_HOMES} activeK={activeK()} {openK} />
 		<Kids dir={dir()} />
+		<CandyLayer />
 		<WalkControls />
 		<KnockButton />
 		<Bubbles />
+		<Hud />
 	</Stage>
 </div>
 
