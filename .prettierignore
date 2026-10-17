@@ -1,0 +1,15 @@
+.svelte-kit/
+build/
+.vercel/
+node_modules/
+pnpm-lock.yaml
+.DS_Store
+
+# Non-app trees: planning docs, research notes and prototype spikes are not
+# governed by the app code style (tabs / single quotes).
+docs/
+research/
+prototypes/
+.scratch/
+.superpowers/
+*.md
