@@ -39,13 +39,13 @@
 | T18 | P4 | Celebration + neighborhood transition | free-coder | T07 | Once per boundary; never mid-flow |
 | T19 | P5 | NPC kids (roam/wave/shout hook) | free-art+coder | T10 | Bounded nodes; wave once per pass |
 | T20 | P5 | Cars + rare passer | free-art+coder | T09 | ≤1 passer per 60–90 s; `.rolling` while moving |
-| T21 | P5 | Sky ghosts + trash-can cameo | free-art+coder | T08 | Drift behind roofs; cameo rate-limited |
+| T21 | P5 | Sky ghosts + trash-can cameo (incl. **ghost hop on trick climax** via the T15 wiring) | free-art+coder | T08 | Drift behind roofs; cameo rate-limited; hop once per show |
 | T22 | P5 | Ornaments per theme (pure decor) | free-art | T09 | 2–4/house; never refusal-correlated |
-| T23 | P5 | Ambience audio engine (beds+sprinkles+duck) | free-coder | T12 | Duck on show/scare; sprinkle ≥20 s; no-AudioContext no-op |
+| T23 | P5 | Ambience audio engine (beds+sprinkles+duck) + wire the existing no-op sound hooks (flow/Theatre/Scherzo) | free-coder | T12 | Duck on show/scare; sprinkle ≥20 s; no-AudioContext no-op |
 | T24 | P5 | Scary moments (crossings + hug beat) | free-art+coder | T15, T23 | Walking-only; ≥60 s gap; reduced-motion safe |
 | T25 | P6 | Music: street loop wired (`a-winters-night.v1.mp3` — owner track, 95.9 s/112 k, trimmed+normalized); title + optional loops/stingers via SA3 | studio | T23 | Loop gap-free via WebAudio decode; rotation decided; verify track license before public deploy |
 | T26 | P6 | Ambience loops ×4 (SA3) | studio | T23 | 4 beds replace synth; duck verified |
-| T27 | P6 | SFX bake + placeholder swap | studio | T23 | Cue-name parity; peaks ≤0.18 |
+| T27 | P6 | **Port `pieces/sfx.js` to `src/lib/audio/sfx.ts`** (WebAudio synth, same 26-cue contract — no bake needed) + wire into the hooks | free-coder | T23 | All 26 cues schedule; peaks ≤0.18; mute + per-slider volume |
 | T28 | P6 | Voice lines IT+EN via game_voice (+ CI completeness check) | studio | T17 | Every line in both langs; CI check green |
 | T29 | P6 | flux2 stills + facade spike | studio | T02 | Hero+OG live; spike verdict recorded |
 | T30 | P7 | Playwright e2e suite (incl. pre-gesture silence) | free-coder | T24, T28 | Suite green against build; note: the Play button carries an infinite invite animation — click it `force:true` or with reduced-motion emulation |
