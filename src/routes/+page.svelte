@@ -1,7 +1,7 @@
 <script lang="ts">
 	/**
 	 * The game page — the T08 + T09 + T10 + T11 + T12 + T13 + T14 + T15 + T17
-	 * composition: the sprite motion stylesheet, the night sky, the two
+	 * + T18 composition: the sprite motion stylesheet, the night sky, the two
 	 * parallax bands, the endless street (world bands + the recycling window
 	 * of houses and yards), the kids duo, the glowing candy layer, the
 	 * hold-to-walk controls, the knock cloud, the speech bubble, the bag chip,
@@ -45,6 +45,18 @@
 	 * place and silent). The landscape lock is the prototype's
 	 * `tryLandscapeLock()` (~1790): a guarded `screen.orientation.lock` that
 	 * iOS refuses and the rotate prompt covers (spec §13).
+	 *
+	 * **T18 — the celebration** (spec §4.2/§9). A `$effect` watches the store's
+	 * `furthest()` seam and asks `decideCelebration()` whether a 10-home
+	 * boundary was just crossed: the banner fires now in `roam`, or is held
+	 * through any flow and released at the next quiet moment. `<Celebration/>`
+	 * renders the beat (the neighborhood's name + a sparkle sweep) and its
+	 * `onStinger` is a no-op until T23/T25/T27 own the audio.
+	 *
+	 * **T18b — persistence.** The second `$effect` autosaves
+	 * `{ bag, record, tricks, furthestK }` to `dos.run.v1` on any change; the
+	 * store's boot seeds that same state back (see `state/game.svelte.ts`). The
+	 * parent reset in Impostazioni still clears the key and reloads.
 	 */
 	import { onDestroy, onMount } from 'svelte';
 	import MotionStyles from '$lib/art/sprites/MotionStyles.svelte';
@@ -60,6 +72,7 @@
 	import Scherzo from '$lib/play/Scherzo.svelte';
 	import Theatre from '$lib/play/Theatre.svelte';
 	import Bubbles from '$lib/play/Bubbles.svelte';
+	import Celebration from '$lib/play/Celebration.svelte';
 	import Hud from '$lib/ui/Hud.svelte';
 	import TitleScreen from '$lib/ui/TitleScreen.svelte';
 	import { showBubble } from '$lib/play/bubble.svelte';
@@ -71,16 +84,26 @@
 		scheduleTrickResolve
 	} from '$lib/play/flow';
 	import type { TrickShow } from '$lib/play/flow';
+	import { decideCelebration } from '$lib/play/celebration-model';
+	import type { Beat } from '$lib/play/celebration-model';
+	import { neighborhoodIndex } from '$lib/sim/progression';
 	import {
 		activeK,
+		bag,
 		dir,
 		dispatch,
+		furthest,
 		phase,
+		record,
+		shopOpen,
 		start,
 		stop,
 		trickPlayed,
+		tricks,
 		worldX
 	} from '$lib/state/game.svelte';
+	import { persist } from '$lib/persist/persist';
+	import type { RunState } from '$lib/persist/persist';
 	import type { Phase } from '$lib/sim/loop';
 
 	/** The store still exposes no `homes`, so nothing can be marked done. */
@@ -113,6 +136,65 @@
 		// One show per trick: the reducer only ever starts one from `refuse`.
 		if (prevPhase === 'refuse' && p === 'trick') startShow();
 		prevPhase = p;
+	});
+
+	/* ------------------------------------------------------------------ */
+	/* T18 — the neighborhood celebration, and T18b — the run autosave     */
+	/* ------------------------------------------------------------------ */
+
+	/** The neighborhood the celebration has already accounted for (model seam). */
+	let seenIndex = neighborhoodIndex(furthest());
+	/** A beat held back while a flow ran, replayed into the next decision. */
+	let pendingBeat: Beat | null = null;
+	/** The beat the banner is showing — a fresh object per transition. */
+	let beat = $state<Beat | null>(null);
+
+	/**
+	 * The celebration decision. Re-runs whenever progress or the phase changes:
+	 * cross a 10-home boundary and the banner fires now in `roam`, or waits out
+	 * any flow (door/collect/trick/refuse, open Bottega) and fires at the next
+	 * quiet moment. The rule itself is `decideCelebration` in
+	 * `celebration-model.ts`; this effect only keeps the model's two memories
+	 * (`seenIndex`, `pendingBeat`) and hands the beat to the banner.
+	 */
+	$effect(() => {
+		const decision = decideCelebration(
+			seenIndex,
+			neighborhoodIndex(furthest()),
+			phase(),
+			shopOpen(),
+			pendingBeat
+		);
+		seenIndex = decision.index;
+		pendingBeat = decision.pending;
+		if (decision.fire) beat = decision.fire;
+	});
+
+	/** The banner's stinger hook — silent until T23/T25/T27 play a cue. */
+	const noopStinger = (): void => {
+		/* intentionally silent — the audio tasks replace this hook */
+	};
+
+	/**
+	 * T18b — autosave. Any change to the wallet, the record, the owned tricks or
+	 * the furthest house writes the one run slot (`dos.run.v1`); `persist.write`
+	 * never throws, so a hostile or full storage only costs the save, never the
+	 * run. It also runs once at boot, re-persisting the restored state.
+	 *
+	 * Documented gap: the sim cannot take `candies`, `homes`, `phase`, `dir`,
+	 * `activeK`, `refusedK` or the exact standing `worldX` at boot, so a reload
+	 * resumes at the furthest doorstep the save's `furthestK` points at — see
+	 * the boot note in `state/game.svelte.ts`.
+	 */
+	$effect(() => {
+		const run: RunState = {
+			version: 1,
+			bag: bag(),
+			record: record(),
+			tricks: [...tricks()],
+			furthestK: furthest()
+		};
+		persist.write(run);
 	});
 
 	/**
@@ -254,6 +336,7 @@
 		<Scherzo />
 		<Theatre bind:this={theatre} />
 		<Bubbles />
+		<Celebration {beat} onStinger={noopStinger} />
 		<Hud />
 	</Stage>
 </div>

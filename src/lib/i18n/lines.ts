@@ -30,6 +30,7 @@
  * ============================================================================
  */
 import type { Lang } from '../sim/loop';
+import type { Theme } from '../sim/progression';
 import type { NeighborArch } from '../art/sprites/neighbors';
 
 /** Keys whose line is one string per language. */
@@ -126,4 +127,37 @@ export function t(lang: Lang, key: LineKey | ArchLineKey, arch?: NeighborArch): 
 	const lines = L[lang];
 	if (key === 'shout' || key === 'knock') return lines[key];
 	return lines[key][arch ?? 'ghost'];
+}
+
+/* ============================================================================
+ *  T18 — NEIGHBORHOOD DISPLAY NAMES
+ *
+ *  The four skins the street cycles through (spec §4.2/§9) get a proper name
+ *  per language; the celebration beat shows the name of the neighborhood just
+ *  entered (T18). Kept out of `L`/`t()` on purpose: those six tables are the
+ *  **voiced** lines the knock chain speaks by archetype, while a neighborhood
+ *  name is a caption with no archetype and (for now) no voice — giving it its
+ *  own table keeps `t()`'s overloads honest and lets T28 add voice ids later
+ *  without reshaping the knock tables.
+ * ========================================================================== */
+
+/** The four neighborhoods, named per language. */
+export const THEME_NAMES: Record<Lang, Record<Theme, string>> = {
+	it: {
+		leafy: 'Viale delle Foglie',
+		foggy: 'Ponte Nebbioso',
+		pumpkin: 'Campo delle Zucche',
+		starry: 'Viale Stellato'
+	},
+	en: {
+		leafy: 'Leafy Lane',
+		foggy: 'Foggy Bridge',
+		pumpkin: 'Pumpkin Patch',
+		starry: 'Starry Alley'
+	}
+};
+
+/** The display name of `theme` in `lang` (T18's celebration caption). */
+export function themeName(lang: Lang, theme: Theme): string {
+	return THEME_NAMES[lang][theme];
 }

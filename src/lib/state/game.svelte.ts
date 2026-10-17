@@ -31,9 +31,19 @@
  * Pure-sim rules live in `loop.ts` and are pinned by `loop.test.ts`; this
  * module is pinned by `game.test.ts` (walk speed, STOP, refused phases, the
  * frame clamp, and the start/stop lifecycle).
+ *
+ * **T18/T18b additions (additive only).** Two read seams and one boot path:
+ * `furthestK` — the monotonic furthest house (spec §9), seeded from the save
+ * and advanced by `trackFurthest` inside `step`, which the celebration watches;
+ * `record()` — the wallet's high-water mark, for the autosave; and the boot
+ * that seeds the sim from `persist.read()` (`bag`, `tricks`, `record`, and a
+ * `worldX` at the furthest doorstep). The autosave itself lives on the page.
  */
-import { initial, reduce, tick } from '../sim/loop';
+import { SPACING, initial, reduce, tick } from '../sim/loop';
 import type { Action, Candy, Dir, GameState, Lang, Phase, TrickId } from '../sim/loop';
+import { trackFurthest } from '../sim/progression';
+import { TRICK_ORDER } from '../sim/economy';
+import { persist } from '../persist/persist';
 import { settings } from '../persist/settings';
 
 /** Longest frame the sim digests — the prototype's `Math.min(.05, dt)`. */
@@ -48,8 +58,55 @@ const FRAME_FALLBACK_MS = 16;
  */
 type FrameHandle = number;
 
+/**
+ * T18b — the run read back from `dos.run.v1` at module load (SSR and hostile
+ * storage both give `null`). Read once: it seeds the boot below and the
+ * `furthestK` seam, then the page autosaves the live state on top of it.
+ */
+const saved = persist.read();
+
+/** The furthest house a save holds, floored at 0 and whole (guard a hand edit). */
+const savedFurthestK = saved ? Math.max(0, Math.round(saved.furthestK)) : 0;
+
+/**
+ * The tricks a save may restore: catalogue ids only (a foreign id can never
+ * reach a card), with the free `boo` guaranteed so the fan is never empty.
+ */
+function restoreTricks(ids: string[]): TrickId[] {
+	const owned = ids.filter((id): id is TrickId => (TRICK_ORDER as readonly string[]).includes(id));
+	if (!owned.includes('boo')) owned.unshift('boo');
+	return owned;
+}
+
+/**
+ * The boot run (T18b). The save seeds everything the pure sim can take —
+ * `bag`, `tricks` and a `worldX` at the furthest doorstep — plus `record`,
+ * lifted to the larger of the save's record and its bag (`initial` seeds
+ * `record` from `bag`; a save may hold a higher one). What the sim *cannot*
+ * take at boot is documented in `+page.svelte`: candies, homes, phase, dir and
+ * the refused/active house are transient and start fresh.
+ */
+function bootState(): GameState {
+	const base = initial({
+		lang: settings.read().lang,
+		bag: saved?.bag ?? 0,
+		tricks: saved ? restoreTricks(saved.tricks) : undefined,
+		worldX: saved ? savedFurthestK * SPACING : undefined
+	});
+	if (!saved) return base;
+	return { ...base, record: Math.max(saved.record, saved.bag) };
+}
+
 /** The whole sim state, deeply reactive. One instance for the whole page. */
-let state = $state<GameState>(initial({ lang: settings.read().lang }));
+let state = $state<GameState>(bootState());
+
+/**
+ * Furthest house ever reached (`spec §9`), monotonic — the T18 celebration and
+ * the save both read it. Seeded from the save and advanced inside `step`; a
+ * `RESET` does not touch it (a real fresh run is the parent reset, which
+ * reloads the module; the in-sim `RESET` is a dev/test gesture).
+ */
+let furthestK = $state(savedFurthestK);
 
 /** Single-loop latch: a second `start()` schedules nothing, `stop()` is safe. */
 let running = false;
@@ -91,6 +148,20 @@ export function candies(): Candy[] {
 /** Candies in the bag — the duo's wallet and the HUD chip's count (spec §8). */
 export function bag(): number {
 	return state.bag;
+}
+
+/**
+ * Furthest house ever reached (T18) — monotonic, the index the celebration
+ * watches and the value the autosave mirrors. Reactive: it advances inside
+ * `step`, so the page's `$effect` fires a beat the frame a boundary is crossed.
+ */
+export function furthest(): number {
+	return furthestK;
+}
+
+/** The best bag ever held (spec §8) — the autosave's record field (T18b). */
+export function record(): number {
+	return state.record;
 }
 
 /**
@@ -161,6 +232,10 @@ export function dispatch(action: Action): void {
 /** One clamped tick: `dt` is seconds, clamped to `[0, MAX_DT]` first. */
 export function step(dt: number): void {
 	state = tick(state, Math.min(MAX_DT, Math.max(0, dt)));
+	// Progress is the furthest house ever seen — `trackFurthest` never regresses,
+	// so backtracking leaves it (and any celebration already fired) alone.
+	const next = trackFurthest(furthestK, state.worldX);
+	if (next !== furthestK) furthestK = next;
 }
 
 /** `performance.now()` where available, `Date.now()` as the last resort. */
