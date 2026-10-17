@@ -102,16 +102,26 @@ worker.addEventListener('fetch', (event) => {
 	// Voice clips: cache-first, at runtime only (never precached — see the
 	// header). A clip is immutable per id + language, so a cached copy is always
 	// correct, and a miss fetches once and warms VOICE_CACHE for the next visit.
+	//
+	// **Key on the URL, not the element's request.** A media element (`<audio>`
+	// in `voice.svelte.ts`) fetches with a `Range` header, so the network answers
+	// **206 Partial Content** — and the Cache API refuses a 206 (`put` throws
+	// `TypeError: Partial response (status code 206) is unsupported`). Keying on
+	// the element's own request therefore stored *nothing* (the write failed
+	// silently) and voice never went offline. Fetch the canonical whole clip (no
+	// `Range`) and key the cache on its URL, so a later range request is answered
+	// from the complete cached body — a media element plays a 200 fine.
 	if (url.pathname.startsWith(VOICE_PREFIX)) {
+		const voiceUrl = url.href;
 		event.respondWith(
-			caches.match(request).then(async (cached) => {
+			caches.match(voiceUrl).then(async (cached) => {
 				if (cached) return cached;
-				const response = await fetch(request);
-				if (response.ok) {
+				const response = await fetch(voiceUrl);
+				if (response.ok && response.status === 200) {
 					const copy = response.clone();
 					try {
 						const cache = await caches.open(VOICE_CACHE);
-						await cache.put(request, copy);
+						await cache.put(voiceUrl, copy);
 					} catch {
 						// A cache write failure must never break the live fetch.
 					}
