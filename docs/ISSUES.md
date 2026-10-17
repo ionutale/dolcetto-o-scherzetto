@@ -28,8 +28,8 @@
 | T08 | P2 | Stage/sky/fit + rotate overlay | free-coder | T02,T04 | 852×393 reference matches; portrait overlay |
 | T09 | P2 | Houses/yards/doors + recycling window | free-art+coder | T08 | ≤20 slots after walking 50 homes |
 | T10 | P2 | Kids duo + hold-to-walk input | free-coder | T08 | Speed spec; pointercancel stops walk |
-| T11 | P2 | Knock→greet→resolve + bubbles | free-coder | T09,T10 | Treat/refuse/regift/seen flows e2e |
-| T12 | P2 | Candy layer (2 s float, pile, collect) | free-coder | T11 | Bag = sum of collected; reduced-motion idle |
+| T11 | P2 | Knock→greet→resolve + bubbles (knock cloud beckons: 1.25 s pulse + glow ring + tapping hand; static under reduced motion) | free-coder | T09,T10 | Treat/refuse/regift/seen flows e2e |
+| T12 | P2 | Candy layer (2 s float, pile, collect) | free-coder | T11 | Bag = sum of collected; per-candy glow halo (pulse, stronger on pile; static under reduced motion); reduced-motion idle |
 | T13 | P3 | Trick fan + selection | free-coder | T12 | Owned-only list; pick starts show |
 | T14 | P3 | Theatre stage + 8 shows | free-art+coder | T13 | All 8 shows fire burst at ~1.9 s |
 | T15 | P3 | Scherzo wiring + ghost hop | free-coder | T14 | Refuse→show→collect→done; hop once |

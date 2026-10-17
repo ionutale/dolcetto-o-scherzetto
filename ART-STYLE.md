@@ -70,7 +70,7 @@ Relative sizes (852×393 scene): Milo ≈96 px tall with hat, Tino ≈78, door n
 
 - **Six silhouette archetypes**: lollipop, gummy, chocolate bar, wrapped toffee, candy corn, star. 30–34 px.
 - Shape and colour are **visual variety only** — value (1–10) is rolled per drop, revealed as `+N` on collect.
-- Motion: candies **float down lightly (~2 s) with an up-down bob**, staggered in a cascade; soft settle, gentle idle bob in the pile, twinkle on landing.
+- Motion: candies **float down lightly (~2 s) with an up-down bob**, staggered in a cascade; soft settle, gentle idle bob in the pile, twinkle on landing. Every candy **glows** — a soft halo in its own pastel colour with a gentle pulse (the landed pile pulses a touch stronger, inviting the tap); static glow under `prefers-reduced-motion`.
 
 ## 7. The world
 
@@ -87,7 +87,7 @@ Relative sizes (852×393 scene): Milo ≈96 px tall with hat, Tino ≈78, door n
 | Effect | Spec |
 |---|---|
 | Door swing | 0.55 s, perspective rotateY |
-| Knock | 3 thuds, house shake 0.5 s |
+| Knock | 3 thuds, house shake 0.5 s; the **Bussa cloud beckons** — 1.25 s invite pulse + glow ring + tapping hand (static under reduced motion) |
 | Candy float | 2.0 s per candy, stagger 0.12 s, bob amplitude ~10 px decaying |
 | Candy pile idle | ±2.5 px, ~1.8 s alternate |
 | Trick show | ~2.4 s staged (spotlight dim `rgba(12,7,30,.45)` + warm cone, props ~1.5× world scale) |

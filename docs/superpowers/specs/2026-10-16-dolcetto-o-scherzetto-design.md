@@ -66,7 +66,7 @@ roam → knock → door (greet) → resolve:
         re-gift  (done homes, first re-knock ever, 30%) → 1 candy → collect
         seen     (done homes otherwise) → funny bubble → close
 ```
-- **Candy drops** land in a little sidewalk pile; **nothing expires**; the pile waits forever.
+- **Candy drops** land in a little sidewalk pile; **nothing expires**; the pile waits forever. Every candy **glows** — a soft halo in its own pastel colour with a gentle pulse (stronger on the landed pile); static under reduced motion.
 - **One-shot homes**; re-gift capped once per home ever (ADR-0003).
 - **Store** opens anytime from the HUD button; buying never blocks the loop.
 - **Never lose**: no fail, no timer; walking away mid-flow simply closes the door (a refused-but-unpranked home stays available).
@@ -74,7 +74,7 @@ roam → knock → door (greet) → resolve:
 ## 6. Controls & input
 
 - **Walk**: hold (both directions, free backtracking). Touch: translucent corner buttons **and** the whole screen half works. Desktop: arrow keys / A-D, or hold the mouse on a side. No auto-stop at doors — the player chooses.
-- **Knock**: floating `Bussa ✊` button appears above the door when in range; ↑ also works.
+- **Knock**: floating `Bussa ✊` button appears above the door when in range; ↑ also works. The cloud **beckons** — a gentle 1.25 s pulse with an amber glow ring and a tapping-hand animation (static under reduced motion).
 - **Collect**: tap each candy. **+N** floats; candy flies into the bucket HUD.
 - **Scherzo**: HUD-lights up at a refusing home → tap → trick fan → tap a trick → show plays (no input during it).
 - **Bottega**: HUD button, anytime. **Sound**: toggle (persists). **Language**: toggle (persists).
