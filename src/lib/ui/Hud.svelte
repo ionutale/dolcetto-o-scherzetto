@@ -20,7 +20,8 @@
 	 */
 	import { onDestroy } from 'svelte';
 	import { bucketIcon } from '$lib/art/sprites/candy';
-	import { bag, dispatch, fanOpen, shopOpen } from '$lib/state/game.svelte';
+	import { bag, dispatch, fanOpen, lang, shopOpen } from '$lib/state/game.svelte';
+	import type { Lang } from '$lib/sim/loop';
 	import { openMenu } from './menu-state.svelte';
 	import Bottega from './Bottega.svelte';
 
@@ -73,15 +74,38 @@
 		if (fanOpen()) dispatch({ type: 'SCHERZO_CLOSE' });
 		openMenu();
 	}
+
+	/** The bag chip's spoken name — the count included (T32), in the run language. */
+	function bagLabel(): string {
+		const n = bag();
+		if (lang() === 'en') return n === 1 ? 'Bag: 1 candy' : `Bag: ${n} candies`;
+		return n === 1 ? 'Sacchetto: 1 caramella' : `Sacchetto: ${n} caramelle`;
+	}
+
+	/** The Bottega pill's accessible name, both languages (visible text stays). */
+	const BOTTEGA_LABEL: Record<Lang, string> = {
+		it: 'Apri la Bottega',
+		en: 'Open the shop'
+	};
 </script>
 
 <div class="hud">
-	<button type="button" id="bagChip" class="pill" class:pulse title="Il sacchetto (portafoglio)">
+	<button
+		type="button"
+		id="bagChip"
+		class="pill"
+		class:pulse
+		aria-label={bagLabel()}
+		title={bagLabel()}
+	>
 		<!-- trusted static SVG from the validated candy pack -->
 		<!-- eslint-disable-next-line svelte/no-at-html-tags -->
 		{@html bucketIcon(24)}
 		<span class="count">{bag()}</span>
 	</button>
+
+	<!-- The wallet count, announced politely whenever it changes (T32). -->
+	<span class="visually-hidden" role="status" aria-live="polite">{bagLabel()}</span>
 
 	<!-- The prototype's `.top-right` cluster (markup ~411-415). T17 adds the
 	     language/mute pills here; T16 ships the Bottega pill alone. -->
@@ -89,7 +113,13 @@
 		<button type="button" id="menuBtn" class="pill" aria-label="Menu" title="Menu" onclick={toMenu}
 			>🏠</button
 		>
-		<button type="button" id="bottegaBtn" class="pill" onclick={openShop}>🏪 Bottega</button>
+		<button
+			type="button"
+			id="bottegaBtn"
+			class="pill"
+			aria-label={BOTTEGA_LABEL[lang()]}
+			onclick={openShop}>🏪 Bottega</button
+		>
 	</div>
 </div>
 
@@ -119,6 +149,9 @@
 		font-weight: 600;
 		font-size: 15px;
 		padding: 7px 13px;
+		/* T32 target size: the pill grows to a 44 px tap target; the icon and the
+		 * count stay vertically centred (flex), so nothing shifts. */
+		min-height: 44px;
 		backdrop-filter: blur(6px);
 		cursor: pointer;
 		transition: transform 0.12s ease;
@@ -127,6 +160,13 @@
 
 	.pill:active {
 		transform: scale(0.95);
+	}
+
+	/* T32 focus ring: amber reads 12.4:1 on the night stage; the ring sits
+	 * outside the pill, so it never clips the icon or the label. */
+	.pill:focus-visible {
+		outline: 3px solid var(--amber);
+		outline-offset: 3px;
 	}
 
 	#bagChip {

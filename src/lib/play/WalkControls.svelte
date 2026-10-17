@@ -42,14 +42,20 @@
 	 * scopes classes with the rest of the block).
 	 */
 	import { onMount } from 'svelte';
-	import { canWalk, dir, dispatch } from '../state/game.svelte';
-	import type { Dir } from '../sim/loop';
+	import { canWalk, dir, dispatch, lang } from '../state/game.svelte';
+	import type { Dir, Lang } from '../sim/loop';
 
 	/** The layer root — its parent is the 852×393 `.stage` box. */
 	let root = $state<HTMLElement | null>(null);
 
 	/** Direction currently held by a live gesture; 0 = nothing held. */
 	let held = $state<Dir>(0);
+
+	/** T32 walk-button names, both languages (the visible art is an arrow). */
+	const WALK_LABEL: Record<Lang, { left: string; right: string }> = {
+		it: { left: 'Cammina a sinistra', right: 'Cammina a destra' },
+		en: { left: 'Walk left', right: 'Walk right' }
+	};
 
 	/** Mirror of the reducer's guard — while false, no press can start a walk. */
 	const allowed = $derived(canWalk());
@@ -167,7 +173,7 @@
 		class="walkbtn l reduce-motion-off"
 		class:held={held === -1}
 		disabled={!allowed}
-		aria-label="cammina a sinistra"
+		aria-label={WALK_LABEL[lang()].left}
 		onpointerdown={leftDown}
 		onpointerup={leftUp}
 		onpointercancel={leftUp}
@@ -175,6 +181,7 @@
 	>
 		<svg
 			viewBox="0 0 24 24"
+			aria-hidden="true"
 			fill="none"
 			stroke="currentColor"
 			stroke-width="2.6"
@@ -187,7 +194,7 @@
 		class="walkbtn r reduce-motion-off"
 		class:held={held === 1}
 		disabled={!allowed}
-		aria-label="cammina a destra"
+		aria-label={WALK_LABEL[lang()].right}
 		onpointerdown={rightDown}
 		onpointerup={rightUp}
 		onpointercancel={rightUp}
@@ -195,6 +202,7 @@
 	>
 		<svg
 			viewBox="0 0 24 24"
+			aria-hidden="true"
 			fill="none"
 			stroke="currentColor"
 			stroke-width="2.6"
@@ -254,5 +262,11 @@
 	.walkbtn:disabled {
 		opacity: 0.35;
 		cursor: default;
+	}
+
+	/* T32 focus ring (amber on the night stage; outside the 76 px circle). */
+	.walkbtn:focus-visible {
+		outline: 3px solid var(--amber);
+		outline-offset: 3px;
 	}
 </style>

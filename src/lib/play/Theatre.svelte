@@ -788,7 +788,7 @@
 <!-- The theatre layer: full stage, click-through, above every other scene layer
      (source `z-index:40`). The spot is composed from the trusted static string;
      the props are built imperatively by the shows because they are mutated. -->
-<div class="tt-layer" bind:this={layerEl}>
+<div class="tt-layer" bind:this={layerEl} aria-hidden="true">
 	<div class="tt-veil" bind:this={veilEl}></div>
 	<div class="tt-spot" bind:this={spotEl}>
 		<!-- trusted static SVG from the validated theatre pack -->

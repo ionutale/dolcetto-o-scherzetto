@@ -95,7 +95,7 @@
 		     and the a11y checker has nothing to warn about; the card sits above
 		     it, so a click inside never reaches it. -->
 		<button type="button" class="scrim" aria-label={CLOSE_LABEL[lang()]} onclick={close}></button>
-		<div class="shopcard reduce-motion-off">
+		<div class="shopcard reduce-motion-off" role="dialog" aria-labelledby="shopTitle">
 			<button type="button" class="close" aria-label={CLOSE_LABEL[lang()]} onclick={close}>✕</button
 			>
 			<div class="shopwitch">
@@ -104,7 +104,7 @@
 				{@html NEIGHBORS.strega}
 			</div>
 			<div class="shopbody">
-				<h2>{copy.title}</h2>
+				<h2 id="shopTitle">{copy.title}</h2>
 				<p class="sub">{copy.sub}</p>
 				<div class="shoplist">
 					{#each rows as row (row.id)}
@@ -124,6 +124,7 @@
 									type="button"
 									class="buybtn"
 									disabled={row.state === 'poor'}
+									aria-label={`${copy.buy} ${row.name}`}
 									onclick={() => buy(row.id)}
 								>
 									{copy.buy}
@@ -302,6 +303,20 @@
 		color: color-mix(in srgb, var(--ink) 45%, var(--cream));
 		box-shadow: none;
 		cursor: default;
+	}
+
+	/* T32 focus rings. The card is cream, so an amber ring would vanish: the
+	 * card's controls take an ink ring instead, and the full-stage scrim draws
+	 * its ring inset so it is visible at the viewport edges. */
+	.close:focus-visible,
+	.buybtn:focus-visible {
+		outline: 3px solid var(--ink);
+		outline-offset: 2px;
+	}
+
+	.scrim:focus-visible {
+		outline: 3px solid var(--amber);
+		outline-offset: -4px;
 	}
 
 	/* `fanup` (prototype ~56, the fan's rise) — declared locally so Svelte

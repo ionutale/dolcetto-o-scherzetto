@@ -40,7 +40,7 @@
 	 */
 	import { onDestroy, untrack } from 'svelte';
 	import { candyColor, candySvg } from '$lib/art/sprites/candy';
-	import { candies, dispatch } from '$lib/state/game.svelte';
+	import { candies, dispatch, lang } from '$lib/state/game.svelte';
 	import type { Candy, CandyType } from '$lib/sim/loop';
 	import {
 		FLOATER_DX,
@@ -68,6 +68,24 @@
 
 	/** How long an unpicked candy waits before it starts asking to be picked. */
 	const PICKME_MS = 5000;
+
+	/** A candy skin's spoken glyph (T32), so a label names the shape too. */
+	const CANDY_EMOJI: Record<CandyType, string> = {
+		lolli: '🍭',
+		gummy: '🐻',
+		choco: '🍫',
+		toffee: '🍬',
+		corn: '🌽',
+		star: '🌟'
+	};
+
+	/** A landed candy's accessible name, in the run language (T32). */
+	function candyLabel(c: Candy): string {
+		const emoji = CANDY_EMOJI[c.type];
+		return lang() === 'en'
+			? `Candy ${emoji} worth ${c.value}, tap to collect`
+			: `Caramella ${emoji} valore ${c.value}, tocca per raccogliere`;
+	}
 
 	/** A landing spark, in stage-logical px. */
 	interface Sparkle {
@@ -262,6 +280,10 @@
 			class:landed={hasLanded(c)}
 			class:pickme={nudging.includes(c.id)}
 			style={candyStyle(c)}
+			lang={lang()}
+			aria-label={hasLanded(c) ? candyLabel(c) : undefined}
+			aria-hidden={hasLanded(c) ? undefined : 'true'}
+			tabindex={hasLanded(c) ? 0 : -1}
 			onclick={(event) => tapCandy(c, event.currentTarget)}
 		>
 			<!-- trusted static SVG from the validated candy pack -->
@@ -273,6 +295,7 @@
 	{#if ghost}
 		<div
 			class="candy ghostfly landed"
+			aria-hidden="true"
 			style="--glow:{candyColor[ghost.type]};left:{ghost.x}px;top:{ghost.y}px"
 		>
 			<!-- trusted static SVG from the validated candy pack -->
@@ -282,11 +305,11 @@
 	{/if}
 
 	{#each sparkles as s (s.id)}
-		<div class="sparkle" style="left:{s.x}px;top:{s.y}px"></div>
+		<div class="sparkle" aria-hidden="true" style="left:{s.x}px;top:{s.y}px"></div>
 	{/each}
 
 	{#each floaters as f (f.id)}
-		<div class="floater" style="left:{f.x}px;top:{f.y}px">{f.text}</div>
+		<div class="floater" aria-hidden="true" style="left:{f.x}px;top:{f.y}px">{f.text}</div>
 	{/each}
 </div>
 
@@ -322,6 +345,14 @@
 		display: block;
 		width: 34px;
 		height: 34px;
+	}
+
+	/* T32 focus ring: the candy box is transparent, so only the ring paints;
+	 * rounded so it hugs the sweet instead of a square. */
+	.candy:focus-visible {
+		outline: 3px solid var(--amber);
+		outline-offset: 1px;
+		border-radius: 50%;
 	}
 
 	.candy::before {

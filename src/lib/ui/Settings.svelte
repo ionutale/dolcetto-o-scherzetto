@@ -137,6 +137,7 @@
 		max="100"
 		step="1"
 		value={Math.round(volumes().music * 100)}
+		aria-label={copy.music}
 		oninput={onMusic}
 	/>
 	<output for="musicVol">{Math.round(volumes().music * 100)}</output>
@@ -151,6 +152,7 @@
 		max="100"
 		step="1"
 		value={Math.round(volumes().sfx * 100)}
+		aria-label={copy.sfx}
 		oninput={onSfx}
 	/>
 	<output for="sfxVol">{Math.round(volumes().sfx * 100)}</output>
@@ -163,6 +165,7 @@
 		class="lang-btn"
 		class:on={lang === 'it'}
 		aria-pressed={lang === 'it'}
+		aria-label="Italiano"
 		onclick={() => pick('it')}>IT</button
 	>
 	<button
@@ -170,6 +173,7 @@
 		class="lang-btn"
 		class:on={lang === 'en'}
 		aria-pressed={lang === 'en'}
+		aria-label="English"
 		onclick={() => pick('en')}>EN</button
 	>
 </div>
@@ -210,6 +214,12 @@
 	.slider-row input[type='range'] {
 		flex: 1;
 		accent-color: var(--amber);
+	}
+
+	/* T32 focus ring on the slider track (amber on the night card). */
+	.slider-row input[type='range']:focus-visible {
+		outline: 3px solid var(--amber);
+		outline-offset: 3px;
 	}
 
 	.slider-row output {
@@ -266,5 +276,13 @@
 
 	.menu-settings:hover {
 		background: rgba(247, 236, 217, 0.18);
+	}
+
+	/* T32 focus rings on the card's buttons (amber reads on the night card). */
+	.lang-btn:focus-visible,
+	.menu-settings:focus-visible,
+	.wipe:focus-visible {
+		outline: 3px solid var(--amber);
+		outline-offset: 3px;
 	}
 </style>

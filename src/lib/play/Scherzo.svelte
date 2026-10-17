@@ -56,10 +56,10 @@
 	 * the same path (T13's parity row). Nothing here listens to the window,
 	 * so the page can mount it without any other wiring.
 	 */
-	import { dispatch, fanOpen, phase, tricks } from '$lib/state/game.svelte';
-	import { settings } from '$lib/persist/settings';
+	import { dispatch, fanOpen, lang, phase, tricks } from '$lib/state/game.svelte';
 	import { TRICKS } from '$lib/sim/economy';
 	import type { TrickId } from '$lib/sim/economy';
+	import type { Lang } from '$lib/sim/loop';
 	import { trickIcons } from '$lib/art/sprites/trick-icons';
 	import { fanList, showFan, showScherzoButton, tierDots } from './fan-model';
 
@@ -81,11 +81,31 @@
 	/** Owned tricks, filtered and ordered by the catalogue (`fan-model`). */
 	const list = $derived(fanList(tricks()));
 
-	/** The card label — the catalogue's own name, in the settings language. */
+	/** The card label — the catalogue's own name, in the run language. */
 	function label(id: TrickId): string {
-		const lang = settings.read().lang;
-		return TRICKS[id].name[lang] ?? TRICKS[id].name.it;
+		const l = lang();
+		return TRICKS[id].name[l] ?? TRICKS[id].name.it;
 	}
+
+	/** The card's tier, spoken (the four-dot row is visual only). */
+	function tierLabel(id: TrickId): string {
+		const n = tierDots(id);
+		return lang() === 'en' ? `tier ${n}` : `livello ${n}`;
+	}
+
+	/** T32 accessible names, both languages. */
+	const SCHERZO_LABEL: Record<Lang, string> = {
+		it: 'Usa uno scherzo',
+		en: 'Use a trick'
+	};
+	const FAN_LABEL: Record<Lang, string> = {
+		it: 'Trucchi',
+		en: 'Tricks'
+	};
+	const ESC_LABEL: Record<Lang, string> = {
+		it: 'Chiudi gli scherzi',
+		en: 'Close the tricks'
+	};
 
 	function open(): void {
 		dispatch({ type: 'SCHERZO_OPEN' });
@@ -102,30 +122,37 @@
 </script>
 
 <div class="layer">
-	<button type="button" class="scherzo" class:show={showButton} onclick={open}>
+	<button
+		type="button"
+		class="scherzo"
+		class:show={showButton}
+		aria-label={SCHERZO_LABEL[lang()]}
+		onclick={open}
+	>
 		<span>✨</span> SCHERZO
 	</button>
 
-	<div class="fan" class:show={showFanUp}>
+	<div class="fan" class:show={showFanUp} role="group" aria-label={FAN_LABEL[lang()]}>
 		{#each list as id (id)}
 			<button
 				type="button"
 				class="trickcard reduce-motion-off"
 				data-trick={id}
+				aria-label={`${label(id)}, ${tierLabel(id)}`}
 				onclick={() => play(id)}
 			>
 				<!-- trusted static SVG from the validated trick pack -->
 				<!-- eslint-disable-next-line svelte/no-at-html-tags -->
 				{@html trickIcons[id]}
 				<span>{label(id)}</span>
-				<span class="tier">
+				<span class="tier" aria-hidden="true">
 					{#each [1, 2, 3, 4] as dot (dot)}
 						<i class:on={dot <= tierDots(id)}></i>
 					{/each}
 				</span>
 			</button>
 		{/each}
-		<button type="button" class="esc" onclick={close}>✕</button>
+		<button type="button" class="esc" aria-label={ESC_LABEL[lang()]} onclick={close}>✕</button>
 	</div>
 </div>
 
@@ -282,6 +309,14 @@
 		font-weight: 700;
 		cursor: pointer;
 		box-shadow: 0 6px 16px rgba(10, 6, 30, 0.4);
+	}
+
+	/* T32 focus rings (amber on the night stage; ring sits outside the box). */
+	.scherzo:focus-visible,
+	.trickcard:focus-visible,
+	.esc:focus-visible {
+		outline: 3px solid var(--amber);
+		outline-offset: 3px;
 	}
 
 	/* Reduced motion: the pulse is an ambient loop and the fanup an entrance

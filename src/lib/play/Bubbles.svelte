@@ -28,6 +28,8 @@
 	class:show={view.show}
 	class:small={view.small}
 	style="left: {view.x}px; top: {view.y}px"
+	role="status"
+	aria-live="polite"
 >
 	{view.text}
 </div>

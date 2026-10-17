@@ -62,8 +62,15 @@
 	}
 </script>
 
-<button type="button" class="knockbtn" class:show style="left: {left}px" onclick={knock}>
-	{labelHead()}<span class="knock-hand">{HAND}</span>
+<button
+	type="button"
+	class="knockbtn"
+	class:show
+	style="left: {left}px"
+	aria-label={labelHead().trim()}
+	onclick={knock}
+>
+	{labelHead()}<span class="knock-hand" aria-hidden="true">{HAND}</span>
 </button>
 
 <style>
@@ -74,7 +81,7 @@
 		bottom: 209px;
 		transform: translateX(-50%);
 		display: none;
-		padding: 10px 18px;
+		padding: 12px 18px;
 		border-radius: 999px;
 		background: var(--paper);
 		color: var(--ink);
@@ -84,6 +91,15 @@
 		cursor: pointer;
 		box-shadow: 0 10px 26px rgba(10, 6, 30, 0.5);
 		font-family: inherit;
+		/* T32 target size: symmetric vertical padding grows the pill from ~41 px
+		 * to ~45 px to a ≥44 px tap target; the label stays vertically centred,
+		 * so its visual centre holds. */
+	}
+
+	/* T32 focus ring (amber on the night stage). */
+	.knockbtn:focus-visible {
+		outline: 3px solid var(--amber);
+		outline-offset: 3px;
 	}
 
 	/* The entrance is a crossing (kept for reduced motion); the invite loop is

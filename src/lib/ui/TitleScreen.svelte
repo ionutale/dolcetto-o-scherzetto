@@ -57,8 +57,18 @@
 
 	const copy = $derived(
 		lang === 'it'
-			? { eyebrow: '🎃 Una notte di caramelle', play: 'Gioca ▶', settings: '⚙️ Impostazioni' }
-			: { eyebrow: '🎃 A night of candy', play: 'Play ▶', settings: '⚙️ Settings' }
+			? {
+					eyebrow: '🎃 Una notte di caramelle',
+					play: 'Gioca ▶',
+					settings: '⚙️ Impostazioni',
+					menu: 'Menu principale'
+				}
+			: {
+					eyebrow: '🎃 A night of candy',
+					play: 'Play ▶',
+					settings: '⚙️ Settings',
+					menu: 'Main menu'
+				}
 	);
 
 	/** Gioca: fade the menu, then hand the gesture to the page. */
@@ -78,7 +88,13 @@
 	}
 </script>
 
-<div class="menu" class:hide={!menuState.open}>
+<div
+	class="menu"
+	class:hide={!menuState.open}
+	role="dialog"
+	aria-label={copy.menu}
+	inert={!menuState.open}
+>
 	<div class="menu-card" hidden={panel !== 'home'}>
 		<p class="menu-eyebrow">{copy.eyebrow}</p>
 		<h1 class="menu-title">Dolcetto o Scherzetto</h1>
@@ -175,6 +191,13 @@
 
 	.menu-settings:hover {
 		background: rgba(247, 236, 217, 0.18);
+	}
+
+	/* T32 focus rings (amber on the night card). */
+	.menu-play:focus-visible,
+	.menu-settings:focus-visible {
+		outline: 3px solid var(--amber);
+		outline-offset: 3px;
 	}
 
 	@keyframes menuInvite {
