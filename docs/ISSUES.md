@@ -26,7 +26,7 @@
 | T06 | P1 | Economy module (+ tests) | free-coder | T05 | Roll/buy math exact; guards hold |
 | T07 | P1 | Progression module (+ tests) | free-coder | T05 | Caps hold; 4-theme rotation |
 | T08 | P2 | Stage/sky/fit + rotate overlay | free-coder | T02,T04 | 852×393 reference matches; portrait overlay |
-| T09 | P2 | Houses/yards/doors + recycling window | free-art+coder | T08 | ≤20 slots after walking 50 homes |
+| T09 | P2 | Houses/yards/doors + recycling window (sprites+houses packs ported to TS) | free-art+coder | T08 | ≤20 slots after walking 50 homes · orchestrator follow-up: drop Stage's dev-chrome reservation (CHROME_X/Y → 8px) once T09 lands for full-bleed |
 | T10 | P2 | Kids duo + hold-to-walk input | free-coder | T08 | Speed spec; pointercancel stops walk |
 | T11 | P2 | Knock→greet→resolve + bubbles (knock cloud beckons: 1.25 s pulse + glow ring + tapping hand; static under reduced motion) | free-coder | T09,T10 | Treat/refuse/regift/seen flows e2e |
 | T12 | P2 | Candy layer (2 s float, pile, collect) | free-coder | T11 | Bag = sum of collected; per-candy glow halo (pulse, stronger on pile; static under reduced motion); reduced-motion idle |

@@ -10,7 +10,7 @@
 <html lang="it">
 <head>
 <meta charset="utf-8" />
-<meta name="viewport" content="width=device-width, initial-scale=1" />
+<meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no" />
 <title>Dolcetto o Scherzetto — scene prototype v2</title>
 <link rel="icon" href="data:," />
 <link rel="preconnect" href="https://fonts.googleapis.com" />
@@ -25,6 +25,15 @@
     --glow:#ffd9a0;
   }
   *{ box-sizing:border-box; margin:0; padding:0; }
+  html, body{ touch-action:manipulation; -webkit-user-select:none; user-select:none;
+    -webkit-tap-highlight-color:transparent; -webkit-touch-callout:none; }
+  /* ---------- app mode: the game IS the page; dev chrome hidden behind 🛠 ---------- */
+  body{ padding:4px; gap:0; overflow:hidden; height:100dvh; }
+  body.dev{ padding:18px 16px 30px; gap:14px; overflow:auto; height:auto; min-height:100%; }
+  body:not(.dev) .chrome, body:not(.dev) .tools{ display:none; }
+  #devBtn{ position:fixed; right:6px; bottom:6px; z-index:400; width:30px; height:30px; border-radius:50%;
+    border:none; background:rgba(247,236,217,.08); color:var(--cream); opacity:.35; cursor:pointer; font-size:14px; }
+  #devBtn:hover{ opacity:.9; }
   html,body{ height:100%; }
   body{
     background:
@@ -447,6 +456,8 @@
   </div>
 </div>
 
+<button id="devBtn" title="Strumenti del prototipo (scenari, stato, reset)">🛠</button>
+
 <div class="tools">
   <div class="scenbar" id="scenbar">
     <span class="step" id="scenstep"></span>
@@ -843,7 +854,7 @@ function musicFrame(ducked) {
   }
 }
 /* any first interaction anywhere unlocks audio (buttons included) — idempotent */
-window.addEventListener('pointerdown', () => { if (window.SFX && SFX.init) SFX.init(); ambInit(); musicStart(); }, { once: true });
+window.addEventListener('pointerdown', () => { if (window.SFX && SFX.init) SFX.init(); ambInit(); musicStart(); tryLandscapeLock(); }, { once: true });
 
 /* ---------------- main menu + settings (prototype) ---------------- */
 const MENU_KEY = 'dos.proto.settings';
@@ -868,7 +879,7 @@ function volsApply() {
   if (m) { m.value = Math.round(vols.music * 100); document.getElementById('musicVolVal').textContent = m.value; }
   if (s) { s.value = Math.round(vols.sfx * 100); document.getElementById('sfxVolVal').textContent = s.value; }
 }
-document.getElementById('playBtn').addEventListener('click', () => { document.getElementById('menu').classList.add('hide'); });
+document.getElementById('playBtn').addEventListener('click', () => { document.getElementById('menu').classList.add('hide'); tryLandscapeLock(); });
 document.getElementById('settingsBtn').addEventListener('click', () => {
   document.getElementById('menuHome').hidden = true;
   document.getElementById('settingsPanel').hidden = false;
@@ -1747,14 +1758,25 @@ function renderScene(dt) {
 /* ---------------- fit ---------------- */
 function fit() {
   const wrap = $('stagewrap');
-  const availW = Math.min(window.innerWidth - 40, 1100);
-  const availH = Math.max(window.innerHeight - 360, 340);
-  const s = Math.max(.4, Math.min(availW / 852, Math.max(300, availH) / 393, 1.6));
+  const dev = document.body.classList.contains('dev');
+  const availW = dev ? Math.min(window.innerWidth - 40, 1100) : window.innerWidth - 8;
+  const availH = dev ? Math.max(window.innerHeight - 360, 340) : window.innerHeight - 8;
+  const s = Math.max(.4, Math.min(availW / 852, Math.max(300, availH) / 393, dev ? 1.6 : 2));
   stage.style.transform = `scale(${s})`;
   wrap.style.width = (852 * s) + 'px';
   wrap.style.height = (393 * s) + 'px';
 }
 window.addEventListener('resize', fit);
+document.getElementById('devBtn').addEventListener('click', () => { document.body.classList.toggle('dev'); fit(); });
+/* attempt a real landscape lock where the platform permits (installed PWA / Android); iOS keeps the rotate prompt */
+function tryLandscapeLock() {
+  try {
+    if (screen.orientation && screen.orientation.lock) {
+      const p = screen.orientation.lock('landscape');
+      if (p && p.catch) p.catch(() => {});
+    }
+  } catch (e) {}
+}
 
 /* ---------------- avvio ---------------- */
 buildBackdrops();
