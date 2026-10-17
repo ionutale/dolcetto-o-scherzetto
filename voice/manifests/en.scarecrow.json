@@ -1,0 +1,44 @@
+[
+  {
+    "id": "greet-scarecrow",
+    "text": "Oh! Someone talked to me!",
+    "bytes": 19629,
+    "duration": 1.542958,
+    "sha256": "51bf4377c6f86e8e61b996c0d01b0afd06b7b262d36a52f11aefa03f45096a9c"
+  },
+  {
+    "id": "treat-scarecrow",
+    "text": "Candy fresh out of the straw!",
+    "bytes": 19629,
+    "duration": 1.541167,
+    "sha256": "f9ea5997ecdc47ad04cbc0259ba824934efd6c8f351d7834abdf227a52713206"
+  },
+  {
+    "id": "refuse-scarecrow",
+    "text": "Oops! My straw brain is empty!",
+    "bytes": 24237,
+    "duration": 1.938542,
+    "sha256": "0c144bf3f6bccf56bd94078b47f15802dc9335f57fa2d78ea94790af6fd6f8f8"
+  },
+  {
+    "id": "regift-scarecrow",
+    "text": "One was hiding in the straw!",
+    "bytes": 17037,
+    "duration": 1.327292,
+    "sha256": "64029926ad9db5e493ea985285d14c6709761511af977f38bb0de0b0961c91f1"
+  },
+  {
+    "id": "seen-scarecrow",
+    "text": "Seen you already! Silly me!",
+    "bytes": 26541,
+    "duration": 2.135583,
+    "sha256": "74f34b9292872f83750dba7063cb955220bbb67eea2a480b21902fe1b1d2c55e"
+  },
+  {
+    "id": "scherzo-scarecrow",
+    "text": "Heh heh! You ruffled my straw!",
+    "bytes": 25389,
+    "duration": 2.034333,
+    "sha256": "ed59012bb2fd4caa327a5dc9fa38aad714b1da8a27fde53ab2c44f79afe651cd"
+  }
+]

@@ -1,0 +1,26 @@
+[
+	{
+		"id": "greet-strega",
+		"text": "Ehehe, chi c’è alla porta?"
+	},
+	{
+		"id": "treat-strega",
+		"text": "Prendete, piccoli maghi!"
+	},
+	{
+		"id": "refuse-strega",
+		"text": "Il mio calderone è vuoto stasera!"
+	},
+	{
+		"id": "regift-strega",
+		"text": "Una scappata dal calderone!"
+	},
+	{
+		"id": "seen-strega",
+		"text": "Già passati di qui, ehehe!"
+	},
+	{
+		"id": "scherzo-strega",
+		"text": "Ehehe! Bei maghetti! Tutto per voi!"
+	}
+]

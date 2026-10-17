@@ -1,0 +1,26 @@
+[
+	{
+		"id": "greet-vlad",
+		"text": "Good evening, little guests!"
+	},
+	{
+		"id": "treat-vlad",
+		"text": "With pleasure — do take some."
+	},
+	{
+		"id": "refuse-vlad",
+		"text": "A thousand pardons: the pantry is bare."
+	},
+	{
+		"id": "regift-vlad",
+		"text": "One last candy, with grace."
+	},
+	{
+		"id": "seen-vlad",
+		"text": "We have met already, I recall."
+	},
+	{
+		"id": "scherzo-vlad",
+		"text": "Ah! Droll. You have earned these!"
+	}
+]

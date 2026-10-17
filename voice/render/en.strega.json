@@ -1,0 +1,26 @@
+[
+	{
+		"id": "greet-strega",
+		"text": "Ehehe, who’s at my door?"
+	},
+	{
+		"id": "treat-strega",
+		"text": "Take some, little wizards!"
+	},
+	{
+		"id": "refuse-strega",
+		"text": "My cauldron is empty tonight!"
+	},
+	{
+		"id": "regift-strega",
+		"text": "One escaped my cauldron!"
+	},
+	{
+		"id": "seen-strega",
+		"text": "Already been here, ehehe!"
+	},
+	{
+		"id": "scherzo-strega",
+		"text": "Ehehe! What little wizards! All yours!"
+	}
+]

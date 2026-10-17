@@ -1,0 +1,26 @@
+[
+	{
+		"id": "greet-wolf",
+		"text": "Woof! Furry friends at the door!"
+	},
+	{
+		"id": "treat-wolf",
+		"text": "Here, take some! Woof woof!"
+	},
+	{
+		"id": "refuse-wolf",
+		"text": "All out, woof... sorry!"
+	},
+	{
+		"id": "regift-wolf",
+		"text": "Wait! One was in my fur!"
+	},
+	{
+		"id": "seen-wolf",
+		"text": "Woof! We sniffed noses already!"
+	},
+	{
+		"id": "scherzo-wolf",
+		"text": "Woof woof! That tickled! All yours!"
+	}
+]

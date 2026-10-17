@@ -1,0 +1,26 @@
+[
+	{
+		"id": "greet-nonna",
+		"text": "Oh, what sweet boys!"
+	},
+	{
+		"id": "treat-nonna",
+		"text": "How cute! Here’s some candy!"
+	},
+	{
+		"id": "refuse-nonna",
+		"text": "No candy tonight, sorry!"
+	},
+	{
+		"id": "regift-nonna",
+		"text": "Here, one more!"
+	},
+	{
+		"id": "seen-nonna",
+		"text": "We already met, haha!"
+	},
+	{
+		"id": "scherzo-nonna",
+		"text": "Ah! You rascals! Take these!"
+	}
+]

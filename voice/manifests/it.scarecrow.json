@@ -1,0 +1,44 @@
+[
+  {
+    "id": "greet-scarecrow",
+    "text": "Oh! Qualcuno mi ha parlato!",
+    "bytes": 22509,
+    "duration": 1.779083,
+    "sha256": "63772b68bcd62c14caa040ddf4f13b478ef3e205925cc497bb3de2de45778efb"
+  },
+  {
+    "id": "treat-scarecrow",
+    "text": "Dolcetti freschi di paglia!",
+    "bytes": 26253,
+    "duration": 2.103792,
+    "sha256": "bb4ffc9ae06a1e39e8edf18aa636b1c7467dbe2b81f8e7188275087eee1ffdb4"
+  },
+  {
+    "id": "refuse-scarecrow",
+    "text": "Ops! Ho la zucca di paglia, stasera!",
+    "bytes": 46413,
+    "duration": 3.769958,
+    "sha256": "00d544d089523ed41b8629b8f614d9bbed5b4893fd9b7525c2d0c4173c001909"
+  },
+  {
+    "id": "regift-scarecrow",
+    "text": "Una era qui tra la paglia!",
+    "bytes": 19053,
+    "duration": 1.501583,
+    "sha256": "33b8509e2944292e82c8df7611a54b3933c92028ecf890469f2d2df8bbd7e629"
+  },
+  {
+    "id": "seen-scarecrow",
+    "text": "Gi\u00e0 visti, gi\u00e0 visti! Che testa!",
+    "bytes": 32589,
+    "duration": 2.635417,
+    "sha256": "a1caafb704f3f63dbc4c5ab7c4e1a581e82b3df647aaa7498748008fc06cfca7"
+  },
+  {
+    "id": "scherzo-scarecrow",
+    "text": "Eh eh! Mi avete scompigliato la paglia!",
+    "bytes": 29709,
+    "duration": 2.381625,
+    "sha256": "99227b2bfcedd6e1cce44732083f4bfc2c1c39422f14e87fe7e7cd9f8b2e2dc1"
+  }
+]

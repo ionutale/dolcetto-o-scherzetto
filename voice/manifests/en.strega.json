@@ -1,0 +1,44 @@
+[
+  {
+    "id": "greet-strega",
+    "text": "Ehehe, who\u2019s at my door?",
+    "bytes": 20205,
+    "duration": 1.59825,
+    "sha256": "ee62e68cd5081ed514b0904e5216d84e6d9d896bf4511c6136127f291d109060"
+  },
+  {
+    "id": "treat-strega",
+    "text": "Take some, little wizards!",
+    "bytes": 17037,
+    "duration": 1.331583,
+    "sha256": "8af4c3c864d703662e4a4c26005e9ec41b4ee8b24f960c311059e44182482a76"
+  },
+  {
+    "id": "refuse-strega",
+    "text": "My cauldron is empty tonight!",
+    "bytes": 25101,
+    "duration": 1.996875,
+    "sha256": "b1d1a7dca70452603bc83c43dc0ff2b726782ac08b5c8d992027f21e8963ef18"
+  },
+  {
+    "id": "regift-strega",
+    "text": "One escaped my cauldron!",
+    "bytes": 18765,
+    "duration": 1.483875,
+    "sha256": "bb403e89b13f2fd975713e2dede8cce62f0aed1bc67e2e54b689a021b70b1788"
+  },
+  {
+    "id": "seen-strega",
+    "text": "Already been here, ehehe!",
+    "bytes": 25965,
+    "duration": 2.086208,
+    "sha256": "1b1b2311c537db520a4b600ec929d265ed2a388e4508f4df2e182818a5e2b7a9"
+  },
+  {
+    "id": "scherzo-strega",
+    "text": "Ehehe! What little wizards! All yours!",
+    "bytes": 41805,
+    "duration": 3.39625,
+    "sha256": "013b25a32d6142ec01982bc2bee98e76f063bddc6ca9158b1fa61978ba682157"
+  }
+]

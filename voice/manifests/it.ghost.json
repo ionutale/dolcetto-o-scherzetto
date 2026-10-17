@@ -1,0 +1,44 @@
+[
+  {
+    "id": "greet-ghost",
+    "text": "Buuu! Chi va l\u00e0?... Ah, siete voi!",
+    "bytes": 44685,
+    "duration": 3.640333,
+    "sha256": "2f244362eb8e15770c4cf14c3bbd8b6fdaac59b96d005cca24764655403869d8"
+  },
+  {
+    "id": "treat-ghost",
+    "text": "Dolcetti per voi... buuu!",
+    "bytes": 23085,
+    "duration": 1.844042,
+    "sha256": "6601e3f79b296906aff952c3db0c13c2d46ae33215e7e074b22ecf5a5019f697"
+  },
+  {
+    "id": "refuse-ghost",
+    "text": "Ooooh... ho finito i dolcetti!",
+    "bytes": 28269,
+    "duration": 2.277417,
+    "sha256": "6d5620451ed50eb42eef85cbf418df1ab50c2133c13c9f19a0bf14028aa7956b"
+  },
+  {
+    "id": "regift-ghost",
+    "text": "Aspetta... una \u00e8 rimasta!",
+    "bytes": 25677,
+    "duration": 2.047542,
+    "sha256": "b7070a0fec93f3d5a6a5bffaf818178008d1cf411e7b9232516e977e73091b29"
+  },
+  {
+    "id": "seen-ghost",
+    "text": "Buuu... ci siamo gi\u00e0 visti!",
+    "bytes": 24525,
+    "duration": 1.965542,
+    "sha256": "4f3353ead5fcb8d986b8ca561777555022a817938a56019854022c7857ad5079"
+  },
+  {
+    "id": "scherzo-ghost",
+    "text": "Ehehe! Mi avete fatto ridere! Tieni!",
+    "bytes": 41517,
+    "duration": 3.374875,
+    "sha256": "5de0b86db4aa3d27138d00fc136d5460047469240f32f63a069babeb5d7f4730"
+  }
+]

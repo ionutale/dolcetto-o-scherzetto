@@ -1,0 +1,44 @@
+[
+  {
+    "id": "greet-wolf",
+    "text": "Arf! Amici pelosi in visita!",
+    "bytes": 35181,
+    "duration": 2.844917,
+    "sha256": "2cc835f7b449fc24e2ee246471ce7556d9afe8841917ce7152c6fd65b467f51c"
+  },
+  {
+    "id": "treat-wolf",
+    "text": "Tieni, tieni! Arf arf!",
+    "bytes": 32013,
+    "duration": 2.573958,
+    "sha256": "1dbf93d3067819acb7e3b3d18eaea89bbe17a6631b0802575b143dec15567503"
+  },
+  {
+    "id": "refuse-wolf",
+    "text": "Ho gi\u00e0 dato tutto, arf... peccato!",
+    "bytes": 35181,
+    "duration": 2.839667,
+    "sha256": "a3c401ba133c5f081e7788f2257423ce40dc5e2235d6dfaf76962b11e9959817"
+  },
+  {
+    "id": "regift-wolf",
+    "text": "Aspetta! Una era nel pelo!",
+    "bytes": 32301,
+    "duration": 2.594917,
+    "sha256": "8cb0d957c631f6d07d1f88b321d5ccca3646d9e8c2d1ecdb87a2dc9766e5c52b"
+  },
+  {
+    "id": "seen-wolf",
+    "text": "Arf! Ci eravamo gi\u00e0 annusati!",
+    "bytes": 33165,
+    "duration": 2.670458,
+    "sha256": "c0a55ed95bf82d08e9a7d2ea7df682fe2dbf24ba2e1a8c3145ad7766fcbb0f37"
+  },
+  {
+    "id": "scherzo-wolf",
+    "text": "Arf arf! Che ridere! Tutto per voi!",
+    "bytes": 42957,
+    "duration": 3.488208,
+    "sha256": "8275e422f08e7a15a384e5d61eec4b06ca7ba02193920239aa2156fc870edc8e"
+  }
+]

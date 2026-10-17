@@ -1,0 +1,44 @@
+[
+  {
+    "id": "greet-strega",
+    "text": "Ehehe, chi c\u2019\u00e8 alla porta?",
+    "bytes": 23373,
+    "duration": 1.851708,
+    "sha256": "436a1afc70dcdd2ff7d29794a57dc75e259fc87b7107dca065b155f2885c147b"
+  },
+  {
+    "id": "treat-strega",
+    "text": "Prendete, piccoli maghi!",
+    "bytes": 21357,
+    "duration": 1.685917,
+    "sha256": "36655910f2692e4d9cd1a7400c9e64bddaa29177c3322269f1cb5386a8f0de3d"
+  },
+  {
+    "id": "refuse-strega",
+    "text": "Il mio calderone \u00e8 vuoto stasera!",
+    "bytes": 30573,
+    "duration": 2.457042,
+    "sha256": "b2b703d6aa1b50a490760505fab39e8a468f2acafd583cf73ece855c9bff11b9"
+  },
+  {
+    "id": "regift-strega",
+    "text": "Una scappata dal calderone!",
+    "bytes": 22797,
+    "duration": 1.801958,
+    "sha256": "0707a56c7d2a594c6f66a39a7af0445ba3825f02b3505417c32bb66f1c5128aa"
+  },
+  {
+    "id": "seen-strega",
+    "text": "Gi\u00e0 passati di qui, ehehe!",
+    "bytes": 21645,
+    "duration": 1.716125,
+    "sha256": "ea3c4e8115a8663ae06a026d264978bf9ee5d4ddbdff292c6ee46a2e2660da89"
+  },
+  {
+    "id": "scherzo-strega",
+    "text": "Ehehe! Bei maghetti! Tutto per voi!",
+    "bytes": 38637,
+    "duration": 3.139167,
+    "sha256": "3d1c5eb46c8172f5a48874f790d43f6054932a6fbf1af1f0bd9a13b040fbb828"
+  }
+]

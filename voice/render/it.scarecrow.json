@@ -1,0 +1,26 @@
+[
+	{
+		"id": "greet-scarecrow",
+		"text": "Oh! Qualcuno mi ha parlato!"
+	},
+	{
+		"id": "treat-scarecrow",
+		"text": "Dolcetti freschi di paglia!"
+	},
+	{
+		"id": "refuse-scarecrow",
+		"text": "Ops! Ho la zucca di paglia, stasera!"
+	},
+	{
+		"id": "regift-scarecrow",
+		"text": "Una era qui tra la paglia!"
+	},
+	{
+		"id": "seen-scarecrow",
+		"text": "Già visti, già visti! Che testa!"
+	},
+	{
+		"id": "scherzo-scarecrow",
+		"text": "Eh eh! Mi avete scompigliato la paglia!"
+	}
+]

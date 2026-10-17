@@ -1,0 +1,150 @@
+[
+	{
+		"id": "shout",
+		"text": "Trick or treat!"
+	},
+	{
+		"id": "greet-ghost",
+		"text": "Boo! Who goes there?.. Oh, it’s you!"
+	},
+	{
+		"id": "greet-nonna",
+		"text": "Oh, what sweet boys!"
+	},
+	{
+		"id": "greet-strega",
+		"text": "Ehehe, who’s at my door?"
+	},
+	{
+		"id": "greet-wolf",
+		"text": "Woof! Furry friends at the door!"
+	},
+	{
+		"id": "greet-vlad",
+		"text": "Good evening, little guests!"
+	},
+	{
+		"id": "greet-scarecrow",
+		"text": "Oh! Someone talked to me!"
+	},
+	{
+		"id": "treat-ghost",
+		"text": "Candy for you... boo!"
+	},
+	{
+		"id": "treat-nonna",
+		"text": "How cute! Here’s some candy!"
+	},
+	{
+		"id": "treat-strega",
+		"text": "Take some, little wizards!"
+	},
+	{
+		"id": "treat-wolf",
+		"text": "Here, take some! Woof woof!"
+	},
+	{
+		"id": "treat-vlad",
+		"text": "With pleasure — do take some."
+	},
+	{
+		"id": "treat-scarecrow",
+		"text": "Candy fresh out of the straw!"
+	},
+	{
+		"id": "refuse-ghost",
+		"text": "Oooh... I ran out of candy!"
+	},
+	{
+		"id": "refuse-nonna",
+		"text": "No candy tonight, sorry!"
+	},
+	{
+		"id": "refuse-strega",
+		"text": "My cauldron is empty tonight!"
+	},
+	{
+		"id": "refuse-wolf",
+		"text": "All out, woof... sorry!"
+	},
+	{
+		"id": "refuse-vlad",
+		"text": "A thousand pardons: the pantry is bare."
+	},
+	{
+		"id": "refuse-scarecrow",
+		"text": "Oops! My straw brain is empty!"
+	},
+	{
+		"id": "regift-ghost",
+		"text": "Wait... one left!"
+	},
+	{
+		"id": "regift-nonna",
+		"text": "Here, one more!"
+	},
+	{
+		"id": "regift-strega",
+		"text": "One escaped my cauldron!"
+	},
+	{
+		"id": "regift-wolf",
+		"text": "Wait! One was in my fur!"
+	},
+	{
+		"id": "regift-vlad",
+		"text": "One last candy, with grace."
+	},
+	{
+		"id": "regift-scarecrow",
+		"text": "One was hiding in the straw!"
+	},
+	{
+		"id": "seen-ghost",
+		"text": "Boo... we already met!"
+	},
+	{
+		"id": "seen-nonna",
+		"text": "We already met, haha!"
+	},
+	{
+		"id": "seen-strega",
+		"text": "Already been here, ehehe!"
+	},
+	{
+		"id": "seen-wolf",
+		"text": "Woof! We sniffed noses already!"
+	},
+	{
+		"id": "seen-vlad",
+		"text": "We have met already, I recall."
+	},
+	{
+		"id": "seen-scarecrow",
+		"text": "Seen you already! Silly me!"
+	},
+	{
+		"id": "scherzo-ghost",
+		"text": "Ehehe! You made me laugh! Take!"
+	},
+	{
+		"id": "scherzo-nonna",
+		"text": "Ah! You rascals! Take these!"
+	},
+	{
+		"id": "scherzo-strega",
+		"text": "Ehehe! What little wizards! All yours!"
+	},
+	{
+		"id": "scherzo-wolf",
+		"text": "Woof woof! That tickled! All yours!"
+	},
+	{
+		"id": "scherzo-vlad",
+		"text": "Ah! Droll. You have earned these!"
+	},
+	{
+		"id": "scherzo-scarecrow",
+		"text": "Heh heh! You ruffled my straw!"
+	}
+]

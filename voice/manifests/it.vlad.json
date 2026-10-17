@@ -1,0 +1,44 @@
+[
+  {
+    "id": "greet-vlad",
+    "text": "Buonasera, piccoli ospiti!",
+    "bytes": 62253,
+    "duration": 5.105792,
+    "sha256": "6be11ce1fbce432dbcb6b0a0c8e2da8727c1464329b1f9dde953ba533d091617"
+  },
+  {
+    "id": "treat-vlad",
+    "text": "Con piacere, prendete i dolcetti.",
+    "bytes": 32301,
+    "duration": 2.6065,
+    "sha256": "ff447d2d47dfaf415b5b027d88f701811d7f68c947b679a6e5a45f96b6e2ddbd"
+  },
+  {
+    "id": "refuse-vlad",
+    "text": "Mille scuse: la dispensa \u00e8 vuota.",
+    "bytes": 37773,
+    "duration": 3.071625,
+    "sha256": "4fde171335d72c148dee445790d560a6437deac2b3e7b3b5620a7d2ad5bb621c"
+  },
+  {
+    "id": "regift-vlad",
+    "text": "Un ultimo dolcetto, con garbo.",
+    "bytes": 27117,
+    "duration": 2.17925,
+    "sha256": "d3a1f8a3879b050fb82b4c03e18209cb3354d0c6b44923ba85a6dbb1d031e6aa"
+  },
+  {
+    "id": "seen-vlad",
+    "text": "Ci siamo gi\u00e0 presentati, rammento.",
+    "bytes": 41805,
+    "duration": 3.392375,
+    "sha256": "dbc8ee1e06597118f3ffc74ff9f7948239806097ca35591356a95f8732113a8f"
+  },
+  {
+    "id": "scherzo-vlad",
+    "text": "Ah! Spiritosi. Ve li siete meritati!",
+    "bytes": 51309,
+    "duration": 4.193833,
+    "sha256": "e8a393f768adc62b2a07d02aa9e5a5eafcb9686d1eba851ba302666413d77a2a"
+  }
+]

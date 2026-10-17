@@ -1,0 +1,26 @@
+[
+	{
+		"id": "greet-vlad",
+		"text": "Buonasera, piccoli ospiti!"
+	},
+	{
+		"id": "treat-vlad",
+		"text": "Con piacere, prendete i dolcetti."
+	},
+	{
+		"id": "refuse-vlad",
+		"text": "Mille scuse: la dispensa è vuota."
+	},
+	{
+		"id": "regift-vlad",
+		"text": "Un ultimo dolcetto, con garbo."
+	},
+	{
+		"id": "seen-vlad",
+		"text": "Ci siamo già presentati, rammento."
+	},
+	{
+		"id": "scherzo-vlad",
+		"text": "Ah! Spiritosi. Ve li siete meritati!"
+	}
+]

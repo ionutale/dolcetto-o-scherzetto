@@ -1,0 +1,26 @@
+[
+	{
+		"id": "greet-nonna",
+		"text": "Oh, che bei bimbi!"
+	},
+	{
+		"id": "treat-nonna",
+		"text": "Che carini! Ecco i dolcetti!"
+	},
+	{
+		"id": "refuse-nonna",
+		"text": "Stasera niente caramelle, mi dispiace!"
+	},
+	{
+		"id": "regift-nonna",
+		"text": "Tieni, ancora una!"
+	},
+	{
+		"id": "seen-nonna",
+		"text": "Ci siamo già visti, aha!"
+	},
+	{
+		"id": "scherzo-nonna",
+		"text": "Ah! Che burloni! Prendete!"
+	}
+]

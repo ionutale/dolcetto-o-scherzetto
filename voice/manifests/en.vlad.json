@@ -1,0 +1,44 @@
+[
+  {
+    "id": "greet-vlad",
+    "text": "Good evening, little guests!",
+    "bytes": 18189,
+    "duration": 1.425833,
+    "sha256": "7e1f0ce0cae7c2769167f4944e12cd7f81f1b6887a9b3ae6395368c52028bbfa"
+  },
+  {
+    "id": "treat-vlad",
+    "text": "With pleasure \u2014 do take some.",
+    "bytes": 37773,
+    "duration": 3.067875,
+    "sha256": "d06a823c576b952e492b9349403c4b1354788242ad664efb6ab2a133fd8db520"
+  },
+  {
+    "id": "refuse-vlad",
+    "text": "A thousand pardons: the pantry is bare.",
+    "bytes": 34029,
+    "duration": 2.752625,
+    "sha256": "dd8f5d1fcfcdb453debe7d49bc2ec18391a4b85e59e82bb8b22d1212edb5e8f5"
+  },
+  {
+    "id": "regift-vlad",
+    "text": "One last candy, with grace.",
+    "bytes": 25389,
+    "duration": 2.035625,
+    "sha256": "a2c55c1fef5119646a29e845a392ee73cd1b28add3a60dfeedc7c2c955e0c6d9"
+  },
+  {
+    "id": "seen-vlad",
+    "text": "We have met already, I recall.",
+    "bytes": 22797,
+    "duration": 1.823375,
+    "sha256": "413a147ff8d12958360d0aa3684506f3b6c1d0de4a5cd0ddcd2a5ebcd45aa538"
+  },
+  {
+    "id": "scherzo-vlad",
+    "text": "Ah! Droll. You have earned these!",
+    "bytes": 44685,
+    "duration": 3.6475,
+    "sha256": "8973f7eb3639eeb798f2ea181685c7040a787fb8e4423744ee5d0019f5d77813"
+  }
+]

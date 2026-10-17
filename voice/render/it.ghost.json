@@ -1,0 +1,26 @@
+[
+	{
+		"id": "greet-ghost",
+		"text": "Buuu! Chi va là?... Ah, siete voi!"
+	},
+	{
+		"id": "treat-ghost",
+		"text": "Dolcetti per voi... buuu!"
+	},
+	{
+		"id": "refuse-ghost",
+		"text": "Ooooh... ho finito i dolcetti!"
+	},
+	{
+		"id": "regift-ghost",
+		"text": "Aspetta... una è rimasta!"
+	},
+	{
+		"id": "seen-ghost",
+		"text": "Buuu... ci siamo già visti!"
+	},
+	{
+		"id": "scherzo-ghost",
+		"text": "Ehehe! Mi avete fatto ridere! Tieni!"
+	}
+]

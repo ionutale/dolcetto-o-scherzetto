@@ -1,0 +1,26 @@
+[
+	{
+		"id": "greet-ghost",
+		"text": "Boo! Who goes there?.. Oh, it’s you!"
+	},
+	{
+		"id": "treat-ghost",
+		"text": "Candy for you... boo!"
+	},
+	{
+		"id": "refuse-ghost",
+		"text": "Oooh... I ran out of candy!"
+	},
+	{
+		"id": "regift-ghost",
+		"text": "Wait... one left!"
+	},
+	{
+		"id": "seen-ghost",
+		"text": "Boo... we already met!"
+	},
+	{
+		"id": "scherzo-ghost",
+		"text": "Ehehe! You made me laugh! Take!"
+	}
+]

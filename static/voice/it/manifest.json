@@ -1,0 +1,261 @@
+[
+  {
+    "id": "shout",
+    "text": "Dolcetto o scherzetto!",
+    "bytes": 23085,
+    "duration": 1.832583,
+    "sha256": "82d830ebe48beb21e81d9d2a0801119e26dd33fda4c863e2f2875490a76ca65c"
+  },
+  {
+    "id": "greet-ghost",
+    "text": "Buuu! Chi va l\u00e0?... Ah, siete voi!",
+    "bytes": 44685,
+    "duration": 3.640333,
+    "sha256": "2f244362eb8e15770c4cf14c3bbd8b6fdaac59b96d005cca24764655403869d8"
+  },
+  {
+    "id": "greet-nonna",
+    "text": "Oh, che bei bimbi!",
+    "bytes": 15597,
+    "duration": 1.215792,
+    "sha256": "e97a504af8a12f337754dcb5b184d0420b5e3eb10fc4f5c9f8e1af2adf3e88a9"
+  },
+  {
+    "id": "greet-strega",
+    "text": "Ehehe, chi c\u2019\u00e8 alla porta?",
+    "bytes": 23373,
+    "duration": 1.851708,
+    "sha256": "436a1afc70dcdd2ff7d29794a57dc75e259fc87b7107dca065b155f2885c147b"
+  },
+  {
+    "id": "greet-wolf",
+    "text": "Arf! Amici pelosi in visita!",
+    "bytes": 35181,
+    "duration": 2.844917,
+    "sha256": "2cc835f7b449fc24e2ee246471ce7556d9afe8841917ce7152c6fd65b467f51c"
+  },
+  {
+    "id": "greet-vlad",
+    "text": "Buonasera, piccoli ospiti!",
+    "bytes": 62253,
+    "duration": 5.105792,
+    "sha256": "6be11ce1fbce432dbcb6b0a0c8e2da8727c1464329b1f9dde953ba533d091617"
+  },
+  {
+    "id": "greet-scarecrow",
+    "text": "Oh! Qualcuno mi ha parlato!",
+    "bytes": 22509,
+    "duration": 1.779083,
+    "sha256": "63772b68bcd62c14caa040ddf4f13b478ef3e205925cc497bb3de2de45778efb"
+  },
+  {
+    "id": "treat-ghost",
+    "text": "Dolcetti per voi... buuu!",
+    "bytes": 23085,
+    "duration": 1.844042,
+    "sha256": "6601e3f79b296906aff952c3db0c13c2d46ae33215e7e074b22ecf5a5019f697"
+  },
+  {
+    "id": "treat-nonna",
+    "text": "Che carini! Ecco i dolcetti!",
+    "bytes": 35757,
+    "duration": 2.898125,
+    "sha256": "9fae9adcb620c9037ed89e8382ebaf6595c99a78a4f86f9fd6bcc75521fa072a"
+  },
+  {
+    "id": "treat-strega",
+    "text": "Prendete, piccoli maghi!",
+    "bytes": 21357,
+    "duration": 1.685917,
+    "sha256": "36655910f2692e4d9cd1a7400c9e64bddaa29177c3322269f1cb5386a8f0de3d"
+  },
+  {
+    "id": "treat-wolf",
+    "text": "Tieni, tieni! Arf arf!",
+    "bytes": 32013,
+    "duration": 2.573958,
+    "sha256": "1dbf93d3067819acb7e3b3d18eaea89bbe17a6631b0802575b143dec15567503"
+  },
+  {
+    "id": "treat-vlad",
+    "text": "Con piacere, prendete i dolcetti.",
+    "bytes": 32301,
+    "duration": 2.6065,
+    "sha256": "ff447d2d47dfaf415b5b027d88f701811d7f68c947b679a6e5a45f96b6e2ddbd"
+  },
+  {
+    "id": "treat-scarecrow",
+    "text": "Dolcetti freschi di paglia!",
+    "bytes": 26253,
+    "duration": 2.103792,
+    "sha256": "bb4ffc9ae06a1e39e8edf18aa636b1c7467dbe2b81f8e7188275087eee1ffdb4"
+  },
+  {
+    "id": "refuse-ghost",
+    "text": "Ooooh... ho finito i dolcetti!",
+    "bytes": 28269,
+    "duration": 2.277417,
+    "sha256": "6d5620451ed50eb42eef85cbf418df1ab50c2133c13c9f19a0bf14028aa7956b"
+  },
+  {
+    "id": "refuse-nonna",
+    "text": "Stasera niente caramelle, mi dispiace!",
+    "bytes": 29709,
+    "duration": 2.383167,
+    "sha256": "54fb21bb997516d111ffe0041bd55e7a72051a3da35b4ba7c56a914eeba1a98e"
+  },
+  {
+    "id": "refuse-strega",
+    "text": "Il mio calderone \u00e8 vuoto stasera!",
+    "bytes": 30573,
+    "duration": 2.457042,
+    "sha256": "b2b703d6aa1b50a490760505fab39e8a468f2acafd583cf73ece855c9bff11b9"
+  },
+  {
+    "id": "refuse-wolf",
+    "text": "Ho gi\u00e0 dato tutto, arf... peccato!",
+    "bytes": 35181,
+    "duration": 2.839667,
+    "sha256": "a3c401ba133c5f081e7788f2257423ce40dc5e2235d6dfaf76962b11e9959817"
+  },
+  {
+    "id": "refuse-vlad",
+    "text": "Mille scuse: la dispensa \u00e8 vuota.",
+    "bytes": 37773,
+    "duration": 3.071625,
+    "sha256": "4fde171335d72c148dee445790d560a6437deac2b3e7b3b5620a7d2ad5bb621c"
+  },
+  {
+    "id": "refuse-scarecrow",
+    "text": "Ops! Ho la zucca di paglia, stasera!",
+    "bytes": 46413,
+    "duration": 3.769958,
+    "sha256": "00d544d089523ed41b8629b8f614d9bbed5b4893fd9b7525c2d0c4173c001909"
+  },
+  {
+    "id": "regift-ghost",
+    "text": "Aspetta... una \u00e8 rimasta!",
+    "bytes": 25677,
+    "duration": 2.047542,
+    "sha256": "b7070a0fec93f3d5a6a5bffaf818178008d1cf411e7b9232516e977e73091b29"
+  },
+  {
+    "id": "regift-nonna",
+    "text": "Tieni, ancora una!",
+    "bytes": 22797,
+    "duration": 1.82225,
+    "sha256": "eb13713b3aae66c542525733f1eda7bdb5dc41d519aa723821cd7b1567c60b0a"
+  },
+  {
+    "id": "regift-strega",
+    "text": "Una scappata dal calderone!",
+    "bytes": 22797,
+    "duration": 1.801958,
+    "sha256": "0707a56c7d2a594c6f66a39a7af0445ba3825f02b3505417c32bb66f1c5128aa"
+  },
+  {
+    "id": "regift-wolf",
+    "text": "Aspetta! Una era nel pelo!",
+    "bytes": 32301,
+    "duration": 2.594917,
+    "sha256": "8cb0d957c631f6d07d1f88b321d5ccca3646d9e8c2d1ecdb87a2dc9766e5c52b"
+  },
+  {
+    "id": "regift-vlad",
+    "text": "Un ultimo dolcetto, con garbo.",
+    "bytes": 27117,
+    "duration": 2.17925,
+    "sha256": "d3a1f8a3879b050fb82b4c03e18209cb3354d0c6b44923ba85a6dbb1d031e6aa"
+  },
+  {
+    "id": "regift-scarecrow",
+    "text": "Una era qui tra la paglia!",
+    "bytes": 19053,
+    "duration": 1.501583,
+    "sha256": "33b8509e2944292e82c8df7611a54b3933c92028ecf890469f2d2df8bbd7e629"
+  },
+  {
+    "id": "seen-ghost",
+    "text": "Buuu... ci siamo gi\u00e0 visti!",
+    "bytes": 24525,
+    "duration": 1.965542,
+    "sha256": "4f3353ead5fcb8d986b8ca561777555022a817938a56019854022c7857ad5079"
+  },
+  {
+    "id": "seen-nonna",
+    "text": "Ci siamo gi\u00e0 visti, aha!",
+    "bytes": 16749,
+    "duration": 1.298333,
+    "sha256": "03d9febaf07cd99a75b6cbbe2aafb2aa7621f1666fd411935f363d547dc82b09"
+  },
+  {
+    "id": "seen-strega",
+    "text": "Gi\u00e0 passati di qui, ehehe!",
+    "bytes": 21645,
+    "duration": 1.716125,
+    "sha256": "ea3c4e8115a8663ae06a026d264978bf9ee5d4ddbdff292c6ee46a2e2660da89"
+  },
+  {
+    "id": "seen-wolf",
+    "text": "Arf! Ci eravamo gi\u00e0 annusati!",
+    "bytes": 33165,
+    "duration": 2.670458,
+    "sha256": "c0a55ed95bf82d08e9a7d2ea7df682fe2dbf24ba2e1a8c3145ad7766fcbb0f37"
+  },
+  {
+    "id": "seen-vlad",
+    "text": "Ci siamo gi\u00e0 presentati, rammento.",
+    "bytes": 41805,
+    "duration": 3.392375,
+    "sha256": "dbc8ee1e06597118f3ffc74ff9f7948239806097ca35591356a95f8732113a8f"
+  },
+  {
+    "id": "seen-scarecrow",
+    "text": "Gi\u00e0 visti, gi\u00e0 visti! Che testa!",
+    "bytes": 32589,
+    "duration": 2.635417,
+    "sha256": "a1caafb704f3f63dbc4c5ab7c4e1a581e82b3df647aaa7498748008fc06cfca7"
+  },
+  {
+    "id": "scherzo-ghost",
+    "text": "Ehehe! Mi avete fatto ridere! Tieni!",
+    "bytes": 41517,
+    "duration": 3.374875,
+    "sha256": "5de0b86db4aa3d27138d00fc136d5460047469240f32f63a069babeb5d7f4730"
+  },
+  {
+    "id": "scherzo-nonna",
+    "text": "Ah! Che burloni! Prendete!",
+    "bytes": 39501,
+    "duration": 3.193958,
+    "sha256": "75a41c067f495085d1fb942868d6e2bc0ac408e5227bcea998d93172155d6677"
+  },
+  {
+    "id": "scherzo-strega",
+    "text": "Ehehe! Bei maghetti! Tutto per voi!",
+    "bytes": 38637,
+    "duration": 3.139167,
+    "sha256": "3d1c5eb46c8172f5a48874f790d43f6054932a6fbf1af1f0bd9a13b040fbb828"
+  },
+  {
+    "id": "scherzo-wolf",
+    "text": "Arf arf! Che ridere! Tutto per voi!",
+    "bytes": 42957,
+    "duration": 3.488208,
+    "sha256": "8275e422f08e7a15a384e5d61eec4b06ca7ba02193920239aa2156fc870edc8e"
+  },
+  {
+    "id": "scherzo-vlad",
+    "text": "Ah! Spiritosi. Ve li siete meritati!",
+    "bytes": 51309,
+    "duration": 4.193833,
+    "sha256": "e8a393f768adc62b2a07d02aa9e5a5eafcb9686d1eba851ba302666413d77a2a"
+  },
+  {
+    "id": "scherzo-scarecrow",
+    "text": "Eh eh! Mi avete scompigliato la paglia!",
+    "bytes": 29709,
+    "duration": 2.381625,
+    "sha256": "99227b2bfcedd6e1cce44732083f4bfc2c1c39422f14e87fe7e7cd9f8b2e2dc1"
+  }
+]

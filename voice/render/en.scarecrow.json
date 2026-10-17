@@ -1,0 +1,26 @@
+[
+	{
+		"id": "greet-scarecrow",
+		"text": "Oh! Someone talked to me!"
+	},
+	{
+		"id": "treat-scarecrow",
+		"text": "Candy fresh out of the straw!"
+	},
+	{
+		"id": "refuse-scarecrow",
+		"text": "Oops! My straw brain is empty!"
+	},
+	{
+		"id": "regift-scarecrow",
+		"text": "One was hiding in the straw!"
+	},
+	{
+		"id": "seen-scarecrow",
+		"text": "Seen you already! Silly me!"
+	},
+	{
+		"id": "scherzo-scarecrow",
+		"text": "Heh heh! You ruffled my straw!"
+	}
+]

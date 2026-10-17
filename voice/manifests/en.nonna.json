@@ -1,0 +1,44 @@
+[
+  {
+    "id": "greet-nonna",
+    "text": "Oh, what sweet boys!",
+    "bytes": 24525,
+    "duration": 1.960458,
+    "sha256": "60e1f8820e178447844d0cb118ea19f8a84d98126790e2a6a5503a8fe9629339"
+  },
+  {
+    "id": "treat-nonna",
+    "text": "How cute! Here\u2019s some candy!",
+    "bytes": 30573,
+    "duration": 2.449958,
+    "sha256": "7065ef9fed5311cfa14897d006f1fd99c09ae93e31eb283ad00218275aaf6370"
+  },
+  {
+    "id": "refuse-nonna",
+    "text": "No candy tonight, sorry!",
+    "bytes": 23373,
+    "duration": 1.849958,
+    "sha256": "a2ba9e03eb96bfa188f8e81c77aeb2a102a517da47fec38e3ec1febca4497d41"
+  },
+  {
+    "id": "regift-nonna",
+    "text": "Here, one more!",
+    "bytes": 13581,
+    "duration": 1.038875,
+    "sha256": "f5ad5ce1e4cd3bc942dad385be08dcf30d87d9d4387abb3cc5b109aa9e6396bd"
+  },
+  {
+    "id": "seen-nonna",
+    "text": "We already met, haha!",
+    "bytes": 21069,
+    "duration": 1.669958,
+    "sha256": "2fb8e153e6bdeca0330199c44ab70617201febe93385e352604f091b6c248d4c"
+  },
+  {
+    "id": "scherzo-nonna",
+    "text": "Ah! You rascals! Take these!",
+    "bytes": 35757,
+    "duration": 2.89375,
+    "sha256": "0d7c798ef50fffee0c6831ca1b5cac95af985eacaa047fdd994eb2f408e5e681"
+  }
+]

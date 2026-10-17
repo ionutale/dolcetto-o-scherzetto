@@ -1,0 +1,26 @@
+[
+	{
+		"id": "greet-wolf",
+		"text": "Arf! Amici pelosi in visita!"
+	},
+	{
+		"id": "treat-wolf",
+		"text": "Tieni, tieni! Arf arf!"
+	},
+	{
+		"id": "refuse-wolf",
+		"text": "Ho già dato tutto, arf... peccato!"
+	},
+	{
+		"id": "regift-wolf",
+		"text": "Aspetta! Una era nel pelo!"
+	},
+	{
+		"id": "seen-wolf",
+		"text": "Arf! Ci eravamo già annusati!"
+	},
+	{
+		"id": "scherzo-wolf",
+		"text": "Arf arf! Che ridere! Tutto per voi!"
+	}
+]

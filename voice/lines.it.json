@@ -1,0 +1,150 @@
+[
+	{
+		"id": "shout",
+		"text": "Dolcetto o scherzetto!"
+	},
+	{
+		"id": "greet-ghost",
+		"text": "Buuu! Chi va là?... Ah, siete voi!"
+	},
+	{
+		"id": "greet-nonna",
+		"text": "Oh, che bei bimbi!"
+	},
+	{
+		"id": "greet-strega",
+		"text": "Ehehe, chi c’è alla porta?"
+	},
+	{
+		"id": "greet-wolf",
+		"text": "Arf! Amici pelosi in visita!"
+	},
+	{
+		"id": "greet-vlad",
+		"text": "Buonasera, piccoli ospiti!"
+	},
+	{
+		"id": "greet-scarecrow",
+		"text": "Oh! Qualcuno mi ha parlato!"
+	},
+	{
+		"id": "treat-ghost",
+		"text": "Dolcetti per voi... buuu!"
+	},
+	{
+		"id": "treat-nonna",
+		"text": "Che carini! Ecco i dolcetti!"
+	},
+	{
+		"id": "treat-strega",
+		"text": "Prendete, piccoli maghi!"
+	},
+	{
+		"id": "treat-wolf",
+		"text": "Tieni, tieni! Arf arf!"
+	},
+	{
+		"id": "treat-vlad",
+		"text": "Con piacere, prendete i dolcetti."
+	},
+	{
+		"id": "treat-scarecrow",
+		"text": "Dolcetti freschi di paglia!"
+	},
+	{
+		"id": "refuse-ghost",
+		"text": "Ooooh... ho finito i dolcetti!"
+	},
+	{
+		"id": "refuse-nonna",
+		"text": "Stasera niente caramelle, mi dispiace!"
+	},
+	{
+		"id": "refuse-strega",
+		"text": "Il mio calderone è vuoto stasera!"
+	},
+	{
+		"id": "refuse-wolf",
+		"text": "Ho già dato tutto, arf... peccato!"
+	},
+	{
+		"id": "refuse-vlad",
+		"text": "Mille scuse: la dispensa è vuota."
+	},
+	{
+		"id": "refuse-scarecrow",
+		"text": "Ops! Ho la zucca di paglia, stasera!"
+	},
+	{
+		"id": "regift-ghost",
+		"text": "Aspetta... una è rimasta!"
+	},
+	{
+		"id": "regift-nonna",
+		"text": "Tieni, ancora una!"
+	},
+	{
+		"id": "regift-strega",
+		"text": "Una scappata dal calderone!"
+	},
+	{
+		"id": "regift-wolf",
+		"text": "Aspetta! Una era nel pelo!"
+	},
+	{
+		"id": "regift-vlad",
+		"text": "Un ultimo dolcetto, con garbo."
+	},
+	{
+		"id": "regift-scarecrow",
+		"text": "Una era qui tra la paglia!"
+	},
+	{
+		"id": "seen-ghost",
+		"text": "Buuu... ci siamo già visti!"
+	},
+	{
+		"id": "seen-nonna",
+		"text": "Ci siamo già visti, aha!"
+	},
+	{
+		"id": "seen-strega",
+		"text": "Già passati di qui, ehehe!"
+	},
+	{
+		"id": "seen-wolf",
+		"text": "Arf! Ci eravamo già annusati!"
+	},
+	{
+		"id": "seen-vlad",
+		"text": "Ci siamo già presentati, rammento."
+	},
+	{
+		"id": "seen-scarecrow",
+		"text": "Già visti, già visti! Che testa!"
+	},
+	{
+		"id": "scherzo-ghost",
+		"text": "Ehehe! Mi avete fatto ridere! Tieni!"
+	},
+	{
+		"id": "scherzo-nonna",
+		"text": "Ah! Che burloni! Prendete!"
+	},
+	{
+		"id": "scherzo-strega",
+		"text": "Ehehe! Bei maghetti! Tutto per voi!"
+	},
+	{
+		"id": "scherzo-wolf",
+		"text": "Arf arf! Che ridere! Tutto per voi!"
+	},
+	{
+		"id": "scherzo-vlad",
+		"text": "Ah! Spiritosi. Ve li siete meritati!"
+	},
+	{
+		"id": "scherzo-scarecrow",
+		"text": "Eh eh! Mi avete scompigliato la paglia!"
+	}
+]

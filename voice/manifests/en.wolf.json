@@ -1,0 +1,44 @@
+[
+  {
+    "id": "greet-wolf",
+    "text": "Woof! Furry friends at the door!",
+    "bytes": 24525,
+    "duration": 1.949083,
+    "sha256": "aa29000381f8825b6a4ae61b8cd3523abaed3f9ed0c6a85eb519fa2af221d662"
+  },
+  {
+    "id": "treat-wolf",
+    "text": "Here, take some! Woof woof!",
+    "bytes": 19917,
+    "duration": 1.566833,
+    "sha256": "7e3faa4444ccaa7528581c8c05742c9a0a857e3ef8c82edbc2a2133b6794e51e"
+  },
+  {
+    "id": "refuse-wolf",
+    "text": "All out, woof... sorry!",
+    "bytes": 19629,
+    "duration": 1.55525,
+    "sha256": "718ed6d9e201651899f5a15c72a15a291033c3f47c32dfc0ec44725c32c3004e"
+  },
+  {
+    "id": "regift-wolf",
+    "text": "Wait! One was in my fur!",
+    "bytes": 27117,
+    "duration": 2.182625,
+    "sha256": "22ba87292615852011bcaf54afa802987f71278ff9275ace6f5abaa27510d371"
+  },
+  {
+    "id": "seen-wolf",
+    "text": "Woof! We sniffed noses already!",
+    "bytes": 25677,
+    "duration": 2.048375,
+    "sha256": "49c122d6f4a8be7b01eaf0c1dc5a1b45d8c74f4f68dc59638aa0581e88c431f0"
+  },
+  {
+    "id": "scherzo-wolf",
+    "text": "Woof woof! That tickled! All yours!",
+    "bytes": 31149,
+    "duration": 2.504917,
+    "sha256": "b752466837befed7b09af2d389a9f6e986688895b83b8cfbfa749ee40f016781"
+  }
+]

@@ -1,0 +1,44 @@
+[
+  {
+    "id": "greet-nonna",
+    "text": "Oh, che bei bimbi!",
+    "bytes": 15597,
+    "duration": 1.215792,
+    "sha256": "e97a504af8a12f337754dcb5b184d0420b5e3eb10fc4f5c9f8e1af2adf3e88a9"
+  },
+  {
+    "id": "treat-nonna",
+    "text": "Che carini! Ecco i dolcetti!",
+    "bytes": 35757,
+    "duration": 2.898125,
+    "sha256": "9fae9adcb620c9037ed89e8382ebaf6595c99a78a4f86f9fd6bcc75521fa072a"
+  },
+  {
+    "id": "refuse-nonna",
+    "text": "Stasera niente caramelle, mi dispiace!",
+    "bytes": 29709,
+    "duration": 2.383167,
+    "sha256": "54fb21bb997516d111ffe0041bd55e7a72051a3da35b4ba7c56a914eeba1a98e"
+  },
+  {
+    "id": "regift-nonna",
+    "text": "Tieni, ancora una!",
+    "bytes": 22797,
+    "duration": 1.82225,
+    "sha256": "eb13713b3aae66c542525733f1eda7bdb5dc41d519aa723821cd7b1567c60b0a"
+  },
+  {
+    "id": "seen-nonna",
+    "text": "Ci siamo gi\u00e0 visti, aha!",
+    "bytes": 16749,
+    "duration": 1.298333,
+    "sha256": "03d9febaf07cd99a75b6cbbe2aafb2aa7621f1666fd411935f363d547dc82b09"
+  },
+  {
+    "id": "scherzo-nonna",
+    "text": "Ah! Che burloni! Prendete!",
+    "bytes": 39501,
+    "duration": 3.193958,
+    "sha256": "75a41c067f495085d1fb942868d6e2bc0ac408e5227bcea998d93172155d6677"
+  }
+]
