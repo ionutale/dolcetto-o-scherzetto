@@ -101,6 +101,7 @@
 	import { say } from '$lib/audio/voice.svelte';
 	import { volumes } from '$lib/audio/volumes.svelte';
 	import Hud from '$lib/ui/Hud.svelte';
+	import { menuState } from '$lib/ui/menu-state.svelte';
 	import TitleScreen from '$lib/ui/TitleScreen.svelte';
 	import { showBubble } from '$lib/play/bubble.svelte';
 	import {
@@ -389,7 +390,7 @@
 
 <MotionStyles />
 
-<div class="scene">
+<div class="scene" inert={menuState.open}>
 	<Stage>
 		<Sky />
 		<ParallaxLayers worldX={worldX()} />

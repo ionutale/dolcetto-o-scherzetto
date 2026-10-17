@@ -95,6 +95,9 @@
 	aria-label={copy.menu}
 	inert={!menuState.open}
 >
+	<!-- T29 — the flux2 key-art band (decorative). -->
+	<img class="menu-hero" src="/art/hero.v1.webp" alt="" aria-hidden="true" />
+
 	<div class="menu-card" hidden={panel !== 'home'}>
 		<p class="menu-eyebrow">{copy.eyebrow}</p>
 		<h1 class="menu-title">Dolcetto o Scherzetto</h1>
@@ -127,8 +130,28 @@
 		pointer-events: none;
 	}
 
+	/* T29 — the flux2 key-art band: a scenic strip grounded under the card.
+	   Masked at the top so the night wash carries the fade; never clickable. */
+	.menu-hero {
+		position: absolute;
+		left: 0;
+		right: 0;
+		bottom: 0;
+		width: 100%;
+		height: 46%;
+		object-fit: cover;
+		object-position: center 60%;
+		opacity: 0.92;
+		-webkit-mask-image: linear-gradient(180deg, transparent 0%, #000 38%);
+		mask-image: linear-gradient(180deg, transparent 0%, #000 38%);
+		pointer-events: none;
+		user-select: none;
+	}
+
 	/* `.menu-card` (prototype ~336-338): the frosted night card. */
 	.menu-card {
+		position: relative;
+		z-index: 1;
 		display: flex;
 		flex-direction: column;
 		align-items: center;

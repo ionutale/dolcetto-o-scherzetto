@@ -128,8 +128,10 @@ sheets, multi-turn editing) was not available; prompts alone were used).
   accepted. The hero/OG register is *illustrated storybook* — soft ink outlines present.
 - **OG card (shipped):** `static/art/og.v1.webp` (1200×630 crop, 81 KB) — wired in
   `src/app.html` (`og:image` absolute URL; verified live at T34).
-- **Bottega panel (shipped):** `static/art/bottega-strip.v1.webp` (640×325 strip of the
-  witch-at-her-stall render, 24 KB) for the shop card header.
+- **Bottega panel (shipped, parked):** `static/art/bottega-strip.v1.webp` (640×325 strip of
+  the witch-at-her-stall render, 24 KB). Parked as an asset: the validated shop card is
+  height-bound in landscape (≈390 of 393 logical px), so a banner would overflow it — the
+  strip is reserved for the About/credits screen instead of the shop card.
 - **Facade spike — verdict:** cutouts are technically viable (chroma `#6b5785` keyed at
   RGB distance < 34: maisonette 65% / tower 84% transparent, zero-alpha corners;
   samples in `static/art/spike/`). Both read on-model (green-trim gable ≈ the
