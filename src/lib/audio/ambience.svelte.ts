@@ -296,6 +296,8 @@ interface AmbienceGraph {
 }
 
 let graph: AmbienceGraph | null = null;
+/** The one adopted studio loop currently playing (T26); replaced on theme change. */
+let loopSrc: AudioBufferSourceNode | null = null;
 let running = false;
 let raf: number | null = null;
 let rafAvailable: ((cb: (t: number) => void) => number) | null = null;
@@ -432,17 +434,35 @@ function playSprinkle(id: SprinkleId): void {
 			gain.gain.exponentialRampToValueAtTime(tone.vol, t + 0.02);
 			gain.gain.exponentialRampToValueAtTime(0.0001, t + tone.dur);
 			let out: AudioNode = gain;
+			let lp: AudioNode | null = null;
 			if (tone.cutoff !== undefined) {
-				const lp = a.createBiquadFilter();
-				lp.type = 'lowpass';
-				lp.frequency.value = tone.cutoff;
-				gain.connect(lp);
-				out = lp;
+				const f = a.createBiquadFilter();
+				f.type = 'lowpass';
+				f.frequency.value = tone.cutoff;
+				gain.connect(f);
+				out = f;
+				lp = f;
 			}
 			osc.connect(gain);
 			out.connect(g.master);
 			osc.start(t);
 			osc.stop(t + tone.dur + 0.03);
+			// Disconnect the voice after its tail: WebKit keeps connected nodes
+			// alive, and a night of sprinkles would accumulate them (the same
+			// guard the SFX pack applies per cue, here per voice).
+			const nodes: AudioNode[] = lp ? [osc, gain, lp] : [osc, gain];
+			setTimeout(
+				() => {
+					for (const n of nodes) {
+						try {
+							n.disconnect();
+						} catch {
+							/* already gone */
+						}
+					}
+				},
+				Math.max(0, (t + tone.dur + 0.06 - a.currentTime) * 1000) + 250
+			);
 		} catch {
 			// One bad tone must not silence the rest of the sprinkle.
 		}
@@ -461,6 +481,19 @@ async function adoptLoop(theme: Theme, bytes: ArrayBuffer): Promise<void> {
 		src.loop = true;
 		src.connect(g.bed);
 		src.start();
+		// Replace any previously adopted loop: leaving it connected would layer
+		// every theme forever AND retain each decoded ~10 MB buffer — a real
+		// session crosses themes repeatedly (the iOS leak guard, applied to the
+		// studio loops exactly as `sweepCue` applies it to the SFX pack).
+		if (loopSrc && loopSrc !== src) {
+			try {
+				loopSrc.stop();
+				loopSrc.disconnect();
+			} catch {
+				/* already gone */
+			}
+		}
+		loopSrc = src;
 		g.bed.gain.setTargetAtTime(AMB_BEDS[theme].gain, g.ctx.currentTime, AMB_MASTER_RAMP_S);
 		g.noise.stop();
 		g.noise.disconnect();
@@ -588,6 +621,15 @@ export function stopAmbience(): void {
 	manualDuck = false;
 	latchedDucked = false;
 	latchedMaster = 0;
+	if (loopSrc) {
+		try {
+			loopSrc.stop();
+			loopSrc.disconnect();
+		} catch {
+			/* already gone */
+		}
+		loopSrc = null;
+	}
 	const g = graph;
 	graph = null;
 	if (g) {

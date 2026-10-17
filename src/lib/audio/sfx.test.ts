@@ -1,4 +1,4 @@
-import { afterEach, describe, expect, it } from 'vitest';
+import { afterEach, describe, expect, it, vi } from 'vitest';
 import { setSfx } from './volumes.svelte';
 import {
 	CUE_GROUPS,
@@ -53,6 +53,8 @@ class FakeParam {
 interface FakeGain {
 	gain: FakeParam;
 	connect(): unknown;
+	disconnect(): void;
+	disconnected?: boolean;
 }
 
 interface FakeFilter {
@@ -60,6 +62,8 @@ interface FakeFilter {
 	frequency: FakeParam;
 	Q: FakeParam;
 	connect(): unknown;
+	disconnect(): void;
+	disconnected?: boolean;
 }
 
 interface FakeOscillator {
@@ -68,6 +72,8 @@ interface FakeOscillator {
 	connect(): unknown;
 	start(): void;
 	stop(): void;
+	disconnect(): void;
+	disconnected?: boolean;
 }
 
 interface FakeSource {
@@ -75,6 +81,8 @@ interface FakeSource {
 	connect(): unknown;
 	start(): void;
 	stop(): void;
+	disconnect(): void;
+	disconnected?: boolean;
 }
 
 interface FakeCtx {
@@ -106,7 +114,13 @@ function fakeContext(): FakeCtx {
 		state: 'suspended' as AudioContextState,
 		destination,
 		createGain() {
-			const node: FakeGain = { gain: new FakeParam(), connect: () => node };
+			const node: FakeGain = {
+				gain: new FakeParam(),
+				connect: () => node,
+				disconnect: () => {
+					node.disconnected = true;
+				}
+			};
 			gains.push(node);
 			return node;
 		},
@@ -115,7 +129,10 @@ function fakeContext(): FakeCtx {
 				type: 'lowpass',
 				frequency: new FakeParam(),
 				Q: new FakeParam(),
-				connect: () => node
+				connect: () => node,
+				disconnect: () => {
+					node.disconnected = true;
+				}
 			};
 			filters.push(node);
 			return node;
@@ -126,7 +143,10 @@ function fakeContext(): FakeCtx {
 				frequency: new FakeParam(),
 				connect: () => node,
 				start: () => {},
-				stop: () => {}
+				stop: () => {},
+				disconnect: () => {
+					node.disconnected = true;
+				}
 			};
 			oscillators.push(node);
 			return node;
@@ -136,7 +156,10 @@ function fakeContext(): FakeCtx {
 				buffer: null,
 				connect: () => node,
 				start: () => {},
-				stop: () => {}
+				stop: () => {},
+				disconnect: () => {
+					node.disconnected = true;
+				}
 			};
 			sources.push(node);
 			return node;
@@ -208,6 +231,46 @@ function start(fake: FakeCtx, audio: FakeAudio | null = null): void {
 afterEach(() => {
 	stopSfx();
 	setSfx(1);
+});
+
+/* ------------------------------------------------------------------ */
+/* The per-cue disconnect sweep (the iOS leak guard)                   */
+/* ------------------------------------------------------------------ */
+
+describe('the per-cue disconnect sweep', () => {
+	it('disconnects every node a cue created, a beat after its last stop — master excluded', () => {
+		vi.useFakeTimers();
+		try {
+			const fake = fakeContext();
+			start(fake);
+			const master = fake.gains[0]; // sink() built the gate on start()
+			expect(master).toBeDefined();
+
+			const before = {
+				g: fake.gains.length,
+				f: fake.filters.length,
+				o: fake.oscillators.length,
+				s: fake.sources.length
+			};
+			expect(playCue('knock')).toBe(true);
+
+			const created = [
+				...fake.gains.slice(before.g),
+				...fake.filters.slice(before.f),
+				...fake.oscillators.slice(before.o),
+				...fake.sources.slice(before.s)
+			];
+			expect(created.length).toBeGreaterThan(0);
+			expect(created.some((n) => n.disconnected)).toBe(false); // still sounding
+
+			vi.runAllTimers(); // the sweep fires after the cue's tail
+
+			expect(created.every((n) => n.disconnected)).toBe(true);
+			expect(master.disconnected).toBeFalsy(); // the gate survives
+		} finally {
+			vi.useRealTimers();
+		}
+	});
 });
 
 /* ------------------------------------------------------------------ */

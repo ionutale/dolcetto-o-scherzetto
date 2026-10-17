@@ -67,9 +67,22 @@
 	const slots = $derived(Array.from({ length: WINDOW }, (_, i) => firstK + i));
 	/** One container transform by `-worldX`; each slot then parks at `k*SPACING`. */
 	const shift = $derived(-worldX);
+	/**
+	 * The pattern offsets are taken **modulo each pattern's period** (T09b):
+	 * an identical visual (both gradients repeat), but the painted
+	 * `background-position` stays inside one period instead of growing to
+	 * thousands of px — WebKit never has to rasterize a huge gradient offset,
+	 * which is exactly the kind of thing that dies after a long walk on iOS.
+	 */
+	const seams = $derived(shift % 86);
+	const dashes = $derived(shift % 60);
 </script>
 
-<div class="street" aria-hidden="true" style="--street-shift: {shift}px">
+<div
+	class="street"
+	aria-hidden="true"
+	style="--street-seams: {seams}px; --street-dashes: {dashes}px"
+>
 	<div class="yards"></div>
 	<div class="sidewalk"></div>
 	<div class="road"></div>
@@ -125,8 +138,9 @@
 			var(--shadow-night) 84px 86px
 		);
 		/* The pavement seams ride with the world (the marks must scroll with the
-		   houses, not sit still under the kids' feet — owner feedback, T09b fix). */
-		background-position-x: var(--street-shift, 0px);
+		   houses, not sit still under the kids' feet — owner feedback, T09b fix).
+		   The offset is modulo the 86 px seam period (see the script note). */
+		background-position-x: var(--street-seams, 0px);
 	}
 
 	.sidewalk::before {
@@ -171,7 +185,8 @@
 			color-mix(in srgb, var(--cream) 18%, transparent) 0 26px,
 			transparent 26px 60px
 		);
-		/* Lane dashes ride with the world too (T09b fix, same as .sidewalk). */
-		background-position-x: var(--street-shift, 0px);
+		/* Lane dashes ride with the world too (T09b fix; modulo the 60 px dash
+		   period, same as .sidewalk's seams). */
+		background-position-x: var(--street-dashes, 0px);
 	}
 </style>

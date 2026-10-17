@@ -271,6 +271,52 @@ function applyMaster(): void {
 	applyWitchVolume();
 }
 
+/* ------------------------------------------------------------------ */
+/* the per-cue node sweep (the iOS leak guard)                         */
+/* ------------------------------------------------------------------ */
+
+/**
+ * Every node one cue creates, and the latest scheduled stop in it. Cues are
+ * built synchronously inside `playCue`, so one shared pair is enough: `playCue`
+ * resets them, the voice helpers register through `track()`, then `sweepCue`
+ * disconnects the whole set shortly after the cue's last stop.
+ *
+ * Why: WebKit does not reliably collect nodes that stay *connected* to the
+ * graph, and a real session creates ~40 nodes per home (a cue every few
+ * seconds) — the known iOS "the tab dies after a few minutes and reloads"
+ * failure. Disconnecting the tail is inaudible (everything in the set has
+ * already stopped by then) and makes the cue's whole graph collectable.
+ * The master gate from `sink()` is deliberately NOT in the set.
+ */
+let cueNodes: AudioNode[] = [];
+let cueEnd = 0;
+
+/** Register one node the current cue created, at the ctx time it goes quiet. */
+function track(n: AudioNode, stopAt: number): void {
+	cueNodes.push(n);
+	if (stopAt > cueEnd) cueEnd = stopAt;
+}
+
+/**
+ * Disconnect every node the finished cue created, a beat after its last stop.
+ * Timers are plain `setTimeout`s and every call is guarded — a closed context
+ * (or a hostile node) must never throw.
+ */
+function sweepCue(a: AudioContext): void {
+	const nodes = cueNodes;
+	if (!nodes.length) return;
+	const ms = Math.max(0, (cueEnd - a.currentTime) * 1000) + 300;
+	setTimeout(() => {
+		for (const n of nodes) {
+			try {
+				n.disconnect();
+			} catch {
+				/* already gone (closed context / hostile node) */
+			}
+		}
+	}, ms);
+}
+
 /**
  * One enveloped oscillator.
  *
@@ -326,6 +372,7 @@ function tone(a: AudioContext, f1: number, f2: number | null, dur: number, o: To
 			if (o.q) flt.Q.value = o.q;
 			g.connect(flt);
 			out = flt;
+			track(flt, t + dur + 0.06);
 		}
 
 		if (o.lfo) {
@@ -340,12 +387,16 @@ function tone(a: AudioContext, f1: number, f2: number | null, dur: number, o: To
 			lg.connect(osc.frequency);
 			lo.start(t);
 			lo.stop(t + dur + 0.05);
+			track(lo, t + dur + 0.06);
+			track(lg, t + dur + 0.06);
 		}
 
 		osc.connect(g);
 		out.connect(sink(a));
 		osc.start(t);
 		osc.stop(t + dur + 0.05);
+		track(osc, t + dur + 0.06);
+		track(g, t + dur + 0.06);
 	} catch {
 		/* one bad tone must never silence the rest of the cue */
 	}
@@ -383,12 +434,15 @@ function noise(a: AudioContext, dur: number, o: NoiseOpts = {}): void {
 			f.Q.value = o.q == null ? 0.9 : o.q;
 			g.connect(f);
 			out = f;
+			track(f, t + dur + 0.05);
 		}
 
 		src.connect(g);
 		out.connect(sink(a));
 		src.start(t);
 		src.stop(t + dur + 0.03);
+		track(src, t + dur + 0.05);
+		track(g, t + dur + 0.05);
 	} catch {
 		/* one bad burst must never silence the rest of the cue */
 	}
@@ -1081,7 +1135,10 @@ export function playCue(name: string): boolean {
 		if (!a) return false;
 		resume(a);
 		applyMaster(); // a settings mute may have flipped since the last cue
+		cueNodes = [];
+		cueEnd = 0;
 		cue(a);
+		sweepCue(a);
 		return true;
 	} catch {
 		return false;
