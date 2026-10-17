@@ -18,8 +18,20 @@
 	 *
 	 * State is class-driven, exactly as the prototype toggled it: `.done` dims
 	 * the windows (`.win` fill transition) and kills the glow; `.active` lights
-	 * the glow; `.open` swings the leaf. `.neighbor` is the reveal slot behind
-	 * the door — left empty here, T11 fills it with the neighbour sprite.
+	 * the glow; `.open` swings the leaf and raises the neighbour. `.neighbor`
+	 * is the reveal slot behind the door — T11 fills it with the archetype's
+	 * sprite (`neighborFor(k)`, the prototype's `houseHTML()` at ~1107), which
+	 * is always rendered and revealed by the same `scaleY` the door swing
+	 * shares, so a knock never reflows the street.
+	 *
+	 * `class:knocking` is T11's knock shake: the prototype added it to the
+	 * slot on KNOCK and took it off 520 ms later (`afterAction`, ~1433). Here
+	 * it is derived (`active && open` — the knocked door is by definition the
+	 * active one) so it needs no timer: the keyframe fires once when the class
+	 * lands, and the door closing takes it away again for the next knock. The
+	 * prototype's own selector (`.slot.active .knocking .cottage`) could never
+	 * match — it added the class to the slot itself, not to a child — so the
+	 * working selector here is `.slot.active.knocking .cottage`.
 	 *
 	 * `worldX` does not move this slot (the `Street` container already carries
 	 * `-worldX`); it is read only to expose `data-screen-x`, the prototype's
@@ -28,6 +40,7 @@
 	 * ported verbatim.
 	 */
 	import { HOUSES } from '$lib/art/sprites/houses';
+	import { neighborFor } from '$lib/art/sprites/neighbors';
 	import Yards from './Yards.svelte';
 
 	interface Props {
@@ -53,6 +66,16 @@
 	const paletteIndex = $derived((((k + typeIndex) % 3) + 3) % 3);
 	const houseArt = $derived(HOUSES.list[typeIndex](paletteIndex));
 
+	/** The neighbour who opens this door — archetype cycles every 3 homes. */
+	const neighbor = $derived(neighborFor(k));
+
+	/**
+	 * The knock shake (prototype `afterAction`, ~1433): it fired while the
+	 * just-knocked door stood open. `active && open` is that state, so the
+	 * class needs no timer — it lands with the door and leaves when it shuts.
+	 */
+	const knocking = $derived(active && open);
+
 	/** `k*SPACING - worldX` — the home's screen x (the player offset is added by T10). */
 	const screenX = $derived(k * SPACING - worldX);
 </script>
@@ -62,6 +85,7 @@
 	class:done
 	class:open
 	class:active
+	class:knocking
 	data-house-slot={k}
 	data-screen-x={screenX}
 	style="transform: translateX({k * SPACING}px)"
@@ -73,7 +97,11 @@
 	</div>
 
 	<div class="doorwrap">
-		<div class="neighbor"></div>
+		<div class="neighbor">
+			<!-- trusted static SVG from the validated neighbour pack -->
+			<!-- eslint-disable-next-line svelte/no-at-html-tags -->
+			{@html neighbor}
+		</div>
 		<div class="door">
 			<svg width="56" height="80" viewBox="0 0 56 80">
 				<rect x="0" y="0" width="56" height="80" rx="9" fill="#8a6a52" />
@@ -136,6 +164,31 @@
 		opacity: 1;
 	}
 
+	/* The knock shake: the prototype's `knockshake` keyframes, verbatim, on
+	 * the selector that actually matches (see the script's note). */
+	.slot.active.knocking .cottage {
+		animation: knockshake 0.5s ease;
+	}
+
+	@keyframes knockshake {
+		0%,
+		100% {
+			transform: translateX(0);
+		}
+		20% {
+			transform: translateX(-2px);
+		}
+		40% {
+			transform: translateX(2px);
+		}
+		60% {
+			transform: translateX(-2px);
+		}
+		80% {
+			transform: translateX(1px);
+		}
+	}
+
 	.doorwrap {
 		position: absolute;
 		left: 282px;
@@ -145,7 +198,8 @@
 		perspective: 300px;
 	}
 
-	/* Reveal slot behind the leaf — empty until T11 puts a neighbour in it. */
+	/* Reveal slot behind the leaf: the neighbour sprite, raised by the same
+	 * `.slot.open` state that swings the door (T11 fills it via `neighborFor`). */
 	.neighbor {
 		position: absolute;
 		left: -8px;
@@ -188,11 +242,16 @@
 	}
 
 	/* The door swing is a state reveal, not an ambient loop: reduced-motion
-	 * users still get the open door, it just snaps instead of swinging. */
+	 * users still get the open door, it just snaps instead of swinging. The
+	 * knock shake is a tremble, so it stops entirely (spec §13). */
 	@media (prefers-reduced-motion: reduce) {
 		.door,
 		.neighbor {
 			transition-duration: 0.001ms;
+		}
+
+		.slot.active.knocking .cottage {
+			animation: none;
 		}
 	}
 </style>

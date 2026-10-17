@@ -78,6 +78,15 @@ export function activeK(): number {
 }
 
 /**
+ * The outcome decided at knock time (`treat`/`refuse`/`regift`/`seen`), or
+ * `null` between flows. Read-only seam for the display layer: prefer this over
+ * deriving outcomes from the post-resolve phase (T11 caveat, T15 note).
+ */
+export function pending(): string | null {
+	return state.pending;
+}
+
+/**
  * Mirror of `canWalk` in `loop.ts` (where it stays private and authoritative):
  * walking is allowed only while roaming (or refusing a door) and never with
  * the shop open. The input layer asks *this* before it presses, so it never
