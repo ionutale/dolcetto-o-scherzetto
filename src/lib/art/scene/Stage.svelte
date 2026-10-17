@@ -43,14 +43,14 @@
 	/** Design reference in logical px (ADR-0004). */
 	const REF_WIDTH = 852;
 	const REF_HEIGHT = 393;
-	/** The prototype's clamp: never below .4, never above 1.6. */
+	/** Clamp: never below .4, never above 2 (production runs full-bleed, no dev chrome). */
 	const MIN_SCALE = 0.4;
-	const MAX_SCALE = 1.6;
+	const MAX_SCALE = 2;
 	/** Short-window floor: the stage still gets the prototype's 340 px. */
 	const MIN_AVAIL_HEIGHT = 340;
-	/** Prototype chrome allowance — see the module comment. */
-	const CHROME_X = 40;
-	const CHROME_Y = 360;
+	/** Full-bleed breathing margin (the prototype reserved 40/360 for its dev chrome). */
+	const CHROME_X = 16;
+	const CHROME_Y = 16;
 
 	let frame = $state<HTMLElement | null>(null);
 	let scale = $state(1);
