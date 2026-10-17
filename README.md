@@ -6,7 +6,7 @@ Cozy endless Halloween trick-or-treat game for a 7-year-old. Two brothers — Mi
 
 ## Quick start (prototype)
 
-- **Hand-off file:** `prototypes/scene-prototype-single.html` — everything inlined, one double-clickable file (regenerate with `node prototypes/inline-pieces.mjs` after editing pieces).
+- **Hand-off file:** `prototypes/scene-prototype-single.html` — everything inlined, one double-clickable file (regenerate with `node prototypes/inline-pieces.mjs` after editing pieces). Street music streams from the sibling `music/` folder — keep it next to the file to hear the song; silent otherwise.
 - **Dev version:** `prototypes/scene-prototype.html` — same game, loads `pieces/*.js` via script tags.
 - Piece previews: `prototypes/pieces/sprites-preview.html` · `houses-preview.html` · `theatre-preview.html` · `scares-preview.html` · `sfx-preview.html`.
 - Hold ◀ / ▶ (or the screen halves, or arrow keys) to walk · **Bussa** at a door · tap the candies · ✨ **SCHERZO** at a refusing home · 👻 button (tools row) test-fires a scary moment.

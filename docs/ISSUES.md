@@ -42,7 +42,7 @@
 | T22 | P5 | Ornaments per theme (pure decor) | free-art | T09 | 2–4/house; never refusal-correlated |
 | T23 | P5 | Ambience audio engine (beds+sprinkles+duck) | free-coder | T12 | Duck on show/scare; sprinkle ≥20 s; no-AudioContext no-op |
 | T24 | P5 | Scary moments (crossings + hug beat) | free-art+coder | T15, T23 | Walking-only; ≥60 s gap; reduced-motion safe |
-| T25 | P6 | Music: title + 3 loops + stingers (SA3) | studio | T23 | Seamless loops; rotation wired |
+| T25 | P6 | Music: street loop wired (`a-winters-night.v1.mp3` — owner track, 95.9 s/112 k, trimmed+normalized); title + optional loops/stingers via SA3 | studio | T23 | Loop gap-free via WebAudio decode; rotation decided; verify track license before public deploy |
 | T26 | P6 | Ambience loops ×4 (SA3) | studio | T23 | 4 beds replace synth; duck verified |
 | T27 | P6 | SFX bake + placeholder swap | studio | T23 | Cue-name parity; peaks ≤0.18 |
 | T28 | P6 | Voice lines IT+EN via game_voice (+ CI completeness check) | studio | T17 | Every line in both langs; CI check green |

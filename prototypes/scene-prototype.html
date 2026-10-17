@@ -763,6 +763,27 @@ function ambFrame(now) {
   }
 }
 
+/* ---------------- music: looping street track (external, versioned filename) ---------------- */
+const music = new Audio('music/a-winters-night.v1.mp3');
+music.loop = true;
+music.preload = 'auto';
+music.volume = 0;
+let musicStarted = false;
+window.__music = music; /* validation handle (detached audio element) */
+function musicStart() {
+  if (musicStarted) return;
+  musicStarted = true;
+  try { music.play().catch(() => {}); } catch (e) {}
+}
+function musicFrame(ducked) {
+  const target = !state.sound ? 0 : ducked ? 0.10 : 0.34;
+  if (Math.abs(music.volume - target) > 0.004) {
+    music.volume = Math.max(0, Math.min(1, music.volume + (target - music.volume) * 0.04));
+  }
+}
+/* any first interaction anywhere unlocks audio (buttons included) — idempotent */
+window.addEventListener('pointerdown', () => { if (window.SFX && SFX.init) SFX.init(); ambInit(); musicStart(); }, { once: true });
+
 /* ---------------- sprite personaggi (Milo & Tino) ---------------- */
 const SVG = {
   milo: `
@@ -1449,6 +1470,7 @@ stage.addEventListener('pointerdown', e => {
   if (e.target.closest('button, .candy, #shop')) return;
   if (window.SFX && SFX.init) SFX.init();
   ambInit();
+  musicStart();
   const r = stage.getBoundingClientRect();
   holdWalk(e.clientX - r.left < r.width / 2 ? -1 : 1, true);
 });
@@ -1588,6 +1610,7 @@ function frame(now) {
   shoutTick(now);
   cameoTick(now);
   ambFrame(now);
+  musicFrame(state.phase === 'trick' || ambienceLock);
 
   renderScene(dt);
   requestAnimationFrame(frame);
