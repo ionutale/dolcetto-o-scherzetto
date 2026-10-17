@@ -796,7 +796,8 @@ function musicStart() {
   try { music.play().catch(() => {}); } catch (e) {}
 }
 function musicFrame(ducked) {
-  const target = !state.sound ? 0 : ducked ? 0.10 : 0.34;
+  /* owner mix: street loop 30% quieter than v1 (0.34 -> 0.238); the duck scales with it */
+  const target = !state.sound ? 0 : ducked ? 0.07 : 0.238;
   if (Math.abs(music.volume - target) > 0.004) {
     music.volume = Math.max(0, Math.min(1, music.volume + (target - music.volume) * 0.04));
   }

@@ -300,19 +300,22 @@
     //   two slightly detuned voices (triangle 330→210 Hz and +1.4 % partner 334.6→212.9 Hz)
     //   through ONE lowpass that sweeps down 1400→580 Hz as the pitch dips, so the sound closes
     //   in on itself like a real "boo". 7 Hz vibrato (±18 decaying to ±8).
-    //   "b" transient: 12 ms bandpassed noise thump at 300 Hz, gain .035, right at the onset.
-    //   peak gains .085 / .045 (+ .035 transient) — worst case ≤ .13.
+    //   "b" transient: 12 ms bandpassed noise thump at 300 Hz, gain .0525, right at the onset.
+    //   LEVEL: owner-requested ~50 % louder than the pass-#2 build — every gain below is the
+    //   original ×1.5 (.085→.1275, .045→.0675, .035→.0525, and the quieter contour points
+    //   .06→.09, .03→.045, .02→.03, .008→.012). Measured peak 0.108→0.162, inside the
+    //   0.18 pack ceiling (verified from silence in isolation).
     'fire:boo': function (a) {
       var contour = [[298, 0.06], [232, 0.35], [210, 0.65]];
-      var env = [[0.02, 0], [0.085, 0.09], [0.06, 0.40], [0.0001, 0.65]];
-      noise(a, 0.012, { type: 'bandpass', f: 300, q: 1.6, vol: 0.035, attack: 0.002 });
+      var env = [[0.03, 0], [0.1275, 0.09], [0.09, 0.40], [0.0001, 0.65]];
+      noise(a, 0.012, { type: 'bandpass', f: 300, q: 1.6, vol: 0.0525, attack: 0.002 });
       tone(a, 330, null, 0.65, {
         type: 'triangle', env: env, cutoff: 1400, cutoff2: 580,
         points: contour, lfo: { rate: 7, depth: 18 }, lfo2: 8
       });
       tone(a, 334.6, null, 0.65, {
         type: 'triangle', cutoff: 1400, cutoff2: 580,
-        env: [[0.008, 0], [0.045, 0.09], [0.03, 0.40], [0.0001, 0.65]],
+        env: [[0.012, 0], [0.0675, 0.09], [0.045, 0.40], [0.0001, 0.65]],
         points: [[302, 0.06], [235, 0.35], [212.9, 0.65]], lfo: { rate: 7, depth: 20 }, lfo2: 9
       });
     },
