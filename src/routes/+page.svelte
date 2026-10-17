@@ -1,16 +1,17 @@
 <script lang="ts">
 	/**
 	 * The game page — the T08 + T09 + T10 + T11 + T12 + T13 + T14 + T15 + T17
-	 * + T18 composition: the sprite motion stylesheet, the night sky, the two
-	 * parallax bands, the endless street (world bands + the recycling window
-	 * of houses and yards), the kids duo, the glowing candy layer, the
-	 * hold-to-walk controls, the knock cloud, the speech bubble, the bag chip,
-	 * the Scherzo button + trick fan and the trick theatre, all inside the
-	 * 852×393 stage frame, with the portrait rotate prompt on top.
+	 * + T18 + T19 composition: the sprite motion stylesheet, the night sky, the
+	 * two parallax bands, the endless street (world bands + the recycling window
+	 * of houses and yards), the neighborhood-kid cast, the kids duo, the glowing
+	 * candy layer, the hold-to-walk controls, the knock cloud, the speech
+	 * bubble, the bag chip, the Scherzo button + trick fan and the trick
+	 * theatre, all inside the 852×393 stage frame, with the portrait rotate
+	 * prompt on top.
 	 *
 	 * The page owns **no game logic**: it reads the store's derived getters
 	 * (`worldX` / `phase` / `activeK` / `dir`) into the scene props, renders
-	 * `<Kids/>`, `<WalkControls/>`, `<KnockButton/>`, `<Scherzo/>`,
+	 * `<Npcs/>`, `<Kids/>`, `<WalkControls/>`, `<KnockButton/>`, `<Scherzo/>`,
 	 * `<Theatre/>` and `<Bubbles/>` (which talk to the store themselves), and
 	 * runs the loop — `start()` on mount, `stop()` on destroy, one rAF for the
 	 * whole scene. The sim's `reduce`/`tick` stay the only rules, in
@@ -18,6 +19,13 @@
 	 * two things this page does with it are fire it on the single edge a knock
 	 * can happen on — `roam → door` — and fire the show on the single edge a
 	 * trick can start on — `refuse → trick`.
+	 *
+	 * **The NPC cast (T19)** mounts after `<Street/>` and before `<Kids/>` — the
+	 * prototype's `#lNpcs` sits between `#lCars` and the `.kids` duo
+	 * (`scene-prototype.html` ~394-404), so the neighborhood kids roam on the
+	 * sidewalk in front of the street and the duo always walks in front of them.
+	 * The layer owns its own ambience clock and talks to the store only through
+	 * the `worldX()` seam.
 	 *
 	 * **The trick wiring (T15), port of the prototype's `PLAY_TRICK` /
 	 * `TRICK_RESOLVE` blocks** (`afterAction`, ~1446-1468): the fan card
@@ -66,6 +74,9 @@
 	import Street from '$lib/art/scene/Street.svelte';
 	import RotateOverlay from '$lib/ui/RotateOverlay.svelte';
 	import Kids from '$lib/play/Kids.svelte';
+	import Cars from '$lib/play/Cars.svelte';
+	import Ghosts from '$lib/play/Ghosts.svelte';
+	import Npcs from '$lib/play/Npcs.svelte';
 	import CandyLayer from '$lib/play/CandyLayer.svelte';
 	import WalkControls from '$lib/play/WalkControls.svelte';
 	import KnockButton from '$lib/play/KnockButton.svelte';
@@ -114,6 +125,7 @@
 
 	/** The theatre instance, mounted below inside the stage box (T15). */
 	let theatre = $state<Theatre | null>(null);
+	let ghosts = $state<Ghosts | null>(null);
 
 	/** The live show's resolve beat — replaced per `PLAY_TRICK`, cancelled on destroy. */
 	let trick: TrickShow | null = null;
@@ -211,7 +223,10 @@
 
 		trick?.cancel();
 		const show = scheduleTrickResolve(flow, showBubble, setTimeout, {
-			onClimax: () => dispatch({ type: 'TRICK_RESOLVE' }),
+			onClimax: () => {
+				dispatch({ type: 'TRICK_RESOLVE' });
+				ghosts?.hop();
+			},
 			bounce: () => bounceNeighbor(k)
 		});
 		trick = show;
@@ -328,7 +343,10 @@
 	<Stage>
 		<Sky />
 		<ParallaxLayers worldX={worldX()} />
+		<Ghosts worldX={worldX()} bind:this={ghosts} />
 		<Street worldX={worldX()} homes={NO_HOMES} activeK={activeK()} {openK} />
+		<Cars worldX={worldX()} />
+		<Npcs />
 		<Kids dir={dir()} />
 		<CandyLayer />
 		<WalkControls />
