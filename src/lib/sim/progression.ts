@@ -47,7 +47,7 @@ export type Theme = (typeof THEMES)[number];
  * Theme of a neighborhood index — cycles `THEMES` forever (`0-1-2-3-0…`).
  *
  * Negative indices wrap with a positive modulo instead of throwing or clamping
- * (`-1 → 'starry'`, `-4 → 'starry'`, `-5 → 'leafy'`): `neighborhoodIndex`
+ * (`-1 → 'starry'`, `-4 → 'leafy'`, `-5 → 'starry'`): `neighborhoodIndex`
  * never produces them, but a caller feeding a raw/backcomputed index still
  * gets a valid theme.
  */

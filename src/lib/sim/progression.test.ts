@@ -72,8 +72,8 @@ describe('themeFor', () => {
 	it('wraps negative indices instead of throwing (guard)', () => {
 		expect(() => themeFor(-1)).not.toThrow();
 		expect(themeFor(-1)).toBe(THEMES[3]);
-		expect(themeFor(-4)).toBe(THEMES[3]);
-		expect(themeFor(-5)).toBe(THEMES[0]);
+		expect(themeFor(-4)).toBe(THEMES[0]);
+		expect(themeFor(-5)).toBe(THEMES[3]);
 		expect(themeFor(-100)).toBe(themeFor(-100 % THEMES.length));
 		for (let i = -12; i <= 12; i += 1) expect(THEMES).toContain(themeFor(i));
 	});
