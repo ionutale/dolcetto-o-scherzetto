@@ -1,7 +1,7 @@
 import { afterEach, beforeEach, describe, expect, it } from 'vitest';
 import { SPACING, setRand } from '../sim/loop';
 import type { InitialOpts } from '../sim/loop';
-import { activeK, dispatch, phase, step, worldX } from '../state/game.svelte';
+import { activeK, candies, dispatch, phase, step, worldX } from '../state/game.svelte';
 import { L, t } from '../i18n/lines';
 import { NEIGHBOR_ARCHES, NEIGHBORS, archOf, neighborFor } from '../art/sprites/neighbors';
 import {
@@ -9,25 +9,31 @@ import {
 	GREET_AT,
 	OUTCOME_AT,
 	RESOLVE_AT,
+	SCHERZO_AT,
+	SCHERZO_MS,
 	SHOUT_AT,
 	SHOUT_MS,
 	SHOUT_X,
 	SHOUT_Y,
 	createFlowStore,
+	doorScreenX,
 	scheduleKnock,
-	scheduleResolve
+	scheduleResolve,
+	scheduleTrickResolve
 } from './flow';
 import type { FlowStore, SetTimeoutLike, ShowBubble } from './flow';
 
 /**
- * Pinning suite for the T11 knock chain (`src/lib/play/flow.ts`) and the two
- * tables it speaks from — the copy lines and the neighbour archetypes.
+ * Pinning suite for the T11 knock chain and the T15 trick resolve beat
+ * (`src/lib/play/flow.ts`) and the two tables they speak from — the copy
+ * lines and the neighbour archetypes.
  *
  * The chain is driven exactly as the page drives it, against the **real**
  * store (`createFlowStore()` over `game.svelte.ts`, so every `RESOLVE` is the
  * real reducer) with two seams injected: a fake clock standing in for
  * `setTimeout`, and a recorder standing in for the bubble. That keeps the
- * timings (`+420 / +900 / +2000 / +150`, `seen`'s `+2000` close) and the
+ * timings (`+420 / +900 / +2000 / +150`, `seen`'s `+2000` close, the show's
+ * climax → `+300` payoff) and the
  * reducer's own outcome split assertable without a DOM — the prototype pinned
  * the same numbers by eye.
  *
@@ -279,6 +285,137 @@ describe('scheduleKnock — the chain the prototype runs on a knock', () => {
 	});
 });
 
+describe('scheduleTrickResolve — the show’s resolve beat (T15)', () => {
+	/** Refuses house `k`, then plays `id` on it — the state the fan's card lands in. */
+	function playTrickAt(k: number, id: 'boo' = 'boo'): void {
+		knockOn(k, { force: { [k]: 'refuse' } });
+		dispatch({ type: 'RESOLVE' });
+		expect(phase()).toBe('refuse');
+		dispatch({ type: 'PLAY_TRICK', id });
+		expect(phase()).toBe('trick');
+	}
+
+	/** The resolve beat with the page's two hooks, as `+page.svelte` wires them. */
+	function trickBeat(show: ShowBubble, clock: FakeClock, bounces: { n: number }) {
+		return scheduleTrickResolve(createFlowStore(), show, clock.set, {
+			onClimax: () => dispatch({ type: 'TRICK_RESOLVE' }),
+			bounce: () => {
+				bounces.n++;
+			}
+		});
+	}
+
+	it('runs the beat once at the climax: dispatch, bounce, payoff line at +300', () => {
+		const clock = new FakeClock();
+		const { calls, show } = recorder();
+		const bounces = { n: 0 };
+		playTrickAt(1); // archOf(1) is the nonna
+		expect(doorScreenX(createFlowStore(), 1)).toBe(DOOR_X);
+
+		const trick = trickBeat(show, clock, bounces);
+		trick.onClimax(); // the Theatre fires its one climax step here
+
+		expect(phase()).toBe('collect'); // the reducer answered TRICK_RESOLVE
+		expect(bounces.n).toBe(1);
+		clock.advance(SCHERZO_AT - 1);
+		expect(calls).toHaveLength(0);
+
+		clock.advance(1); // +300: the neighbour laughs back
+		expect(calls).toEqual([
+			{ text: L.it.scherzo[archOf(1)], x: DOOR_X, y: 175, small: false, ms: SCHERZO_MS }
+		]);
+	});
+
+	it('cannot climax twice: one dispatch, one bounce, one line', () => {
+		const clock = new FakeClock();
+		const { calls, show } = recorder();
+		const bounces = { n: 0 };
+		playTrickAt(2); // archOf(2) is the strega
+
+		const trick = trickBeat(show, clock, bounces);
+		trick.onClimax();
+		trick.onClimax(); // a replayed climax must not burst or speak again
+		clock.advance(SCHERZO_AT + 50);
+
+		expect(bounces.n).toBe(1);
+		expect(calls).toHaveLength(1);
+		expect(calls[0].text).toBe(L.it.scherzo.strega);
+	});
+
+	it('cancel before the climax silences both halves', () => {
+		const clock = new FakeClock();
+		const { calls, show } = recorder();
+		const bounces = { n: 0 };
+		playTrickAt(3); // archOf(3) is the ghost
+
+		const trick = trickBeat(show, clock, bounces);
+		trick.cancel();
+		trick.onClimax();
+		clock.advance(SCHERZO_AT + 50);
+
+		expect(phase()).toBe('trick'); // the reducer was never told
+		expect(bounces.n).toBe(0);
+		expect(calls).toHaveLength(0);
+	});
+
+	it('cancel after the climax silences the pending payoff line', () => {
+		const clock = new FakeClock();
+		const { calls, show } = recorder();
+		const bounces = { n: 0 };
+		playTrickAt(4);
+
+		const trick = trickBeat(show, clock, bounces);
+		trick.onClimax();
+		expect(phase()).toBe('collect'); // the burst itself already happened
+		trick.cancel();
+		clock.advance(SCHERZO_AT + 50);
+
+		expect(calls).toHaveLength(0);
+	});
+
+	it('says the payoff in the neighbour’s own words, in the store’s language', () => {
+		const clock = new FakeClock();
+		const { calls, show } = recorder();
+		// A language-reading stub — archOf(3) is the ghost; hooks are optional.
+		const en: FlowStore = {
+			dispatch: () => {},
+			activeK: () => 3,
+			worldX: () => 3 * SPACING,
+			phase: () => 'trick',
+			lang: () => 'en',
+			resolvedOutcome: () => null
+		};
+
+		scheduleTrickResolve(en, show, clock.set).onClimax();
+		clock.advance(SCHERZO_AT);
+
+		expect(calls).toEqual([
+			{ text: L.en.scherzo.ghost, x: DOOR_X, y: 175, small: false, ms: SCHERZO_MS }
+		]);
+	});
+
+	it('closes the loop: refuse → show → climax → burst → collect → roam', () => {
+		const clock = new FakeClock();
+		const { show } = recorder();
+		playTrickAt(7, 'boo');
+
+		const trick = scheduleTrickResolve(createFlowStore(), show, clock.set, {
+			onClimax: () => dispatch({ type: 'TRICK_RESOLVE' })
+		});
+		trick.onClimax();
+		expect(phase()).toBe('collect');
+
+		// The boo burst is the gentle tier (4 candies), flying for ~2.4 s.
+		for (let i = 0; i < 80; i++) step(0.05);
+		const pile = candies().filter((c) => c.state === 'landed');
+		expect(pile).toHaveLength(4);
+
+		for (const c of pile) dispatch({ type: 'COLLECT', id: c.id });
+		expect(candies()).toHaveLength(0);
+		expect(phase()).toBe('roam');
+	});
+});
+
 describe('createFlowStore — the outcome the store keeps private', () => {
 	it('reads a first-visit collect as a treat', () => {
 		const flow = createFlowStore();
@@ -357,7 +494,7 @@ describe('the tables the chain speaks from', () => {
 			expect(t(lang, 'shout')).toBeTruthy();
 			// The knock pill splices its hand span at this glyph.
 			expect(t(lang, 'knock')).toContain('✊');
-			for (const key of ['greet', 'treat', 'refuse', 'regift', 'seen'] as const) {
+			for (const key of ['greet', 'treat', 'refuse', 'regift', 'seen', 'scherzo'] as const) {
 				for (const arch of NEIGHBOR_ARCHES) {
 					expect(t(lang, key, arch)).toBeTruthy();
 				}

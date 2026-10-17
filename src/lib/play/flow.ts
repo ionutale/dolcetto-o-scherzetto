@@ -1,5 +1,6 @@
 /**
  * T11 — the knock → greet → resolve chain, and the flow's view of the store.
+ * T15 — the show's resolve beat (climax → bounce → payoff line).
  *
  * Faithful port of the two `afterAction()` blocks the prototype runs around a
  * knock (`prototypes/scene-prototype.html`, ~1428-1455): the shout over the
@@ -16,17 +17,31 @@
  *  + 4000  CLOSE_DOOR (seen only)             the door that stayed open shuts
  * ```
  *
+ * …plus the `PLAY_TRICK` / `TRICK_RESOLVE` blocks (~1446-1468) that stage the
+ * show and take its payoff (T15):
+ *
+ * ```
+ *  PLAY_TRICK  Theatre.start(id, door x, 222, { sound, onClimax })   (page)
+ *  climax      hooks.onClimax() once  → the page dispatches TRICK_RESOLVE
+ *              neighbour `.bounce`    → the prototype's class toggle
+ *  +  300      scherzo line (door x, 175)  by archetype, 2200 ms
+ * ```
+ *
  * **Who calls this.** The page's `$effect` on the one edge the knock can
  * happen on — `roam → door` (`+page.svelte`) — so a knock from the pill or
  * from anywhere else in the game starts exactly one chain. Nothing cancels
  * the timers (the prototype cleared its job list only on dev resets); the
  * guard is at the resolve end instead: `scheduleResolve` reads the outcome
  * through the store, and an outcome of `null` means `RESOLVE` did not land,
- * so no line is said at all.
+ * so no line is said at all. The trick half is the mirror image: the page
+ * builds one `TrickShow` per `PLAY_TRICK` (`refuse → trick` edge), hands its
+ * `onClimax` to `Theatre.start` and calls `cancel()` when the show dies
+ * early — `Theatre.cancel()` kills the climax itself, `TrickShow.cancel()`
+ * silences everything this module still owes after it.
  *
  * **The store seam.** `game.svelte.ts` exposes `worldX/phase/dir/activeK/
- * canWalk` and nothing else — `pending` (the reducer's own name for the
- * outcome), `homes`, `candies` and `lang` are module-private by design. The
+ * canWalk` (plus the later read-only seams down to T15's `trickPlayed`) —
+ * `homes` and `lang` are module-private by design. The
  * chain therefore never *reads* the outcome from the sim; `createFlowStore()`
  * wraps the real store in the small `FlowStore` the chain needs and derives
  * `resolvedOutcome()` from what *is* observable — the phase the reducer lands
@@ -48,7 +63,10 @@
  * (or a restored save) that clears `homes` behind its back — the mirror then
  * over-records one visit per home, which mislabels only a *forced* outcome.
  * A read-only `pending()` getter on the store would remove the whole seam;
- * until one exists, this derivation is the exact one.
+ * until one exists, this derivation is the exact one. *(T15 note: `pending()`
+ * has since landed on the store, together with `candies`/`bag`/`tricks`/
+ * `fanOpen`/`trickPlayed`; the chain keeps its derivation — it is the one the
+ * suite pins, and it still never writes anything.)*
  *
  * Tests inject the clock (`SetTimeoutLike`) and the bubble sink
  * (`ShowBubble`), so the whole chain runs in `flow.test.ts` with no DOM.
@@ -108,11 +126,17 @@ export const OUTCOME_MS: Record<KnockOutcome, number> = {
 	refuse: 2200,
 	seen: 1600
 };
+/** T15 — the theatre's door **centre** y (prototype `Theatre.start(…, 222, …)`). */
+export const SHOW_DOOR_Y = 222;
+/** T15 — +300 ms after the climax: the neighbour's payoff line. */
+export const SCHERZO_AT = 300;
+/** T15 — its duration (the prototype's `showBubble(…, false, 2200)`). */
+export const SCHERZO_MS = 2200;
 /** The player offset every door screen-x is measured from (loop.ts, §5). */
 const DOOR_X_OFFSET = 310;
 
 /** The door's screen x for house `k`: `k * SPACING - worldX + 310`. */
-function doorX(store: FlowStore, k: number): number {
+export function doorScreenX(store: FlowStore, k: number): number {
 	return k * SPACING - store.worldX() + DOOR_X_OFFSET;
 }
 
@@ -125,7 +149,7 @@ function doorX(store: FlowStore, k: number): number {
  */
 export function scheduleKnock(store: FlowStore, showBubble: ShowBubble, t: SetTimeoutLike): void {
 	const k = store.activeK();
-	const greetX = doorX(store, k);
+	const greetX = doorScreenX(store, k);
 
 	t(() => showBubble(line(store.lang(), 'shout'), SHOUT_X, SHOUT_Y, true, SHOUT_MS), SHOUT_AT);
 	t(() => showBubble(line(store.lang(), 'greet', archOf(k)), greetX, DOOR_Y), GREET_AT);
@@ -146,7 +170,7 @@ export function scheduleResolve(store: FlowStore, showBubble: ShowBubble, t: Set
 	if (!outcome) return;
 
 	const k = store.activeK();
-	const x = doorX(store, k);
+	const x = doorScreenX(store, k);
 	const lang = store.lang();
 	const arch = archOf(k);
 
@@ -154,6 +178,85 @@ export function scheduleResolve(store: FlowStore, showBubble: ShowBubble, t: Set
 	// CLOSE_DOOR lands 2000 ms after RESOLVE either way.
 	if (outcome === 'seen') t(() => store.dispatch({ type: 'CLOSE_DOOR' }), CLOSE_DOOR_AT);
 	t(() => showBubble(line(lang, outcome, arch), x, DOOR_Y, false, OUTCOME_MS[outcome]), OUTCOME_AT);
+}
+
+/* ------------------------------------------------------------------ */
+/* T15 — the show's resolve beat (climax → bounce → payoff line)      */
+/* ------------------------------------------------------------------ */
+
+/** What the trick orchestration can reach beyond the timers. All optional. */
+export interface TrickHooks {
+	/**
+	 * The show's climax — the page's `dispatch({ type: 'TRICK_RESOLVE' })`,
+	 * called exactly once per show, the moment the Theatre reaches it.
+	 */
+	onClimax?(): void;
+	/**
+	 * The neighbour's bounce — the prototype's `classList` toggle on the
+	 * doorway's `.neighbor` (a page-side DOM seam: HouseSlot ships the
+	 * `.neighbor` reveal slot but no `.bounce` class of its own, T15-checked).
+	 */
+	bounce?(): void;
+}
+
+/** A live show's choreography on this side of the Theatre. */
+export interface TrickShow {
+	/** Hand to `Theatre.start` as its `onClimax`; runs the resolve beat once. */
+	onClimax(): void;
+	/** Silences the pending payoff line — and any climax still to come. */
+	cancel(): void;
+}
+
+/**
+ * The `TRICK_RESOLVE` half of a trick — the prototype's
+ * `if (a.type === 'TRICK_RESOLVE')` block (~1463-1468), minus the sounds
+ * (`fire:<id>` / `theatre-laugh`, T23/T27) and the sky-ghost hop (T21):
+ *
+ * ```
+ *  climax    hooks.onClimax() once  → the page dispatches TRICK_RESOLVE
+ *            hooks.bounce()         → the neighbour's classList toggle
+ *  +  300    scherzo[archOf(k)] (door x, 175), 2200 ms
+ * ```
+ *
+ * `k` is read at climax time and `worldX`/`lang` when the line is said — the
+ * same moments the prototype read them (its closures captured exactly these).
+ * The Theatre is expected to call the returned `onClimax` once (it fires one
+ * `climax` step per show), but the guard is this module's, not the
+ * component's: a replayed climax cannot say the line twice. `cancel()` is the
+ * page's undo when a show dies before its climax — a flag, not a
+ * `clearTimeout`, so the injected clock stays the only timer here.
+ */
+export function scheduleTrickResolve(
+	store: FlowStore,
+	showBubble: ShowBubble,
+	t: SetTimeoutLike,
+	hooks: TrickHooks = {}
+): TrickShow {
+	let fired = false;
+	let cancelled = false;
+
+	return {
+		onClimax(): void {
+			if (fired || cancelled) return;
+			fired = true;
+			hooks.onClimax?.();
+			hooks.bounce?.();
+			const k = store.activeK();
+			t(() => {
+				if (cancelled) return;
+				showBubble(
+					line(store.lang(), 'scherzo', archOf(k)),
+					doorScreenX(store, k),
+					DOOR_Y,
+					false,
+					SCHERZO_MS
+				);
+			}, SCHERZO_AT);
+		},
+		cancel(): void {
+			cancelled = true;
+		}
+	};
 }
 
 /**

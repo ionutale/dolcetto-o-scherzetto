@@ -33,7 +33,7 @@
  * frame clamp, and the start/stop lifecycle).
  */
 import { initial, reduce, tick } from '../sim/loop';
-import type { Action, Candy, Dir, GameState, Phase } from '../sim/loop';
+import type { Action, Candy, Dir, GameState, Phase, TrickId } from '../sim/loop';
 
 /** Longest frame the sim digests — the prototype's `Math.min(.05, dt)`. */
 const MAX_DT = 0.05;
@@ -109,6 +109,15 @@ export function tricks(): string[] {
 /** Whether the trick fan is open (T13's Scherzo widget). */
 export function fanOpen(): boolean {
 	return state.fanOpen;
+}
+
+/**
+ * The trick a `PLAY_TRICK` has just put on stage, or `null` outside a show.
+ * Read-only seam for the display layer (T15): `Theatre.start` takes the id,
+ * and no other seam carries which card the fan picked.
+ */
+export function trickPlayed(): TrickId | null {
+	return state.trickPlayed;
 }
 
 /**

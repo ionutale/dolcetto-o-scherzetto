@@ -1,26 +1,28 @@
 /*!
  * ============================================================================
- *  Dolcetto o Scherzetto — COPY LINES (T11's IT/EN tables)
+ *  Dolcetto o Scherzetto — COPY LINES (T11's IT/EN tables + T15's `scherzo`)
  *
  *  Typed port of the prototype's `L` dictionary (`prototypes/
  *  scene-prototype.html`, lines ~689-714): the same Italian and English
  *  strings, in the same shape — two flat lines (the kids' shout and the knock
- *  label) plus five archetype tables (greet / treat / refuse / regift / seen),
- *  one row per neighbour archetype (`ghost`, `nonna`, `strega`).
+ *  label) plus six archetype tables (greet / treat / refuse / regift / seen /
+ *  scherzo), one row per neighbour archetype (`ghost`, `nonna`, `strega`).
  *
  *  USAGE
  *    t('it', 'shout');                 // 'Dolcetto o scherzetto!'
  *    t('en', 'greet', 'strega');       // 'Ehehe, who’s at my door?'
+ *    t('it', 'scherzo', 'ghost');      // 'Ehehe! Mi avete fatto ridere! Tieni!'
  *    L[lang].treat[archOf(k)];         // the same table, indexed by hand
  *
  *  The overload is the point: a key that has one line per language cannot be
  *  called with an archetype, and one that varies by neighbour must be — the
  *  compiler keeps `t(lang, 'greet')` and `t(lang, 'shout', 'ghost')` wrong.
  *
- *  SCOPE (T11 only)
- *    `scherzo` (the trick payoff line, prototype line ~695/707) belongs to
- *    T15's theatre wiring and the shop copy to T16; both extend this table
- *    when they land rather than T11 pre-shipping strings nothing renders.
+ *  SCOPE (T11 + T15)
+ *    T11 shipped the knock chain's five tables; T15 added `scherzo` (the trick
+ *    payoff line, prototype lines ~695/707) when the show wiring landed. The
+ *    shop copy belongs to T16 and extends this table when it lands rather
+ *    than pre-shipping strings nothing renders.
  *
  *  The live language is `settings.read().lang` (T17 owns the toggle); the sim
  *  keeps its own `lang` inside `GameState` for the run, and both agree on IT
@@ -34,9 +36,9 @@ import type { NeighborArch } from '../art/sprites/neighbors';
 export type LineKey = 'shout' | 'knock';
 
 /** Keys whose line varies by neighbour archetype. */
-export type ArchLineKey = 'greet' | 'treat' | 'refuse' | 'regift' | 'seen';
+export type ArchLineKey = 'greet' | 'treat' | 'refuse' | 'regift' | 'seen' | 'scherzo';
 
-/** The five archetype tables a language ships. */
+/** The six archetype tables a language ships. */
 type ArchLines = Record<ArchLineKey, Record<NeighborArch, string>>;
 
 /** One language: the flat lines plus the archetype tables. */
@@ -71,6 +73,12 @@ export const L: Record<Lang, Lines> = {
 			ghost: 'Buuu... ci siamo già visti!',
 			nonna: 'Ci siamo già visti, aha!',
 			strega: 'Già passati di qui, ehehe!'
+		},
+		// T15 — the trick payoff line, prototype `L.it.scherzo` (~695), verbatim.
+		scherzo: {
+			ghost: 'Ehehe! Mi avete fatto ridere! Tieni!',
+			nonna: 'Ah! Che burloni! Prendete!',
+			strega: 'Ehehe! Bei maghetti! Tutto per voi!'
 		}
 	},
 	en: {
@@ -100,6 +108,12 @@ export const L: Record<Lang, Lines> = {
 			ghost: 'Boo... we already met!',
 			nonna: 'We already met, haha!',
 			strega: 'Already been here, ehehe!'
+		},
+		// T15 — the trick payoff line, prototype `L.en.scherzo` (~707), verbatim.
+		scherzo: {
+			ghost: 'Ehehe! You made me laugh! Take!',
+			nonna: 'Ah! You rascals! Take these!',
+			strega: 'Ehehe! What little wizards! All yours!'
 		}
 	}
 };
