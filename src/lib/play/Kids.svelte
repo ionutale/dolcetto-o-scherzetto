@@ -362,4 +362,96 @@
 			animation: none;
 		}
 	}
+
+	/* ===== T24 — the scary-moment beat =====
+	 * `<Scares/>` arms `.scares-armed` once and, for ~2.5 s per cameo, adds
+	 * `.scares-stop` to this container and `scare-hug` / `-tremble` / `-peek` /
+	 * `-giggle` to `.tino` / `.milo`. The class names and this block are a port
+	 * of `prototypes/pieces/scares.js` (~127-163): the classes are added at
+	 * runtime, so every selector reaches them with `:global(...)`, still anchored
+	 * to these scoped wrappers. */
+	.kids:global(.scares-armed) .tino,
+	.kids:global(.scares-armed) .milo {
+		transform-origin: bottom center;
+		will-change: transform;
+	}
+
+	/* STOP: kill any host walk/swing animation inside the duo during the beat. */
+	.kids:global(.scares-stop) .m-body,
+	.kids:global(.scares-stop) .t-body,
+	.kids:global(.scares-stop) .arm,
+	.kids:global(.scares-stop) .leg-l,
+	.kids:global(.scares-stop) .leg-r {
+		animation: none !important;
+	}
+
+	/* HUG: Tino leans into Milo. `translate`/`rotate`/`scale` are the individual
+	 * transform properties, so they compose with `transform` (the tremble/giggle
+	 * keyframes) and the parent's facing `scaleX`. */
+	.kids :global(.tino.scare-hug) {
+		translate: 24px;
+		rotate: 9deg;
+	}
+	.kids :global(.milo.scare-hug) {
+		translate: -18px;
+		rotate: -7deg;
+	}
+
+	/* TREMBLE: subtle shake on `transform` so it composes with the hug. */
+	.kids :global(.tino.scare-tremble),
+	.kids :global(.milo.scare-tremble) {
+		animation: scare-tremble 0.16s linear infinite;
+	}
+	@keyframes scare-tremble {
+		0%,
+		100% {
+			transform: translate(0, 0);
+		}
+		20% {
+			transform: translate(1.1px, 0.3px);
+		}
+		40% {
+			transform: translate(-1px, -0.2px);
+		}
+		60% {
+			transform: translate(0.9px, 0.4px);
+		}
+		80% {
+			transform: translate(-0.8px, 0);
+		}
+	}
+
+	/* PEEK: small lean back. */
+	.kids :global(.tino.scare-peek) {
+		scale: 1.05;
+	}
+	.kids :global(.milo.scare-peek) {
+		scale: 1.03;
+	}
+
+	/* GIGGLE: quick bounce. */
+	.kids :global(.tino.scare-giggle),
+	.kids :global(.milo.scare-giggle) {
+		animation: scare-giggle 0.42s cubic-bezier(0.3, 1.5, 0.6, 1) 1;
+	}
+	@keyframes scare-giggle {
+		0% {
+			transform: translateY(0) scale(1);
+		}
+		40% {
+			transform: translateY(-7px) scale(1.05);
+		}
+		100% {
+			transform: translateY(0) scale(1);
+		}
+	}
+
+	/* The tremble is an ambient loop, so it dies under reduced motion (the
+	 * prototype's own kill switch); the hug/peek/giggle flourishes stay. */
+	@media (prefers-reduced-motion: reduce) {
+		.kids :global(.tino.scare-tremble),
+		.kids :global(.milo.scare-tremble) {
+			animation: none;
+		}
+	}
 </style>

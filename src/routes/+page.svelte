@@ -65,6 +65,15 @@
 	 * `{ bag, record, tricks, furthestK }` to `dos.run.v1` on any change; the
 	 * store's boot seeds that same state back (see `state/game.svelte.ts`). The
 	 * parent reset in Impostazioni still clears the key and reloads.
+	 *
+	 * **T24 — the scary moments.** `<Scares/>` mounts inside the stage after the
+	 * duo; it owns the six cameos, the veil and the kids' beat, and it decides
+	 * *when* through `scare-model.ts`. The page owns one thing: the walking lock.
+	 * Its `onScare(active)` hook stops the duo and hides `<WalkControls/>` for
+	 * the ~2.5 s beat, so no WALK can reach the sim — the prototype's local
+	 * `ambienceLock`. (The prototype kept the buttons mounted but inert; here
+	 * they unmount, which is the same guarantee with no stale hold to leak —
+	 * Review Focus #2.)
 	 */
 	import { onDestroy, onMount } from 'svelte';
 	import MotionStyles from '$lib/art/sprites/MotionStyles.svelte';
@@ -84,6 +93,7 @@
 	import Theatre from '$lib/play/Theatre.svelte';
 	import Bubbles from '$lib/play/Bubbles.svelte';
 	import Celebration from '$lib/play/Celebration.svelte';
+	import Scares from '$lib/play/Scares.svelte';
 	import Hud from '$lib/ui/Hud.svelte';
 	import TitleScreen from '$lib/ui/TitleScreen.svelte';
 	import { showBubble } from '$lib/play/bubble.svelte';
@@ -126,6 +136,14 @@
 	/** The theatre instance, mounted below inside the stage box (T15). */
 	let theatre = $state<Theatre | null>(null);
 	let ghosts = $state<Ghosts | null>(null);
+
+	/**
+	 * T24 — the scary-moment walking lock. `true` from a cameo's trigger until
+	 * its beat ends (`SCARE_BEAT_MS` ≈ 2.5 s); while it holds, `<WalkControls/>`
+	 * is unmounted and no WALK can be dispatched — the prototype's local
+	 * `ambienceLock` (it stopped the duo and ignored input for the beat).
+	 */
+	let scareActive = $state(false);
 
 	/** The live show's resolve beat — replaced per `PLAY_TRICK`, cancelled on destroy. */
 	let trick: TrickShow | null = null;
@@ -243,6 +261,21 @@
 		/* intentionally silent — never throw, whatever the cue name */
 	};
 
+	/* ------------------------------------------------------------------ */
+	/* T24 — the scary moments: the page's side of the `onScare` contract   */
+	/* ------------------------------------------------------------------ */
+
+	/**
+	 * The page's half of `<Scares/>`'s `onScare(active)` hook. On `true` it
+	 * stops the duo (the prototype's `scareNow` dispatched `STOP` before the
+	 * cameo) and drops the walk lock; on `false` — exactly `SCARE_BEAT_MS` later
+	 * — it hands walking back. T23 will also wire its `duckAmbience` here.
+	 */
+	function onScare(active: boolean): void {
+		scareActive = active;
+		if (active) dispatch({ type: 'STOP' });
+	}
+
 	/**
 	 * The neighbour's bounce — the prototype's `.neighbor.bounce` toggle
 	 * (`TRICK_RESOLVE`, ~1466; keyframes ~119-120). HouseSlot ships the
@@ -348,8 +381,11 @@
 		<Cars worldX={worldX()} />
 		<Npcs />
 		<Kids dir={dir()} />
+		<Scares {onScare} />
 		<CandyLayer />
-		<WalkControls />
+		{#if !scareActive}
+			<WalkControls />
+		{/if}
 		<KnockButton />
 		<Scherzo />
 		<Theatre bind:this={theatre} />
