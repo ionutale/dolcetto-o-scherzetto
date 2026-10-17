@@ -319,6 +319,31 @@
     .tools{ gap:8px; }
   }
   .foot{ font-size:11.5px; opacity:.5; line-height:1.5; max-width:980px; }
+  /* ---------- main menu ---------- */
+  .menu{ position:fixed; inset:0; z-index:200; display:flex; align-items:center; justify-content:center;
+    background:radial-gradient(1200px 600px at 70% -10%, #2c2352 0%, transparent 60%), linear-gradient(180deg,#191231,#241d45 45%,#3d2f5f);
+    transition:opacity .35s ease; }
+  .menu.hide{ opacity:0; pointer-events:none; }
+  .menu-card{ display:flex; flex-direction:column; align-items:center; gap:14px; padding:34px 42px;
+    background:rgba(28,20,52,.55); border:1px solid var(--cream-line); border-radius:28px;
+    box-shadow:0 30px 80px rgba(5,2,20,.6); backdrop-filter:blur(6px); }
+  .menu-eyebrow{ font-size:13px; letter-spacing:.12em; text-transform:uppercase; opacity:.7; }
+  .menu-title{ font-size:36px; color:var(--cream); }
+  .menu-title2{ font-size:22px; color:var(--cream); }
+  .menu-play{ font-family:inherit; font-size:22px; font-weight:700; color:var(--ink);
+    background:linear-gradient(180deg,#ffd166,#f2b93f); border:none; border-radius:999px;
+    padding:14px 54px; cursor:pointer; box-shadow:0 12px 30px rgba(255,209,102,.35);
+    animation:menuInvite 1.6s ease-in-out infinite alternate; }
+  @keyframes menuInvite{ from{ transform:scale(1) } to{ transform:scale(1.05) } }
+  .menu-settings{ font-family:inherit; font-size:15px; font-weight:600; color:var(--cream);
+    background:rgba(247,236,217,.1); border:1px solid var(--cream-line); border-radius:999px;
+    padding:9px 26px; cursor:pointer; }
+  .menu-settings:hover{ background:rgba(247,236,217,.18); }
+  .slider-row{ display:flex; align-items:center; gap:12px; color:var(--cream); font-weight:600; font-size:15px; min-width:280px; }
+  .slider-row input[type=range]{ flex:1; accent-color:var(--amber); }
+  .slider-row output{ width:34px; text-align:right; opacity:.85; }
+  .menu-card[hidden]{ display:none; }
+  @media (prefers-reduced-motion: reduce){ .menu-play{ animation:none } }
 </style>
 </head>
 <body>
@@ -407,6 +432,21 @@
   </div>
 </div>
 
+<div id="menu" class="menu">
+  <div class="menu-card" id="menuHome">
+    <p class="menu-eyebrow">🎃 Una notte di caramelle</p>
+    <h1 class="menu-title">Dolcetto o Scherzetto</h1>
+    <button id="playBtn" class="menu-play">Gioca ▶</button>
+    <button id="settingsBtn" class="menu-settings">⚙️ Impostazioni</button>
+  </div>
+  <div class="menu-card" id="settingsPanel" hidden>
+    <h2 class="menu-title2">Impostazioni</h2>
+    <label class="slider-row"><span>🎵 Musica</span><input type="range" id="musicVol" min="0" max="100" value="100" /><output id="musicVolVal">100</output></label>
+    <label class="slider-row"><span>🔊 Effetti</span><input type="range" id="sfxVol" min="0" max="100" value="100" /><output id="sfxVolVal">100</output></label>
+    <button id="settingsBack" class="menu-settings">Indietro</button>
+  </div>
+</div>
+
 <div class="tools">
   <div class="scenbar" id="scenbar">
     <span class="step" id="scenstep"></span>
@@ -435,6 +475,7 @@
  *    SFX.init();                 // call from a user gesture (lazily makes the AudioContext)
  *    SFX.play('coin');           // NEVER throws; unknown name or no WebAudio -> silent no-op
  *    SFX.setEnabled(false);      // global mute  (SFX.enabled reads back the same flag)
+ *    SFX.setVolume(0.5);         // 0..1 level applied to the master gain (combined with the mute)
  *
  *  CONTRACT (ART-STYLE.md §4.7 "no volume spikes", §8 durations, §9 shows, §10 ceiling)
  *    - cartoonish, cozy, moderate: peak gains sit at 0.05–0.18, most cues 0.1–0.9 s
@@ -459,6 +500,7 @@
   var ctx = null;      // AudioContext, created lazily
   var master = null;   // single master gain (the mute gate), created lazily too
   var enabled = true;
+  var volume = 1;      // 0..1 master level (menu slider), combined with the mute
 
   /* ------------------------------------------------------------------ *
    * infrastructure — every helper swallows its own errors
@@ -492,7 +534,7 @@
     try {
       if (!master) {
         var m = a.createGain();
-        m.gain.value = enabled ? 1 : 0;
+        m.gain.value = enabled ? volume : 0;
         m.connect(a.destination);
         master = m;
       }
@@ -1033,15 +1075,24 @@
 
   function setEnabled(v) {
     enabled = !!v;
-    try { if (master) master.gain.value = enabled ? 1 : 0; } catch (e) {}
+    try { if (master) master.gain.value = enabled ? volume : 0; } catch (e) {}
     if (!hasAccessor) SFX.enabled = enabled;   // pre-defineProperty fallback only
     return enabled;
+  }
+
+  // Set the 0..1 master level (menu slider). Never throws; clamps.
+  function setVolume(v) {
+    var n = Number(v);
+    volume = isFinite(n) ? Math.max(0, Math.min(1, n)) : 1;
+    try { if (master) master.gain.value = enabled ? volume : 0; } catch (e) {}
+    return volume;
   }
 
   var SFX = {
     init: init,
     play: play,
     setEnabled: setEnabled,
+    setVolume: setVolume,
     cueGroups: GROUPS
   };
 
@@ -3798,7 +3849,7 @@ function ambFrame(now) {
     amb.g.gain.setTargetAtTime(th.gain, amb.a.currentTime, 2);
   }
   const ducked = (state.phase === 'trick') || ambienceLock;
-  const target = !state.sound ? 0 : ducked ? .16 : .5;
+  const target = (!state.sound ? 0 : ducked ? .16 : .5) * (window.__vols ? __vols.music : 1);
   amb.master.gain.setTargetAtTime(target, amb.a.currentTime, .3);
   if (state.sound && !ducked && now > ambSprinkleAt && (state.phase === 'roam' || state.phase === 'refuse')) {
     ambSprinkleAt = now + 20000 + Math.random() * 20000;
@@ -3820,14 +3871,51 @@ function musicStart() {
   try { music.play().catch(() => {}); } catch (e) {}
 }
 function musicFrame(ducked) {
-  /* owner mix: street loop 30% quieter than v1 (0.34 -> 0.238); the duck scales with it */
-  const target = !state.sound ? 0 : ducked ? 0.07 : 0.238;
+  /* owner mix: street loop -30% then -40% vs v1 (0.34 -> 0.143); scaled by the menu Music slider */
+  const target = (!state.sound ? 0 : ducked ? 0.042 : 0.143) * (window.__vols ? __vols.music : 1);
   if (Math.abs(music.volume - target) > 0.004) {
     music.volume = Math.max(0, Math.min(1, music.volume + (target - music.volume) * 0.04));
   }
 }
 /* any first interaction anywhere unlocks audio (buttons included) — idempotent */
 window.addEventListener('pointerdown', () => { if (window.SFX && SFX.init) SFX.init(); ambInit(); musicStart(); }, { once: true });
+
+/* ---------------- main menu + settings (prototype) ---------------- */
+const MENU_KEY = 'dos.proto.settings';
+const vols = (() => {
+  try {
+    const raw = localStorage.getItem(MENU_KEY);
+    if (raw) {
+      const v = JSON.parse(raw);
+      return {
+        music: Math.max(0, Math.min(1, Number(v.music) || 0)),
+        sfx: Math.max(0, Math.min(1, Number(v.sfx) || 0)),
+      };
+    }
+  } catch (e) {}
+  return { music: 1, sfx: 1 };
+})();
+window.__vols = vols;
+function volsSave() { try { localStorage.setItem(MENU_KEY, JSON.stringify(vols)); } catch (e) {} }
+function volsApply() {
+  if (window.SFX && SFX.setVolume) SFX.setVolume(vols.sfx);
+  const m = document.getElementById('musicVol'), s = document.getElementById('sfxVol');
+  if (m) { m.value = Math.round(vols.music * 100); document.getElementById('musicVolVal').textContent = m.value; }
+  if (s) { s.value = Math.round(vols.sfx * 100); document.getElementById('sfxVolVal').textContent = s.value; }
+}
+document.getElementById('playBtn').addEventListener('click', () => { document.getElementById('menu').classList.add('hide'); });
+document.getElementById('settingsBtn').addEventListener('click', () => {
+  document.getElementById('menuHome').hidden = true;
+  document.getElementById('settingsPanel').hidden = false;
+  volsApply();
+});
+document.getElementById('settingsBack').addEventListener('click', () => {
+  document.getElementById('settingsPanel').hidden = true;
+  document.getElementById('menuHome').hidden = false;
+});
+document.getElementById('musicVol').addEventListener('input', e => { vols.music = e.target.value / 100; document.getElementById('musicVolVal').textContent = e.target.value; volsSave(); });
+document.getElementById('sfxVol').addEventListener('input', e => { vols.sfx = e.target.value / 100; document.getElementById('sfxVolVal').textContent = e.target.value; volsSave(); volsApply(); });
+volsApply();
 
 /* ---------------- sprite personaggi (Milo & Tino) ---------------- */
 const SVG = {

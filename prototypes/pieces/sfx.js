@@ -9,6 +9,7 @@
  *    SFX.init();                 // call from a user gesture (lazily makes the AudioContext)
  *    SFX.play('coin');           // NEVER throws; unknown name or no WebAudio -> silent no-op
  *    SFX.setEnabled(false);      // global mute  (SFX.enabled reads back the same flag)
+ *    SFX.setVolume(0.5);         // 0..1 level applied to the master gain (combined with the mute)
  *
  *  CONTRACT (ART-STYLE.md §4.7 "no volume spikes", §8 durations, §9 shows, §10 ceiling)
  *    - cartoonish, cozy, moderate: peak gains sit at 0.05–0.18, most cues 0.1–0.9 s
@@ -33,6 +34,7 @@
   var ctx = null;      // AudioContext, created lazily
   var master = null;   // single master gain (the mute gate), created lazily too
   var enabled = true;
+  var volume = 1;      // 0..1 master level (menu slider), combined with the mute
 
   /* ------------------------------------------------------------------ *
    * infrastructure — every helper swallows its own errors
@@ -66,7 +68,7 @@
     try {
       if (!master) {
         var m = a.createGain();
-        m.gain.value = enabled ? 1 : 0;
+        m.gain.value = enabled ? volume : 0;
         m.connect(a.destination);
         master = m;
       }
@@ -607,15 +609,24 @@
 
   function setEnabled(v) {
     enabled = !!v;
-    try { if (master) master.gain.value = enabled ? 1 : 0; } catch (e) {}
+    try { if (master) master.gain.value = enabled ? volume : 0; } catch (e) {}
     if (!hasAccessor) SFX.enabled = enabled;   // pre-defineProperty fallback only
     return enabled;
+  }
+
+  // Set the 0..1 master level (menu slider). Never throws; clamps.
+  function setVolume(v) {
+    var n = Number(v);
+    volume = isFinite(n) ? Math.max(0, Math.min(1, n)) : 1;
+    try { if (master) master.gain.value = enabled ? volume : 0; } catch (e) {}
+    return volume;
   }
 
   var SFX = {
     init: init,
     play: play,
     setEnabled: setEnabled,
+    setVolume: setVolume,
     cueGroups: GROUPS
   };
 

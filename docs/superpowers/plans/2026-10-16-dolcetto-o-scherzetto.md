@@ -142,9 +142,10 @@ tests/e2e/          *.spec.ts
 **Files:** `Bottega.svelte`; witch sprite; scroll list of 8.
 **Acceptance:** e2e: buy when affordable → owned + bag reduced; poor → disabled; already owned → "Tuo!".
 
-### T17 — Title screen + settings + hidden reset
-**Files:** `TitleScreen.svelte`, `Settings.svelte`.
-**Acceptance:** Play → last save; IT/EN + sound persist across reload; long-press reveals parent reset which clears both keys.
+### T17 — Title menu + settings + hidden reset
+**Files:** `TitleScreen.svelte`, `Settings.svelte`; extend `settings.ts` shape to `{ lang, sound, musicVolume, sfxVolume }` (+ tests) and add `setVolume` to the audio modules.
+**Deliverable:** opening screen with **Gioca / Impostazioni**; Settings = separate **Music** and **SFX** sliders (persisted; music default = owner-tuned `MUSIC_MAX 0.143`), IT/EN toggle; Play unlocks audio and enters the game.
+**Acceptance:** e2e: Play → last save; both sliders persist across reload and audibly scale the right layers (music+ambience vs SFX); long-press reveals parent reset which clears both keys.
 
 ### T18 — Celebration + neighborhood transition beat
 **Files:** transition overlay + stinger hook.

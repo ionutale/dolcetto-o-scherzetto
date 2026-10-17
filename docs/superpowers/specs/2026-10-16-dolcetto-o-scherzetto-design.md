@@ -77,7 +77,7 @@ roam → knock → door (greet) → resolve:
 - **Knock**: floating `Bussa ✊` button appears above the door when in range; ↑ also works. The cloud **beckons** — a gentle 1.25 s pulse with an amber glow ring and a tapping-hand animation (static under reduced motion).
 - **Collect**: tap each candy. **+N** floats; candy flies into the bucket HUD.
 - **Scherzo**: HUD-lights up at a refusing home → tap → trick fan → tap a trick → show plays (no input during it).
-- **Bottega**: HUD button, anytime. **Sound**: toggle (persists). **Language**: toggle (persists).
+- **Bottega**: HUD button, any time. **Title menu**: opens on load — **Gioca (Play)** and **Impostazioni (Settings)**; Settings holds **separate Music and SFX volume sliders** (persisted on the device) and the IT/EN language toggle; the 🔊 master mute stays in the HUD. Pressing Gioca unlocks audio (first-gesture policy).
 - iOS gotchas (Review Focus in the plan): audio unlock on first gesture; `pointer-events` and `touch-action` for held buttons; safe-area insets.
 
 ## 7. Scherzo & the trick theatre
@@ -141,7 +141,7 @@ roam → knock → door (greet) → resolve:
 - **Stack**: SvelteKit 5 + TypeScript + Vite, `adapter-vercel` → **Vercel**, PWA (manifest `orientation: landscape`, service worker offline shell, icons via `tools/gen-icons`), Fredoka font, pnpm, **Vitest + Playwright**.
 - **Renderer**: DOM/SVG, no canvas (ADR-0001); node/animation budgets documented in `ARCHITECTURE.md` (to write).
 - **Stage**: height-scaled, fluid width, iPhone 16 landscape reference; safe-area insets (ADR-0004).
-- **Persistence**: localStorage only — defensive `persist` + `settings` modules mirroring the sibling project (versioned keys, never throws), one slot, autosave, hidden parent reset (ADR-0006).
+- **Persistence**: localStorage only — defensive `persist` + `settings` modules mirroring the sibling project (versioned keys, never throws), one slot, autosave, hidden parent reset (ADR-0006). Settings shape: `{ lang, sound, musicVolume, sfxVolume }`; music default maps to the owner-tuned `MUSIC_MAX = 0.143` (duck `0.042`), both scale linearly with their slider.
 - **Docs set**: `GLOSSARY.md`, `ART-STYLE.md`, spec + plan under `docs/superpowers/`, `docs/adr/`, `docs/ISSUES.md`; later: `ARCHITECTURE.md`, `CONTENT-BIBLE.md`, `BALANCE.md`, `ART-MUSIC.md`, `CREDITS.md`.
 
 ## 14. Quality bar
