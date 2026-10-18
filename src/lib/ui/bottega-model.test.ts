@@ -1,7 +1,7 @@
 import { describe, expect, it } from 'vitest';
-import { TRICK_ORDER, TRICKS, priceFor } from '../sim/economy';
+import { TRICK_ORDER, TRICKS, canBuy, priceFor } from '../sim/economy';
 import type { TrickId } from '../sim/economy';
-import { SHOP_COPY, bottegaRows, shopCopy, trickDesc } from './bottega-model';
+import { SHOP_COPY, bottegaRows, inviteToShop, shopCopy, trickDesc } from './bottega-model';
 
 /**
  * Pinning suite for the T16 Bottega model (`bottega-model.ts`) — the row
@@ -18,6 +18,36 @@ import { SHOP_COPY, bottegaRows, shopCopy, trickDesc } from './bottega-model';
 
 /** The eight rows for a bag, at the default owned set (just the free `boo`). */
 const fresh = (bag: number) => bottegaRows('it', bag, ['boo']);
+
+describe('inviteToShop — the 🏪 beckon rule (owner feedback)', () => {
+	it('is quiet with an empty bag', () => {
+		expect(inviteToShop(0, ['boo'])).toBe(false);
+	});
+
+	it('wakes at the cheapest unowned boundary (14 / 15 / 16 for ragnetto)', () => {
+		expect(inviteToShop(14, ['boo'])).toBe(false);
+		expect(inviteToShop(15, ['boo'])).toBe(true);
+		expect(inviteToShop(16, ['boo'])).toBe(true);
+	});
+
+	it('ignores tricks the player already owns', () => {
+		// A bag that could only afford ragnetto, and ragnetto is owned → quiet.
+		expect(inviteToShop(15, ['boo', 'ragnetto'])).toBe(false);
+	});
+
+	it('is quiet once everything is bought, however rich', () => {
+		expect(inviteToShop(9999, [...TRICK_ORDER])).toBe(false);
+	});
+
+	it('agrees with canBuy on every catalogue prefix and bag size', () => {
+		for (let n = 1; n <= 8; n++) {
+			const owned = ['boo', ...TRICK_ORDER.slice(1, n)];
+			for (const bag of [0, 14, 15, 16, 44, 45, 110, 200]) {
+				expect(inviteToShop(bag, owned)).toBe(TRICK_ORDER.some((id) => canBuy(bag, owned, id)));
+			}
+		}
+	});
+});
 
 describe('bottegaRows — order and shape', () => {
 	it('pins the catalogue order — all eight ids, TRICK_ORDER verbatim', () => {

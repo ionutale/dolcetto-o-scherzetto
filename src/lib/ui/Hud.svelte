@@ -20,8 +20,9 @@
 	 */
 	import { onDestroy } from 'svelte';
 	import { bucketIcon } from '$lib/art/sprites/candy';
-	import { bag, dispatch, fanOpen, lang, shopOpen } from '$lib/state/game.svelte';
+	import { bag, dispatch, fanOpen, lang, shopOpen, tricks } from '$lib/state/game.svelte';
 	import type { Lang } from '$lib/sim/loop';
+	import { inviteToShop } from './bottega-model';
 	import { openMenu } from './menu-state.svelte';
 	import Bottega from './Bottega.svelte';
 
@@ -87,6 +88,15 @@
 		it: 'Apri la Bottega',
 		en: 'Open the shop'
 	};
+
+	/**
+	 * Owner feedback: the 🏪 pill beckons exactly while at least one **unowned,
+	 * affordable** trick waits — and goes quiet the moment nothing new is
+	 * affordable or everything is bought. Pure rule in `bottega-model.ts`;
+	 * this is only the reactive wiring (buys update the bag and the owned set,
+	 * so the beckon stops by itself the moment it no longer applies).
+	 */
+	const shopInvite = $derived(inviteToShop(bag(), tricks()));
 </script>
 
 <div class="hud">
@@ -117,6 +127,7 @@
 			type="button"
 			id="bottegaBtn"
 			class="pill"
+			class:invite={shopInvite}
 			aria-label={BOTTEGA_LABEL[lang()]}
 			onclick={openShop}>🏪 Bottega</button
 		>
@@ -200,6 +211,36 @@
 	@keyframes bagpulse {
 		50% {
 			transform: scale(1.14);
+		}
+	}
+
+	/* Owner feedback: the 🏪 pill's beckon — a slow, gentle swell of the amber
+	   CTA while an affordable trick waits (the shop's "pick me", the knock
+	   cloud's slower cousin). Wins over `:active` only in scale, so tapping
+	   still reads as a press. */
+	#bottegaBtn.invite {
+		animation: shopinvite 1.6s ease-in-out infinite alternate;
+	}
+
+	@keyframes shopinvite {
+		from {
+			transform: scale(1);
+			box-shadow: 0 6px 18px var(--amber-glow);
+		}
+		to {
+			transform: scale(1.07);
+			box-shadow: 0 10px 30px color-mix(in srgb, var(--amber) 55%, transparent);
+		}
+	}
+
+	/* Reduced motion: the beckon loop stops, the pill still asks — statically,
+	   with a brighter halo and a visible ring (same policy as the candies). */
+	@media (prefers-reduced-motion: reduce) {
+		#bottegaBtn.invite {
+			animation: none;
+			box-shadow: 0 8px 26px color-mix(in srgb, var(--amber) 60%, transparent);
+			outline: 2px solid color-mix(in srgb, var(--amber) 70%, transparent);
+			outline-offset: 2px;
 		}
 	}
 </style>

@@ -134,3 +134,14 @@ export function bottegaRows(lang: Lang, bag: number, owned: string[]): BottegaRo
 		};
 	});
 }
+
+/**
+ * Whether the shop is worth opening **right now** (owner feedback): true exactly
+ * while at least one trick is unowned and the bag can afford it, false when the
+ * bag is short of every unowned price or everything is owned already. Built on
+ * the same `canBuy`/`TRICK_ORDER` pair the rows and the `BUY` reducer use, so
+ * the beckon can never drift from the purchase guard.
+ */
+export function inviteToShop(bag: number, owned: string[]): boolean {
+	return TRICK_ORDER.some((id) => canBuy(bag, owned, id));
+}
