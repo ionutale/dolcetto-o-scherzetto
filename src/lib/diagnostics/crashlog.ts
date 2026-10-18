@@ -158,9 +158,13 @@ function scrubValue(value: unknown, depth: number): unknown {
 		if (Array.isArray(value)) return value.slice(0, 10).map((item) => scrubValue(item, depth + 1));
 		try {
 			const out: Record<string, unknown> = {};
+			// 24 keys of headroom: the heartbeat is a legitimate flat 15-key
+			// payload (`el … fps`), and the 12-key cap this replaced silently
+			// swallowed its tail (`ph`/`menu`/`fps`) the day three counters
+			// joined — caught by the e2e before it ever reached a device.
 			let n = 0;
 			for (const [key, item] of Object.entries(value as object)) {
-				if (n >= 12) break;
+				if (n >= 24) break;
 				n += 1;
 				const scrubbed = scrubValue(item, depth + 1);
 				if (scrubbed !== undefined) out[key] = scrubbed;
@@ -466,8 +470,9 @@ export function createCrashLog(storage: Storage | null, opts: CrashLogOptions = 
 			for (const e of entries) lines.push(entryLine(e));
 			lines.push(
 				'(legenda: el=nodi DOM · aC/aD=nodi WebAudio creati/chiusi · aX=stato AudioContext · ' +
-					'vf=voci in pool · amb=loop ambience vivi · fps=frame/s · cd=caramelle a schermo · ' +
-					'bag=caramelle in sacca · k=isolato · ph=fase · menu=menu aperto)'
+					'amb=loop ambience vivi · vf=voci in pool · sy=voce in play · rb=scambi clip voce · ' +
+					'cq=cue SFX suonati · fps=frame/s · cd=caramelle a schermo · bag=caramelle in sacca · ' +
+					'k=isolato · ph=fase · menu=menu aperto)'
 			);
 			return lines.join('\n');
 		}

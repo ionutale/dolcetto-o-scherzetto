@@ -96,7 +96,10 @@ its own rAF frame; there is no shared node graph.
   on the same master. Duck −6 dB on `phase === 'trick'` and on a manual `duckAmbience`.
 - **music** — one master `GainNode`; one decoded buffer source looped into it (`loop = true`),
   gap-free at the wrap.
-- **voice** — a pool of ≤ `VOICE_POOL_SIZE` (6) `<audio>` elements, one per bound line; volume
+- **voice** — a pool of ≤ `VOICE_POOL_SIZE` (6) `<audio>` elements, one per bound line; a
+  rebind **unloads the old clip first** (`removeAttribute('src')` + `load()` — the iOS
+  media-memory guard; the owner's device trail traced the recurring ~6-7-home process kill
+  to resource accumulation outside every page-visible counter, 2026-10-18); volume
   = the SFX slider; a missing clip is silence, never an error.
 
 `volumes.svelte.ts` is the only cross-engine state: the two 0..1 gains the audio frames read.

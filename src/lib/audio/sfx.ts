@@ -291,9 +291,10 @@ function applyMaster(): void {
 let cueNodes: AudioNode[] = [];
 let cueEnd = 0;
 
-/** Black-box counters: what this graph has created, and swept away. */
+/** Black-box counters: what this graph has created, swept away, and played. */
 let nodesCreated = 0;
 let nodesDisconnected = 0;
+let cuesTotal = 0;
 
 /** Register one node the current cue created, at the ctx time it goes quiet. */
 function track(n: AudioNode, stopAt: number): void {
@@ -329,6 +330,8 @@ export interface SfxStats {
 	created: number;
 	/** How many a sweep has disconnected (created − disconnected = live). */
 	disconnected: number;
+	/** How many cues actually played since the page loaded. */
+	cues: number;
 	/** The AudioContext state (`running`/`suspended`), or `null` before init. */
 	ctx: string | null;
 	/** Whether the witch's `<audio>` element exists (created lazily). */
@@ -340,6 +343,7 @@ export function sfxStats(): SfxStats {
 	return {
 		created: nodesCreated,
 		disconnected: nodesDisconnected,
+		cues: cuesTotal,
 		ctx: ctx ? String(ctx.state) : null,
 		witch: witchFile !== null
 	};
@@ -1166,6 +1170,7 @@ export function playCue(name: string): boolean {
 		cueNodes = [];
 		cueEnd = 0;
 		cue(a);
+		cuesTotal += 1;
 		sweepCue(a);
 		return true;
 	} catch {

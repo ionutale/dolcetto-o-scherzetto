@@ -110,6 +110,10 @@ interface VoiceSlot {
 let pool: VoiceSlot[] = [];
 let cursor = 0;
 
+/** Black-box counters: plays that reached an element, and slot rebinds. */
+let playsTotal = 0;
+let rebindsTotal = 0;
+
 /** The audio-element factory — `new Audio()` by default; injectable for tests. */
 type AudioFactory = () => HTMLAudioElement | null;
 
@@ -168,9 +172,19 @@ function slotFor(url: string): HTMLAudioElement | null {
 		cursor = (cursor + 1) % pool.length;
 		try {
 			slot.el.pause();
+			// Release the old clip *before* rebinding (the iOS media-resource
+			// guard, found by the owner's device trail 2026-10-18): WebKit keeps
+			// a bound media resource alive until the element is explicitly
+			// unloaded, so a night of line swaps piles up native media memory
+			// outside every page-visible counter — until the process is killed
+			// (~6-7 homes, every run). `removeAttribute('src')` + `load()` is
+			// the documented teardown; the new `src` below loads right after.
+			slot.el.removeAttribute('src');
+			slot.el.load();
 		} catch {
 			/* a hostile element: rebinding it is enough */
 		}
+		rebindsTotal += 1;
 		slot.url = url;
 		el = slot.el;
 	}
@@ -205,6 +219,8 @@ export function initVoice(opts: VoiceOptions = {}): void {
 	if (opts.muted) isMuted = opts.muted;
 	pool = [];
 	cursor = 0;
+	playsTotal = 0;
+	rebindsTotal = 0;
 }
 
 /**
@@ -222,6 +238,8 @@ export function stopVoice(): void {
 	}
 	pool = [];
 	cursor = 0;
+	playsTotal = 0;
+	rebindsTotal = 0;
 	createAudio = defaultAudio;
 	isMuted = () => settings.read().sound === false;
 }
@@ -245,6 +263,7 @@ export function say(lang: Lang, key: string, arch?: string): void {
 		if (!el) return;
 		el.volume = clamp01(volumes().sfx);
 		el.currentTime = 0;
+		playsTotal += 1;
 		const started = el.play();
 		if (started && typeof started.catch === 'function') started.catch(() => {});
 	} catch {
@@ -252,15 +271,24 @@ export function say(lang: Lang, key: string, arch?: string): void {
 	}
 }
 
-/** A read-only snapshot for tests, the smoke and a future debug overlay. */
+/** A read-only snapshot for tests, the smoke and the black box. */
 export interface VoiceInfo {
 	/** How many elements the pool is holding. */
 	pooled: number;
 	/** The lines currently bound to a pooled element, oldest first. */
 	bound: string[];
+	/** Total `say()` calls that reached an element's `play()` this page. */
+	plays: number;
+	/** Total slot rebinds (a new line swapped onto an already-bound element). */
+	rebinds: number;
 }
 
 /** The player's current snapshot (never throws). */
 export function voiceInfo(): VoiceInfo {
-	return { pooled: pool.length, bound: pool.map((slot) => slot.url) };
+	return {
+		pooled: pool.length,
+		bound: pool.map((slot) => slot.url),
+		plays: playsTotal,
+		rebinds: rebindsTotal
+	};
 }

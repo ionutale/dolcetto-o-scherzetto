@@ -253,6 +253,40 @@ describe('scrubbing', () => {
 		const out = scrubPayload(big);
 		expect(typeof out.trunc).toBe('number');
 	});
+
+	it('keeps a full heartbeat-shaped payload intact (the 15-key shape)', () => {
+		// The regression this pins: a 12-key object cap silently swallowed the
+		// heartbeat's tail (`ph`/`menu`/`fps`) once `sy`/`rb`/`cq` joined —
+		// exactly the fields the device crash hunt reads.
+		const out = scrubPayload({
+			el: 1700,
+			aC: 10,
+			aD: 9,
+			aX: 'running',
+			amb: 3,
+			vf: 6,
+			sy: 12,
+			rb: 7,
+			cq: 40,
+			cd: 2,
+			bag: 100,
+			k: 5,
+			ph: 'roam',
+			menu: 0,
+			fps: 60
+		});
+		expect(Object.keys(out)).toHaveLength(15);
+		expect(out.fps).toBe(60);
+		expect(out.ph).toBe('roam');
+		expect(out.menu).toBe(0);
+	});
+
+	it('still bounds pathological objects at 24 keys', () => {
+		const big: Record<string, unknown> = {};
+		for (let i = 0; i < 40; i++) big[`k${i}`] = i;
+		const out = scrubPayload(big);
+		expect(Object.keys(out)).toHaveLength(24);
+	});
 });
 
 describe('parseEntries', () => {

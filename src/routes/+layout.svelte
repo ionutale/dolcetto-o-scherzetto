@@ -26,13 +26,17 @@
 			stats: () => {
 				const audio = sfxStats();
 				const amb = ambienceStats();
+				const voice = voiceInfo();
 				return {
 					el: document.getElementsByTagName('*').length,
 					aC: audio.created,
 					aD: audio.disconnected,
 					aX: audio.ctx,
 					amb: amb.live,
-					vf: voiceInfo().pooled,
+					vf: voice.pooled,
+					sy: voice.plays,
+					rb: voice.rebinds,
+					cq: audio.cues,
 					cd: candies().length,
 					bag: bag(),
 					k: furthest(),

@@ -34,6 +34,9 @@ class FakeElement {
 	playing = false;
 	playCalls = 0;
 	pauseCalls = 0;
+	/** Attribute removals, in order — the iOS unload teardown uses `src`. */
+	removed: string[] = [];
+	loadCalls = 0;
 	listeners: string[] = [];
 	/** Make the next `play()` reject (a blocked autoplay / decode failure). */
 	rejectPlay = false;
@@ -47,6 +50,15 @@ class FakeElement {
 	pause(): void {
 		this.pauseCalls++;
 		this.playing = false;
+	}
+
+	removeAttribute(name: string): void {
+		this.removed.push(name);
+		if (name === 'src') this.src = '';
+	}
+
+	load(): void {
+		this.loadCalls++;
 	}
 
 	addEventListener(type: string): void {
@@ -205,6 +217,42 @@ describe('say — playback through the reused pool', () => {
 		expect(made).toHaveLength(6); // no seventh element built
 		expect(made[0].src).toBe('/voice/it/scherzo-ghost.mp3'); // slot 0 rebound
 		expect(made[0].playCalls).toBe(2); // once as `shout`, again as the rebound line
+		// The iOS unload teardown: the old clip is released before the rebind.
+		expect(made[0].removed).toEqual(['src']);
+		expect(made[0].loadCalls).toBe(1);
+		// Only the rebound element was unloaded; the other five kept their clip.
+		for (const el of made.slice(1)) {
+			expect(el.removed).toEqual([]);
+			expect(el.loadCalls).toBe(0);
+		}
+	});
+
+	it('counts plays and rebinds for the black box', () => {
+		const { createAudio } = fakeFactory();
+		initVoice({ createAudio });
+
+		expect(voiceInfo().plays).toBe(0);
+		expect(voiceInfo().rebinds).toBe(0);
+
+		say('it', 'shout');
+		say('it', 'shout'); // same line: a reuse, not a rebind
+		expect(voiceInfo().plays).toBe(2);
+		expect(voiceInfo().rebinds).toBe(0);
+
+		const rest = [
+			['greet', 'ghost'],
+			['treat', 'ghost'],
+			['refuse', 'ghost'],
+			['regift', 'ghost'],
+			['seen', 'ghost']
+		] as const;
+		for (const [key, arch] of rest) say('it', key, arch);
+		expect(voiceInfo().pooled).toBe(6);
+		expect(voiceInfo().rebinds).toBe(0); // the pool filled, no swap yet
+
+		say('it', 'scherzo', 'ghost'); // the seventh distinct line → first rebind
+		expect(voiceInfo().rebinds).toBe(1);
+		expect(voiceInfo().plays).toBe(8);
 	});
 
 	it('is a no-op for a pair that is not a voiced line', () => {
