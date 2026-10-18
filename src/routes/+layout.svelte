@@ -39,9 +39,19 @@
 				} catch {
 					/* no heap API: keep null */
 				}
+				// The street's raster breath count (Street.svelte mirrors it onto
+				// the scrolling subtree) — proves cache trims during a walk.
+				let breathCount: number;
+				try {
+					breathCount =
+						Number(document.querySelector('[data-breaths]')?.getAttribute('data-breaths')) || 0;
+				} catch {
+					breathCount = 0;
+				}
 				return {
 					el: document.getElementsByTagName('*').length,
 					svg: document.getElementsByTagName('svg').length,
+					br: breathCount,
 					aC: audio.created,
 					aD: audio.disconnected,
 					aX: audio.ctx,

@@ -43,6 +43,7 @@
 	 * token, the same convention T08 used for the sky.
 	 */
 	import HouseSlot from './HouseSlot.svelte';
+	import { createBreathClock } from './breath-model';
 
 	interface Props {
 		/** World scroll position in logical px — the sim's only street input. */
@@ -76,6 +77,74 @@
 	 */
 	const seams = $derived(shift % 86);
 	const dashes = $derived(shift % 60);
+
+	/* ------------------------------------------------------------------ */
+	/* the raster breath (the pure-walk diagnosis, 2026-10-18)             */
+	/* ------------------------------------------------------------------ */
+
+	/**
+	 * While the world scrolls, WebKit rasterizes newly exposed street pixels
+	 * into its tile cache and releases them only when the page idles — the
+	 * owner's controlled nonstop-walk test died in **20 seconds** with every
+	 * page-side counter flat. The breath is the page-side idle trim: once
+	 * ~12 s of actual walking accumulates, the scrolling subtree is hidden
+	 * for one *committed* frame — forcing the renderer to drop the layer and
+	 * its raster cache — then restored. A synchronous hide+restore inside one
+	 * task can be coalesced away and release nothing, hence the frame
+	 * hand-off; a timed fallback restores even when the frame callback never
+	 * lands (a hidden tab). Never throws.
+	 */
+	const breathClock = createBreathClock();
+	/** The scrolling subtree — the raster-heavy layer the breath resets. */
+	let homesEl: HTMLElement | undefined = $state();
+	/** Breaths taken — mirrored onto `data-breaths` for tests and the probe. */
+	let breaths = 0;
+	/** The in-flight breath's token (`null` = none) — restore runs once. */
+	let breathToken: object | null = null;
+
+	/** `performance.now()` guarded against absent or hostile hosts. */
+	function perfNow(): number {
+		try {
+			return typeof performance === 'undefined' ? Date.now() : performance.now();
+		} catch {
+			return Date.now();
+		}
+	}
+
+	/** One breath: hide → one committed frame → restore. */
+	function breathe(): void {
+		const el = homesEl;
+		if (!el || breathToken !== null) return;
+		const token = {};
+		breathToken = token;
+		const done = (): void => {
+			if (breathToken !== token) return;
+			breathToken = null;
+			try {
+				el.style.display = '';
+				breaths += 1;
+				el.dataset.breaths = String(breaths);
+			} catch {
+				/* a hostile element: the breath count simply does not grow */
+			}
+		};
+		try {
+			el.style.display = 'none';
+			requestAnimationFrame(done);
+			setTimeout(done, 250);
+		} catch {
+			breathToken = null;
+		}
+	}
+
+	/**
+	 * One tick per scroll update — the frames that move the world are exactly
+	 * the ones that grow the tile cache, so `worldX` reads are the clock's
+	 * "walking" signal (the effect's only dependency).
+	 */
+	$effect(() => {
+		if (breathClock.tick(perfNow(), Number.isFinite(worldX))) breathe();
+	});
 </script>
 
 <div
@@ -87,7 +156,7 @@
 	<div class="sidewalk"></div>
 	<div class="road"></div>
 
-	<div class="homes" style="transform: translateX({shift}px)">
+	<div class="homes" bind:this={homesEl} style="transform: translateX({shift}px)">
 		{#each slots as k (k)}
 			<HouseSlot
 				{k}
