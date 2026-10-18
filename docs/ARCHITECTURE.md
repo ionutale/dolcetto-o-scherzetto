@@ -135,7 +135,7 @@ Settings first, then the save, then the title, then one gesture, then the engine
 | Layer | Command | Backer / shape |
 |---|---|---|
 | **Unit** | `pnpm test:unit` | Vitest — **651 tests / 23 files** (0.7 s), covering the pure sim, the play/scene models, the audio modules, the black box and the store. Count backed by the Budgets table below. |
-| **e2e** | `pnpm test:e2e` | Playwright — **12 tests in 7 specs** (`tests/e2e/*.spec.ts`), run against the **built** app at 852×393: audio unlock, the full loop + reduced motion, Bottega, settings/language, the reopenable menu, save→reload, and the black box (crash banner + viewer, error capture, clean close, reachability). See `tests/README.md`. |
+| **e2e** | `pnpm test:e2e` | Playwright — **13 tests in 7 specs** (`tests/e2e/*.spec.ts`), run against the **built** app at 852×393: audio unlock, the full loop + reduced motion, Bottega, settings/language, the reopenable menu, save→reload, and the black box (crash banner + viewer, error capture, unassisted heartbeat flush, clean close, reachability). See `tests/README.md`. |
 | **Perf / memory** | `node tools/perf-probe.mjs --launch` | the CDP harness behind the Budgets table: audio-node gap, loop replacement, DOM count, heap, page errors. Re-measure recipe in *Budgets → Re-measuring*. |
 | **Voice gate** | `pnpm check:voice` | `tools/check-voice.mjs` — a non-empty clip + a manifest row per id, both languages. |
 

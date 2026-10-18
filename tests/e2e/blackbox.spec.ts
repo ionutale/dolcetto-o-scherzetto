@@ -133,6 +133,31 @@ test('the live session records errors and heartbeats while playing', async ({ pa
 	expect(typeof beat?.d?.fps).toBe('number');
 });
 
+test('heartbeats reach localStorage on their own (no error required)', async ({ page }) => {
+	await openTitle(page);
+
+	// The flush fix (owner's first device logs): before it, heartbeats sat in
+	// memory until an error/close/pagehide, so a silent foreground process kill
+	// erased the whole session down to the bare boot line. Two beats in — the
+	// initial one plus one interval — the persisted log must already carry
+	// `hb` entries with no error, no visibility change and no pagehide having
+	// fired.
+	await expect
+		.poll(
+			async () => {
+				const raw = await page.evaluate((key) => window.localStorage.getItem(key) ?? '', LIVE_KEY);
+				try {
+					const entries = JSON.parse(raw) as { k: string }[];
+					return entries.filter((e) => e.k === 'hb').length;
+				} catch {
+					return 0;
+				}
+			},
+			{ timeout: 20_000 }
+		)
+		.toBeGreaterThanOrEqual(2);
+});
+
 test('a clean close writes end and the next boot shows no banner', async ({ page }) => {
 	await openTitle(page);
 

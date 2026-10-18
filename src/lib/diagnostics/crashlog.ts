@@ -534,6 +534,12 @@ function beat(): void {
 			sampled = { statsErr: 1 };
 		}
 		crashlog.log('hb', { ...sampled, fps: Math.round(framesDelta / secs) });
+		// Persist immediately. On iOS the process can be killed between beats,
+		// and a kill **while foreground** never fires the critical events
+		// (visibility/pagehide/error) — without this write-through the whole
+		// session vanished down to a bare `boot` line (owner's first device
+		// log, 2026-10-18): the last 4 s must already be on disk.
+		crashlog.flush();
 	} catch {
 		/* a heartbeat must never throw */
 	}
