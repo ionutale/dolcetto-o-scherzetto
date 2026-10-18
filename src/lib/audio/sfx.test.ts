@@ -271,6 +271,44 @@ describe('the per-cue disconnect sweep', () => {
 			vi.useRealTimers();
 		}
 	});
+
+	it('disconnects every node of every one of the 26 cues (the drift hunt)', () => {
+		// The desktop probe's live-node gap drifts +0.5/home and never closes
+		// (12 → 46 over 60 homes, 2026-10-18) — some cue path leaks a node
+		// past the sweep. Pin all 26: created === disconnected, master aside.
+		vi.useFakeTimers();
+		try {
+			for (const name of CUE_NAMES) {
+				const fake = fakeContext();
+				const audio = fakeAudio(SFX_WITCH_URL);
+				start(fake, audio);
+				const master = fake.gains[0];
+				const before = {
+					g: fake.gains.length,
+					f: fake.filters.length,
+					o: fake.oscillators.length,
+					s: fake.sources.length
+				};
+
+				expect(playCue(name), name).toBe(true);
+				vi.runAllTimers();
+
+				const created = [
+					...fake.gains.slice(before.g),
+					...fake.filters.slice(before.f),
+					...fake.oscillators.slice(before.o),
+					...fake.sources.slice(before.s)
+				];
+				const alive = created.filter((n) => !n.disconnected);
+				expect(alive, `cue "${name}" left ${alive.length} node(s) connected`).toHaveLength(0);
+				expect(master.disconnected).toBeFalsy(); // the gate survives every cue
+
+				stopSfx();
+			}
+		} finally {
+			vi.useRealTimers();
+		}
+	});
 });
 
 /* ------------------------------------------------------------------ */

@@ -169,8 +169,12 @@ class CDP {
 const METER_INSTALL = `(function () {
 	if (window.__perfMeterInstalled) return;
 	window.__perfMeterInstalled = true;
-	window.__perfMeter = { created: {}, disconnected: 0, errors: [],
-		loopsStarted: 0, loopsStopped: 0, started: 0, stopped: 0 };
+	window.__perfMeter = { created: {}, discByKind: {}, disconnected: 0, errors: [],
+		loopsStarted: 0, loopsStopped: 0, started: 0, stopped: 0,
+		// Not AudioNodes (no disconnect()): must never count in the gap — the
+		// old accounting read transient noise buffers as a permanent "leak
+		// drift" (35 buffers ≈ the whole 12→46 "gap" of the 60-home run).
+		nonNodes: ['createBuffer', 'createPeriodicWave'] };
 	const M = window.__perfMeter;
 	try {
 		const proto = AudioContext.prototype;
@@ -185,12 +189,17 @@ const METER_INSTALL = `(function () {
 			proto[name] = function (...a) {
 				const n = orig.apply(this, a);
 				M.created[name] = (M.created[name] || 0) + 1;
+				try { n.__kind = name; } catch (e) { /* a frozen node */ }
 				return n;
 			};
 		}
 		const disc = AudioNode.prototype.disconnect;
 		AudioNode.prototype.disconnect = function (...a) {
 			M.disconnected += 1;
+			try {
+				const k = this.__kind || '?';
+				M.discByKind[k] = (M.discByKind[k] || 0) + 1;
+			} catch (e) { /* ignore */ }
 			try { return disc.apply(this, a); } catch (e) { return undefined; }
 		};
 		const start = AudioBufferSourceNode.prototype.start;
@@ -242,7 +251,8 @@ function autopilotScript() {
 	const M = window.__perfMeter;
 
 	const store = await import('/src/lib/state/game.svelte.ts');
-	const createdTotal = () => Object.values(M.created).reduce((a, b) => a + b, 0);
+	const createdTotal = () =>
+		Object.entries(M.created).reduce((a, [k, v]) => a + (M.nonNodes.includes(k) ? 0 : v), 0);
 	const heapMB = () => (performance.memory ? +(performance.memory.usedJSHeapSize / 1048576).toFixed(2) : null);
 	const domCount = () => document.getElementsByTagName('*').length;
 	const sample = (home, note) => ({
@@ -349,6 +359,17 @@ function autopilotScript() {
 			createdTotal: createdTotal(),
 			disconnected: M.disconnected,
 			gap: createdTotal() - M.disconnected,
+			gapByKind: (() => {
+				const out = {};
+				for (const kind of Object.keys(M.created)) {
+					if (M.nonNodes.includes(kind)) continue;
+					const gap = M.created[kind] - (M.discByKind[kind] || 0);
+					if (gap > 0) {
+						out[kind] = { created: M.created[kind], disconnected: M.discByKind[kind] || 0, gap };
+					}
+				}
+				return out;
+			})(),
 			loopsStarted: M.loopsStarted,
 			loopsStopped: M.loopsStopped,
 			bufStarted: M.started,
@@ -599,6 +620,7 @@ function printReport(result, pageErrors) {
 		`  created / disc .... ${result.meter.createdTotal} / ${result.meter.disconnected}  → live gap ${result.meter.gap}`
 	);
 	console.log(`  by type ........... ${JSON.stringify(result.meter.created)}`);
+	console.log(`  gap by kind ....... ${JSON.stringify(result.meter.gapByKind ?? {})}`);
 	console.log(
 		`  loops started/stop  ${result.meter.loopsStarted} / ${result.meter.loopsStopped}  (buffer srcs ${result.meter.bufStarted}/${result.meter.bufStopped})`
 	);

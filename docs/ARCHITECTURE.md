@@ -180,7 +180,7 @@ a backer is a guess, so none of these are.
 | Client CSS total | ≤ 100 kB | **81.8 kB** (gzip **33.5 kB**) | `pnpm build` |
 | All client assets (pre-gzip) | ≤ 600 kB | **552.6 kB** (JS 270.2 · CSS 81.8 · fonts 191.5 · SW 9.1) | `pnpm build` |
 | **DOM nodes during play** | **≤ 2000** | **1567 – 1748** (boot 1679 · end 1666) | `tools/perf-probe.mjs` |
-| **Audio live-node gap** | **≤ 60** (alarm) | boot **12** · max **35** · end **26** | `tools/perf-probe.mjs` |
+| **Audio live-node gap** | **≤ 60** (alarm) | boot **12** · steady **≈ 11** after the meter fix — the old "12→46 drift" was non-node `createBuffer` counts (2026-10-18) | `tools/perf-probe.mjs` |
 | Ambience loop replacement | one live loop | **17 started / 15 stopped** → 1 ambience + 1 music live | `tools/perf-probe.mjs` |
 | Heap after a 30-min session | ≤ 50 MB · no monotonic rise | **14.5 → 21.2 MB** (peak 40.0) | `tools/perf-probe.mjs` |
 | Sim session (long run) | ≥ 30 sim-min · 0 page errors | **34.4 sim-min · 0 errors** (52 homes, 258.9 s wall) | `tools/perf-probe.mjs` |
@@ -220,12 +220,14 @@ loop is adopted and the previous one replaced. The headline rows:
 
 ### Findings (reported, not patched)
 
-1. **The live-node gap drifts gently upward.** It climbs from **12** at boot to
-   **35** by home 51 (+≈ 0.45 nodes/home), driven by ambience-loop adoption
-   churn under the rapid theme changes the fast-drive homes create; the settled
-   theme march reclaims most of it (**35 → 26**). It never approaches the
-   **≤ 60** alarm, but the trend is worth a look the next time this file is
-   touched. No action taken here — `src/` is out of scope for T31.
+1. **The live-node gap "drift" was a metering artifact — resolved (2026-10-18).**
+   The meter counted `createBuffer` — not an AudioNode, no `disconnect` — among
+   "created", so transient cue noise buffers read as a slow permanent leak
+   (+34 over the 60-home run, versus 35 buffers created in the same run). With
+   the meter corrected, the true node gap sits steady at the intentional
+   keepers (≈ 11–12: masters, LFOs, loops), and every one of the 26 cues is
+   pinned by a unit test to disconnect *all* of its nodes. The probe now prints
+   `gap by kind`, so a real leak can never hide between kinds again.
 2. **No product-level jank, no console errors, no growth breach.** The full
    sample table (54 rows) is reproducible with the command above; the probe's
    `--out` flag writes the raw JSON.

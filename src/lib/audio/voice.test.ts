@@ -65,7 +65,7 @@ class FakeContext {
 	async decodeAudioData(): Promise<unknown> {
 		this.decodeCalls += 1;
 		if (this.decodeFails) throw new Error('decode');
-		return { clip: true };
+		return { clip: true, duration: 1 };
 	}
 }
 

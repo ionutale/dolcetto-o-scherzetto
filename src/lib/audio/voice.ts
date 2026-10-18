@@ -141,6 +141,9 @@ let pending = new Map<string, Promise<AudioBuffer | null>>();
 /** The live source per URL — re-saying a line stops it (rewind, not stack). */
 let active = new Map<string, AudioBufferSourceNode>();
 
+/** Sources already retired — `onended` and the fallback timer race safely. */
+const retiredSources = new WeakSet<AudioBufferSourceNode>();
+
 /** Black-box counters: sources started, clips decoded, failures swallowed. */
 let playsTotal = 0;
 let clipsTotal = 0;
@@ -208,10 +211,26 @@ function load(a: AudioContext, url: string): Promise<AudioBuffer | null> {
 }
 
 /**
+ * Leave the graph for good: disconnect once, drop the `active` slot. Idempotent
+ * — `onended` and the fallback timer both call it and may race.
+ */
+function retire(source: AudioBufferSourceNode, url: string): void {
+	if (retiredSources.has(source)) return;
+	retiredSources.add(source);
+	try {
+		source.disconnect();
+	} catch {
+		/* already gone */
+	}
+	if (active.get(url) === source) active.delete(url);
+}
+
+/**
  * Play one clip: bus → decoded buffer → source → master. The previous source
  * for the same URL is stopped first (re-saying a line rewinds rather than
- * stacks — the shout chain can land twice on a fast walk); `onended`
- * disconnects the source so the graph never accumulates.
+ * stacks — the shout chain can land twice on a fast walk); `retire` (from
+ * `onended`, or the fallback timer below) disconnects the source so the graph
+ * never accumulates.
  */
 async function play(url: string): Promise<void> {
 	try {
@@ -231,18 +250,25 @@ async function play(url: string): Promise<void> {
 				/* already ended: the map entry below still wins */
 			}
 		}
-		source.onended = () => {
-			try {
-				source.disconnect();
-			} catch {
-				/* already gone */
-			}
-			if (active.get(url) === source) active.delete(url);
-		};
+		source.onended = () => retire(source, url);
 		source.connect(now.master);
 		active.set(url, source);
 		playsTotal += 1;
 		source.start();
+		// Belt and braces: WebKit has a documented history of retaining
+		// finished `AudioBufferSourceNode`s (bug 189337 class — memory "freed
+		// too late", WKWebViews killed for it). If `onended` never lands, the
+		// clip's own length retires the source, so the graph cannot grow
+		// unattended. `retire` is idempotent either way.
+		const seconds =
+			typeof buffer.duration === 'number' && Number.isFinite(buffer.duration)
+				? buffer.duration
+				: 30;
+		try {
+			setTimeout(() => retire(source, url), Math.ceil((seconds + 2) * 1000));
+		} catch {
+			/* no timers: `onended` remains the only path */
+		}
 	} catch {
 		errorsTotal += 1;
 	}
