@@ -23,9 +23,12 @@
 	 * the world only through `dispatch` and the volumes store.
 	 */
 	import { dispatch } from '$lib/state/game.svelte';
+	import { crashlog } from '$lib/diagnostics/crashlog';
+	import { shareFileOrCopy } from '$lib/diagnostics/share-text';
 	import { settings } from '$lib/persist/settings';
 	import type { Lang } from '$lib/sim/loop';
 	import { setMusic, setSfx, volumes } from '$lib/audio/volumes.svelte';
+	import { openLogs } from './log-panel-state.svelte';
 
 	interface Props {
 		/** The live language, owned by the title so its labels follow. */
@@ -46,6 +49,9 @@
 					sfx: '🔊 Effetti',
 					language: 'Lingua',
 					back: 'Indietro',
+					logs: '🐞 Registro errori',
+					exportLogs: '📤 Esporta log',
+					exported: 'Fatto ✓',
 					wipe: 'Cancella progressi (genitori)',
 					wipeConfirm: 'Sicuro? Tocca di nuovo'
 				}
@@ -55,6 +61,9 @@
 					sfx: '🔊 Sound effects',
 					language: 'Language',
 					back: 'Back',
+					logs: '🐞 Error log',
+					exportLogs: '📤 Export logs',
+					exported: 'Done ✓',
 					wipe: 'Erase progress (parents)',
 					wipeConfirm: 'Sure? Tap again'
 				}
@@ -85,10 +94,11 @@
 		try {
 			localStorage.removeItem('dos.run.v1');
 			localStorage.removeItem('dos.settings.v1');
-			// The black box's two keys (diagnostics/crashlog) go with the rest:
-			// "delete everything" means everything.
+			// The black box's three keys (diagnostics/crashlog) go with the
+			// rest: "delete everything" means everything.
 			localStorage.removeItem('dos.log.live.v1');
 			localStorage.removeItem('dos.log.prev.v1');
+			localStorage.removeItem('dos.log.history.v1');
 		} catch {
 			/* a hostile storage must not stop the reset */
 		}
@@ -114,6 +124,25 @@
 		settings.write({ ...settings.read(), lang: next });
 		dispatch({ type: 'LANG' });
 		onLang(next);
+	}
+
+	/* ------------------------------------------------------------------ */
+	/* the error-log row (owner ask, 2026-10-18): open the archive list,   */
+	/* export everything                                                */
+	/* ------------------------------------------------------------------ */
+
+	let logFeedback = $state('');
+	let logTimer: number | null = null;
+	function flashLogs(message: string): void {
+		logFeedback = message;
+		if (logTimer !== null) clearTimeout(logTimer);
+		logTimer = window.setTimeout(() => (logFeedback = ''), 1800);
+	}
+
+	/** Export every log (archive + live) as one file via the share sheet. */
+	async function exportLogs(): Promise<void> {
+		const ok = await shareFileOrCopy('dolcetto-o-scherzetto-log.txt', crashlog.formatAll());
+		if (ok) flashLogs(copy.exported);
 	}
 </script>
 
@@ -180,6 +209,16 @@
 		aria-label="English"
 		onclick={() => pick('en')}>EN</button
 	>
+</div>
+
+<div class="lang-row log-row">
+	<button id="errorLogBtn" type="button" class="lang-btn" onclick={() => openLogs('list')}
+		>{copy.logs}</button
+	>
+	<button id="exportLogBtn" type="button" class="lang-btn" onclick={exportLogs}
+		>{copy.exportLogs}</button
+	>
+	{#if logFeedback}<span class="log-fb">{logFeedback}</span>{/if}
 </div>
 
 <button type="button" class="menu-settings" onclick={onBack}>{copy.back}</button>
@@ -257,6 +296,17 @@
 		border-radius: var(--r-pill);
 		padding: 6px 16px;
 		cursor: pointer;
+	}
+
+	/* The error-log row (owner ask): two muted pills + a flash label. */
+	.log-row {
+		flex-wrap: wrap;
+	}
+
+	.log-fb {
+		font-size: 12px;
+		font-weight: 600;
+		color: var(--amber);
 	}
 
 	.lang-btn.on {

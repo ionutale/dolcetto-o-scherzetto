@@ -50,3 +50,27 @@ export async function shareText(title: string, text: string): Promise<boolean> {
 	}
 	return copyText(text);
 }
+
+/**
+ * Export `text` as a named file through the system sheet (iOS sends it to
+ * Files/WhatsApp/Mail in two taps); when file sharing is unsupported — or the
+ * sheet is cancelled — fall back to the clipboard. Never throws.
+ */
+export async function shareFileOrCopy(filename: string, text: string): Promise<boolean> {
+	try {
+		const nav = navigator as Navigator & {
+			canShare?: (data: { files?: File[] }) => boolean;
+			share?: (data: { files?: File[]; title?: string }) => Promise<void>;
+		};
+		if (typeof File === 'function' && typeof nav.share === 'function') {
+			const file = new File([text], filename, { type: 'text/plain' });
+			if (!nav.canShare || nav.canShare({ files: [file] })) {
+				await nav.share({ files: [file], title: filename });
+				return true;
+			}
+		}
+	} catch {
+		/* cancelled or unsupported: copy instead */
+	}
+	return copyText(text);
+}

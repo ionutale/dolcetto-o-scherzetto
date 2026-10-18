@@ -56,7 +56,7 @@
 | T35 | P8 | iPhone device pass | human | T34 | Checklist signed (H2HS, safe areas, audio, feel) |
 | T36 | P8 | Docs finalize (ARCHITECTURE/CONTENT-BIBLE/BALANCE/ART-MUSIC/CREDITS) | free-coder | T25–T35 | Open spec items closed or re-ticketed |
 | T37 | P9 | Street life: firecracker kids · monster strollers · mystery van + candy toss | free-coder | T35 | Owner-approved design; prototype first (kids/strollers/vans → live approval) → integration |
-| T38 | P9 | Black box: crash log to localStorage (banner + viewer + heartbeat) | free-coder | T35 | ✅ per-beat flush · scrub key-cap fix · `anim`/`vs`/`sy`/`vc`/`vx` + `lag` fields · **the crash hunt**: media-session kill cornered + fixed (voice → WebAudio bus; 60 s → 3 m25) · source-retire hardening · all-26-cues sweep + probe meter verified clean · **memory axis found (owner Activity Monitor: ~225 MB idle → ~355–400 MB mid-play; the front never collects during continuous play = the iOS kill)** · **memory pass: music @32 kHz (owner call) + ambience/voice @24 kHz via one `decode.ts` helper**; 656 unit / 13 e2e suite-green |
+| T38 | P9 | Black box: crash log to localStorage (banner + viewer + heartbeat) | free-coder | T35 | ✅ per-beat flush · scrub key-cap fix · `anim`/`vs`/`sy`/`vc`/`vx`/`svg`/`js` + `lag` fields · media-session kill fixed (voice → WebAudio bus) · source-retire + all-26-cues sweep + probe meter verified clean · memory pass (32 kHz music / 24 kHz clips) · **HouseSlot layer fix** · **owner: durable crash archive** (3-day retention, settings list + per-session view + export-all as a shared file, parent wipe clears it) — `LogPanel.svelte` replaces `BlackBox.svelte`; 663 unit / 14 e2e suite-green |
 
 ## Parked (v2+ — not now)
 

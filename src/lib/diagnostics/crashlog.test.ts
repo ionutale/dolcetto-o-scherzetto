@@ -1,12 +1,17 @@
 import { describe, expect, it } from 'vitest';
 import {
+	CRASHLOG_HISTORY_KEY,
 	CRASHLOG_LIVE_KEY,
 	CRASHLOG_PREV_KEY,
 	CRASH_WINDOW_MS,
+	HISTORY_MAX,
+	HISTORY_MAX_AGE_MS,
 	createCrashLog,
 	fmtDur,
 	parseEntries,
-	scrubPayload
+	pruneHistory,
+	scrubPayload,
+	sessionSummary
 } from './crashlog';
 import type { BootMeta } from './crashlog';
 
@@ -379,5 +384,110 @@ describe('fmtDur', () => {
 		expect(fmtDur(34_400)).toBe('34s');
 		expect(fmtDur(60_000)).toBe('1m00s');
 		expect(fmtDur(459_200)).toBe('7m39s');
+	});
+});
+
+describe('the crash archive (owner ask: keep crashes 3 days, deletable)', () => {
+	it('archives an interrupted session with when and how it died', () => {
+		const clock = fakeClock();
+		const boot = clock.now() - 30_000;
+		const storage = memStorage({ [CRASHLOG_LIVE_KEY]: seedSession(boot, 25_000) });
+		const log = createCrashLog(storage, { now: clock.now, meta: testMeta });
+		const list = log.history();
+		expect(list).toHaveLength(1);
+		expect(list[0].at).toBe(boot + 25_000); // died at its last activity
+		expect(list[0].startedAt).toBe(boot);
+		expect(list[0].entries).toHaveLength(2);
+		expect(storage.getItem(CRASHLOG_HISTORY_KEY)).toContain('"entries"');
+	});
+
+	it('does not archive a clean close', () => {
+		const clock = fakeClock();
+		const storage = memStorage({
+			[CRASHLOG_LIVE_KEY]: seedSession(clock.now() - 30_000, 25_000, true)
+		});
+		const log = createCrashLog(storage, { now: clock.now, meta: testMeta });
+		expect(log.history()).toEqual([]);
+	});
+
+	it('keeps three days, drops older, and caps the count', () => {
+		const clock = fakeClock();
+		const base = {
+			startedAt: null,
+			v: 'a',
+			entries: [
+				{ t: 0, k: 'boot', d: { at: clock.now() - 2000 } },
+				{ t: 1000, k: 'hb', d: { el: 1 } }
+			]
+		};
+		const stale = { ...base, at: clock.now() - HISTORY_MAX_AGE_MS - 60_000, v: 'old' };
+		const many = Array.from({ length: HISTORY_MAX + 5 }, (_, i) => ({
+			...base,
+			at: clock.now() - i * 1000,
+			v: `b${i}`
+		}));
+		const storage = memStorage({ [CRASHLOG_HISTORY_KEY]: JSON.stringify([stale, ...many]) });
+		const log = createCrashLog(storage, { now: clock.now, meta: testMeta });
+		const list = log.history();
+		expect(list.length).toBeLessThanOrEqual(HISTORY_MAX);
+		expect(list.some((s) => s.v === 'old')).toBe(false);
+	});
+
+	it('pruneHistory is pure and enforces the age rule', () => {
+		const now = 1_000_000_000;
+		const make = (at: number, v: string) => ({
+			at,
+			startedAt: null,
+			v,
+			entries: [
+				{ t: 0, k: 'boot', d: { at } },
+				{ t: 5, k: 'hb', d: { el: 1 } }
+			]
+		});
+		const input = [make(now - 1000, 'a'), make(now - HISTORY_MAX_AGE_MS - 1, 'b')];
+		const out = pruneHistory(input, now);
+		expect(out.map((s) => s.v)).toEqual(['a']);
+		expect(input).toHaveLength(2); // untouched
+	});
+
+	it('clearArchive drops the history and the prev slot', () => {
+		const clock = fakeClock();
+		const storage = memStorage({ [CRASHLOG_LIVE_KEY]: seedSession(clock.now() - 30_000, 25_000) });
+		const log = createCrashLog(storage, { now: clock.now, meta: testMeta });
+		expect(log.history()).toHaveLength(1);
+		log.clearArchive();
+		expect(log.history()).toEqual([]);
+		expect(storage.getItem(CRASHLOG_HISTORY_KEY)).toBeNull();
+		expect(storage.getItem(CRASHLOG_PREV_KEY)).toBeNull();
+	});
+
+	it('formatAll carries every archived session and the live tail, without the prev duplicate', () => {
+		const clock = fakeClock();
+		const storage = memStorage({ [CRASHLOG_LIVE_KEY]: seedSession(clock.now() - 30_000, 25_000) });
+		const log = createCrashLog(storage, { now: clock.now, meta: testMeta });
+		const text = log.formatAll();
+		expect(text).toContain('archivio completo');
+		expect(text).toContain('1 sessione interrotta');
+		expect(text).toContain('sessione viva');
+		expect(text).not.toContain('[prev]'); // the archive already holds it
+	});
+
+	it('sessionSummary names when, build, duration, homes and fps', () => {
+		const session = {
+			at: Date.UTC(2026, 9, 18, 12, 0),
+			startedAt: null,
+			v: 'abc1234',
+			entries: [
+				{ t: 0, k: 'boot', d: { at: 0 } },
+				{ t: 5_000, k: 'hb', d: { k: 3, fps: 60 } },
+				{ t: 68_000, k: 'hb', d: { k: 7, fps: 44 } }
+			]
+		};
+		const line = sessionSummary(session);
+		expect(line).toContain('2026-10-18 12:00');
+		expect(line).toContain('build abc1234');
+		expect(line).toContain('1m08s');
+		expect(line).toContain('porte 3→7');
+		expect(line).toContain('fps min 44');
 	});
 });

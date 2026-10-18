@@ -35,9 +35,10 @@
 	import { crashlog } from '$lib/diagnostics/crashlog';
 	import { settings } from '$lib/persist/settings';
 	import type { Lang } from '$lib/sim/loop';
-	import BlackBox from './BlackBox.svelte';
 	import CrashBanner from './CrashBanner.svelte';
+	import LogPanel from './LogPanel.svelte';
 	import Settings from './Settings.svelte';
+	import { openLogs } from './log-panel-state.svelte';
 	import { menuState, closeMenu } from './menu-state.svelte';
 
 	interface Props {
@@ -62,9 +63,7 @@
 	const crashInfo = crashlog.info();
 	/** ✕ on the banner hides it for this boot. */
 	let crashDismissed = $state(false);
-	/** The full-log viewer. */
-	let boxOpen = $state(false);
-	/** Triple-tap the build line to open the viewer (kid-proof by accident). */
+	/** Triple-tap the build line to open the log panel (kid-proof by accident). */
 	let versionTaps = 0;
 	let versionTimer: ReturnType<typeof setTimeout> | undefined;
 	function tapVersion(): void {
@@ -72,16 +71,16 @@
 		clearTimeout(versionTimer);
 		if (versionTaps >= 3) {
 			versionTaps = 0;
-			boxOpen = true;
+			openLogs();
 			return;
 		}
 		versionTimer = setTimeout(() => (versionTaps = 0), 700);
 	}
 
-	/** `?debug` opens the viewer directly (desktop triage). */
+	/** `?debug` opens the log panel directly (desktop triage). */
 	onMount(() => {
 		try {
-			if (new URLSearchParams(location.search).has('debug')) boxOpen = true;
+			if (new URLSearchParams(location.search).has('debug')) openLogs();
 		} catch {
 			/* no location: no debug entry */
 		}
@@ -139,7 +138,7 @@
 
 	<div class="menu-card" hidden={panel !== 'home'}>
 		{#if crashInfo.crashed && !crashDismissed}
-			<CrashBanner onDismiss={() => (crashDismissed = true)} onOpenLogs={() => (boxOpen = true)} />
+			<CrashBanner onDismiss={() => (crashDismissed = true)} onOpenLogs={() => openLogs()} />
 		{/if}
 		<p class="menu-eyebrow">{copy.eyebrow}</p>
 		<h1 class="menu-title">Dolcetto o Scherzetto</h1>
@@ -154,7 +153,7 @@
 		<Settings {lang} onLang={(next) => (lang = next)} onBack={showHome} />
 	</div>
 
-	<BlackBox open={boxOpen} onClose={() => (boxOpen = false)} />
+	<LogPanel />
 </div>
 
 <style>

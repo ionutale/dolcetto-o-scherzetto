@@ -53,7 +53,7 @@ above it).
 | **Play** | `src/lib/play/` | the interaction widgets — knock chain, bubbles, candy layer, fan, theatre, scares, cars, NPCs — plus their pure `*-model.ts` maths | owning sim math |
 | **Audio** | `src/lib/audio/` | **three independent engines**, each with its own lazy `AudioContext` and self-driven rAF frame: `sfx.ts` (26-cue WebAudio synth), `ambience.svelte.ts` (per-theme beds + sprinkles + duck), `music.svelte.ts` (the decoded street loop); `voice.ts` decodes clips once and plays them on the synth's bus; `volumes.svelte.ts` is the shared gain seam | throwing on a hostile `AudioContext` |
 | **Persist** | `src/lib/persist/persist.ts` · `settings.ts` | defensive `localStorage`: the run slot `dos.run.v1` and the one settings envelope `dos.settings.v1` | throwing (`read`/`write` degrade to no-save/defaults) |
-| **Diagnostics** | `src/lib/diagnostics/crashlog.ts` · `share-text.ts` | the black box: the crash/heartbeat log (`dos.log.live.v1` / `dos.log.prev.v1`), the crash verdict, the copy/share helpers — read by the title banner and viewer | throwing (every path degrades to memory-only) |
+| **Diagnostics** | `src/lib/diagnostics/crashlog.ts` · `share-text.ts` | the black box: the crash/heartbeat log (`dos.log.live.v1` / `dos.log.prev.v1`) and the 3-day crash archive (`dos.log.history.v1`), the crash verdict, the copy/share/export helpers — read by the title banner and the log panel (`LogPanel.svelte`) | throwing (every path degrades to memory-only) |
 | **i18n** | `src/lib/i18n/lines.ts` | the UI copy + the IT/EN voice-line inventory (the copy lock) | — |
 | **Service worker** | `src/service-worker.ts` | **precache** (hashed build + static assets), the versioned **shell** (network-first navigations, cached under `/`), and the runtime **voice cache** (cache-first `/voice/**`, never precached) | caching anything unversioned |
 | **Routes** | `src/routes/` (`+page.svelte`, `ssr = false`) | composition only — mounts the scene, runs the loop, wires the single knock/trick edge | game logic |
@@ -67,7 +67,7 @@ do to cues). The engine split exists for isolation, not for voices.
 
 ### Save schema
 
-Four versioned keys, all read/written defensively (`read`/`write` never throw; a corrupt,
+Five versioned keys, all read/written defensively (`read`/`write` never throw; a corrupt,
 truncated, hand-edited or future-version payload is refused and the game falls back to
 defaults / a fresh run):
 
@@ -77,6 +77,7 @@ defaults / a fresh run):
 | `dos.settings.v1` | `{ version: 1, lang: 'it'\|'en', sound, musicVolume: 0..1, sfxVolume: 0..1 }` | `src/lib/persist/settings.ts` `Settings` + `isSettings` |
 | `dos.log.live.v1` | `[{ t, k, d? }]` — the live session's flight log (ring, ≤ 320 entries) | `src/lib/diagnostics/crashlog.ts` |
 | `dos.log.prev.v1` | the same shape — the previous session, archived only when it ended abruptly | `src/lib/diagnostics/crashlog.ts` |
+| `dos.log.history.v1` | `{ at, startedAt, v, entries }[]` — the crash archive (automatic, 3-day retention, ≤ 20 sessions) | `src/lib/diagnostics/crashlog.ts` |
 
 The run is autosaved after every change (a `$effect` in `+page.svelte`) and seeds the boot;
 the settings envelope is a device preference (written by the title's sliders/toggle). A future

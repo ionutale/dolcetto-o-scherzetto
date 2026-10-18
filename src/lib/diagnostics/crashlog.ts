@@ -21,7 +21,10 @@
  *
  *   - `dos.log.live.v1` — the live session, one JSON array of entries;
  *   - `dos.log.prev.v1` — the archived previous session (kept only when it
- *     crashed; the viewer can show and clear it).
+ *     crashed; the viewer can show and clear it);
+ *   - `dos.log.history.v1` — the durable crash archive (owner ask,
+ *     2026-10-18): every interrupted session of the last three days, newest
+ *     first, viewable and deletable from the settings.
  *
  * Entry shape: `{ t, k, d? }` where `t` is milliseconds since the session
  * started, `k` is the event key (`boot`, `hb`, `ph`, `err`, …) and `d` is a
@@ -49,6 +52,15 @@ declare global {
 export const CRASHLOG_LIVE_KEY = 'dos.log.live.v1';
 /** The one key the crashed previous session is archived under. */
 export const CRASHLOG_PREV_KEY = 'dos.log.prev.v1';
+/** The durable crash archive: every interrupted session of the last 3 days. */
+export const CRASHLOG_HISTORY_KEY = 'dos.log.history.v1';
+
+/** The archive's age ceiling — the owner's rule: three days. */
+export const HISTORY_MAX_AGE_MS = 3 * 24 * 60 * 60 * 1000;
+/** The archive's length ceiling (the oldest fall off). */
+export const HISTORY_MAX = 20;
+/** The archive's serialised ceiling in characters (oldest drop first). */
+const HISTORY_MAX_BYTES = 600_000;
 
 /**
  * A previous session counts as *crash* when its last entry is this close to
@@ -97,6 +109,18 @@ export interface LogEntry {
 	d?: Record<string, unknown>;
 }
 
+/** One archived (interrupted) session in the crash history. */
+export interface ArchivedSession {
+	/** Wall clock of the session's last activity (when it died). */
+	at: number;
+	/** Wall clock of its boot, when the session header wrote one. */
+	startedAt: number | null;
+	/** The build the dead session ran. */
+	v: string;
+	/** The session's entries, verbatim. */
+	entries: LogEntry[];
+}
+
 /** What the session knew about itself at boot (the report's header). */
 export interface BootMeta {
 	/** Wall clock at boot (`Date.now()`). */
@@ -139,6 +163,12 @@ export interface CrashLog {
 	snapshot(): { live: LogEntry[]; prev: LogEntry[] };
 	/** Drop the archived previous session. */
 	clearPrev(): void;
+	/** The pruned crash archive, newest first (owner ask). */
+	history(): ArchivedSession[];
+	/** Drop the whole crash archive + the `prev` slot. */
+	clearArchive(): void;
+	/** The full export text: the archive + the prev (once) + the live session. */
+	formatAll(): string;
 	/** The human text the banner and the viewer copy/share. */
 	format(): string;
 }
@@ -248,6 +278,59 @@ export function parseEntries(raw: string | null): LogEntry[] {
 	}
 }
 
+/** Parse a stored crash archive; malformed sessions fall off. */
+export function parseHistory(raw: string | null): ArchivedSession[] {
+	if (!raw) return [];
+	try {
+		const value: unknown = JSON.parse(raw);
+		if (!Array.isArray(value)) return [];
+		const out: ArchivedSession[] = [];
+		for (const item of value) {
+			if (typeof item !== 'object' || item === null) continue;
+			const s = item as Partial<ArchivedSession>;
+			if (typeof s.at !== 'number' || !Number.isFinite(s.at)) continue;
+			const entries = Array.isArray(s.entries) ? parseEntries(JSON.stringify(s.entries)) : [];
+			if (!entries.length) continue;
+			out.push({
+				at: s.at,
+				startedAt:
+					typeof s.startedAt === 'number' && Number.isFinite(s.startedAt) ? s.startedAt : null,
+				v: typeof s.v === 'string' ? s.v : '?',
+				entries
+			});
+		}
+		return out;
+	} catch {
+		return [];
+	}
+}
+
+/**
+ * Apply the owner's retention rules to an archive, newest first: keep only
+ * sessions from the last {@link HISTORY_MAX_AGE_MS}, at most {@link HISTORY_MAX}
+ * of them, and within {@link HISTORY_MAX_BYTES} serialised (oldest drop first).
+ * Pure — the boot and the tests both call it.
+ */
+export function pruneHistory(list: ArchivedSession[], nowMs: number): ArchivedSession[] {
+	const fresh = list.filter((s) => nowMs - s.at <= HISTORY_MAX_AGE_MS && s.at <= nowMs + 60_000);
+	const out = fresh.slice(0, HISTORY_MAX);
+	let raw: string;
+	try {
+		raw = JSON.stringify(out);
+	} catch {
+		return out.slice(0, 1);
+	}
+	while (raw.length > HISTORY_MAX_BYTES && out.length > 1) {
+		out.pop();
+		try {
+			raw = JSON.stringify(out);
+		} catch {
+			break;
+		}
+	}
+	return out;
+}
+
 /* ------------------------------------------------------------------ */
 /* the boot metadata                                                   */
 /* ------------------------------------------------------------------ */
@@ -342,6 +425,23 @@ export function fmtDur(ms: number): string {
 	return `${Math.floor(s / 60)}m${String(s % 60).padStart(2, '0')}s`;
 }
 
+/** `2026-10-18 14:32` — the archive's compact, sortable timestamp. */
+export function stamp(at: number): string {
+	try {
+		return new Date(at).toISOString().slice(0, 16).replace('T', ' ');
+	} catch {
+		return String(at);
+	}
+}
+
+/** The report's legend, shared by `format` and `formatAll`. */
+const LEGEND =
+	'(legenda: el=nodi DOM · svg=nodi SVG · aC/aD=nodi WebAudio creati/chiusi · aX=stato AudioContext · ' +
+	'amb=loop ambience vivi · sy=voce avviata · vc=clip voce decodificati · vx=errori voce · ' +
+	'vs=fonti voce vive · anim=animazioni attive · js=heap JS MB (dove leggibile) · ' +
+	'lag=blocco main-thread ms · cq=cue SFX suonati · fps=frame/s · cd=caramelle a schermo · ' +
+	'bag=caramelle in sacca · k=isolato · ph=fase · menu=menu aperto)';
+
 /**
  * Bind a black box to a `Storage`. Pass `null` where there is none and every
  * write quietly degrades to memory-only — the log survives nothing, but the
@@ -356,6 +456,17 @@ export function createCrashLog(storage: Storage | null, opts: CrashLogOptions = 
 	/* ---- boot: read the previous session, decide crash, archive ---- */
 	let prev: LogEntry[] = [];
 	let crashed = false;
+	let prevLastWall: number | null = null;
+	function historyNow(): ArchivedSession[] {
+		return pruneHistory(parseHistory(readRaw(storage, CRASHLOG_HISTORY_KEY)), now());
+	}
+	function writeHistory(list: ArchivedSession[]): void {
+		try {
+			writeRaw(storage, CRASHLOG_HISTORY_KEY, JSON.stringify(list));
+		} catch {
+			/* a hostile entry: the archive just does not grow */
+		}
+	}
 	{
 		const raw = readRaw(storage, CRASHLOG_LIVE_KEY);
 		const parsed = parseEntries(raw);
@@ -363,6 +474,7 @@ export function createCrashLog(storage: Storage | null, opts: CrashLogOptions = 
 			const last = parsed[parsed.length - 1];
 			const firstWall = typeof parsed[0].d?.at === 'number' ? (parsed[0].d.at as number) : null;
 			const lastWall = firstWall === null ? null : firstWall + last.t;
+			prevLastWall = lastWall;
 			// Closed ⇔ an `end` marker sits in the session's final stretch (the
 			// teardown's trailing bread crumbs must not look like a crash).
 			const tail = parsed.slice(-CRASH_TAIL);
@@ -373,8 +485,20 @@ export function createCrashLog(storage: Storage | null, opts: CrashLogOptions = 
 				crashed = true;
 				writeRaw(storage, CRASHLOG_PREV_KEY, raw);
 				prev = parsed;
+				// The durable crash archive (owner ask, 2026-10-18): every
+				// interrupted session is kept for three days, not just the
+				// latest one — viewable and exportable from the settings.
+				const session: ArchivedSession = {
+					at: lastWall ?? now(),
+					startedAt: firstWall,
+					v: typeof parsed[0].d?.v === 'string' ? (parsed[0].d.v as string) : '?',
+					entries: parsed
+				};
+				writeHistory([session, ...historyNow()]);
 			}
 		}
+		// The three-day rule runs on every boot, crash or not.
+		writeHistory(historyNow());
 	}
 
 	/* ---- the live session starts here ---- */
@@ -451,6 +575,46 @@ export function createCrashLog(storage: Storage | null, opts: CrashLogOptions = 
 			prev = [];
 			dropRaw(storage, CRASHLOG_PREV_KEY);
 		},
+		history(): ArchivedSession[] {
+			return historyNow();
+		},
+		clearArchive(): void {
+			prev = [];
+			dropRaw(storage, CRASHLOG_PREV_KEY);
+			dropRaw(storage, CRASHLOG_HISTORY_KEY);
+		},
+		formatAll(): string {
+			const lines: string[] = [];
+			lines.push('SCATOLA NERA — archivio completo (Dolcetto o Scherzetto)');
+			lines.push(
+				`build ${meta.v} · ${meta.mode} · iOS ${meta.ios ?? '?'} · ${meta.screen} · lang ${meta.lang} · esportato ${stamp(now())}`
+			);
+			const archived = historyNow();
+			lines.push(
+				`— ${archived.length} session${archived.length === 1 ? 'e' : 'i'} interrott${archived.length === 1 ? 'a' : 'e'} in archivio (ultimi 3 giorni)`
+			);
+			archived.forEach((session, index) => {
+				lines.push('');
+				lines.push(`═══ [${index + 1}] ${stamp(session.at)} · build ${session.v}`);
+				lines.push(...synopsis(session.entries));
+				lines.push('— dettaglio:');
+				for (const e of session.entries) lines.push(entryLine(e));
+			});
+			// The `prev` slot duplicates the newest archive entry; only a prev
+			// the archive missed (a hostile storage) is exported on its own.
+			if (prev.length && !archived.some((s) => s.at === prevLastWall)) {
+				lines.push('');
+				lines.push(`═══ [prev] ${stamp(prevLastWall ?? now())}`);
+				lines.push(...synopsis(prev));
+				for (const e of prev) lines.push(entryLine(e));
+			}
+			lines.push('');
+			lines.push(`═══ [sessione viva] +${fmtDur(entries[entries.length - 1]?.t ?? 0)}`);
+			lines.push(...synopsis(entries));
+			for (const e of entries) lines.push(entryLine(e));
+			lines.push(LEGEND);
+			return lines.join('\n');
+		},
 		format(): string {
 			const lines: string[] = [];
 			lines.push('SCATOLA NERA — Dolcetto o Scherzetto');
@@ -473,13 +637,7 @@ export function createCrashLog(storage: Storage | null, opts: CrashLogOptions = 
 			);
 			lines.push(...synopsis(entries));
 			for (const e of entries) lines.push(entryLine(e));
-			lines.push(
-				'(legenda: el=nodi DOM · svg=nodi SVG · aC/aD=nodi WebAudio creati/chiusi · aX=stato AudioContext · ' +
-					'amb=loop ambience vivi · sy=voce avviata · vc=clip voce decodificati · vx=errori voce · ' +
-					'vs=fonti voce vive · anim=animazioni attive · js=heap JS MB (dove leggibile) · ' +
-					'lag=blocco main-thread ms · cq=cue SFX suonati · fps=frame/s · cd=caramelle a schermo · ' +
-					'bag=caramelle in sacca · k=isolato · ph=fase · menu=menu aperto)'
-			);
+			lines.push(LEGEND);
 			return lines.join('\n');
 		}
 	};
@@ -551,6 +709,30 @@ function synopsis(entries: LogEntry[]): string[] {
 	const errors = entries.filter((e) => e.k === 'err' || e.k === 'rej' || e.k === 'ce').length;
 	lines.push(`  errori pagina: ${errors}`);
 	return lines;
+}
+
+/** One archived session as text (the list's detail view + export blocks). */
+export function formatSession(session: ArchivedSession): string {
+	const lines: string[] = [];
+	lines.push(`SCATOLA NERA — sessione archiviata (${stamp(session.at)})`);
+	lines.push(`build ${session.v}`);
+	lines.push(...synopsis(session.entries));
+	lines.push('— dettaglio:');
+	for (const e of session.entries) lines.push(entryLine(e));
+	return lines.join('\n');
+}
+
+/** The list row's one-liner: when, which build, and what it looked like. */
+export function sessionSummary(session: ArchivedSession): string {
+	const beats = session.entries.filter((e) => e.k === 'hb');
+	const last = beats[beats.length - 1];
+	const parts = [stamp(session.at), `build ${session.v}`, fmtDur(last?.t ?? 0)];
+	const k0 = beats.length ? num(beats[0], 'k') : null;
+	const k1 = num(last, 'k');
+	if (k0 !== null && k1 !== null) parts.push(`porte ${k0}→${k1}`);
+	const fpsAll = beats.map((e) => num(e, 'fps')).filter((v): v is number => v !== null);
+	if (fpsAll.length) parts.push(`fps min ${Math.min(...fpsAll)}`);
+	return parts.join(' · ');
 }
 
 function entryLine(e: LogEntry): string {

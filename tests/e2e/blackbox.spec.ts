@@ -102,6 +102,28 @@ test('with the banner up, Gioca stays reachable on the landscape screen', async 
 	expect(box!.bottom).toBeLessThanOrEqual(393);
 });
 
+test('the settings open the error-log archive, and a session views', async ({ page }) => {
+	await seedCrash(page);
+	await openTitle(page);
+
+	// Settings card → the error-log list (the owner-asked entry point).
+	await page.locator('.menu-card:not([hidden]) .menu-settings').click({ force: true });
+	await page.locator('#errorLogBtn').click({ force: true });
+	await expect(page.locator('#logList')).toBeVisible();
+	await expect(page.locator('.logrow').first()).toContainText('build');
+
+	// The session's detail view is the full archived report.
+	await page.locator('.logrow button').first().click({ force: true });
+	await expect(page.locator('#blackboxText')).toContainText('sessione archiviata');
+	await expect(page.locator('#blackboxText')).toContainText('build');
+
+	// Back to the list, then close.
+	await page.locator('.bb-actions button', { hasText: 'Elenco' }).click();
+	await expect(page.locator('#logList')).toBeVisible();
+	await page.locator('.bb-actions button', { hasText: 'Chiudi' }).click();
+	await expect(page.locator('#logList')).not.toBeVisible();
+});
+
 test('the live session records errors and heartbeats while playing', async ({ page }) => {
 	await openTitle(page);
 	await play(page);
