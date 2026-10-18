@@ -219,18 +219,45 @@
 	   cloud's slower cousin). Wins over `:active` only in scale, so tapping
 	   still reads as a press. */
 	#bottegaBtn.invite {
-		animation: shopinvite 1.6s ease-in-out infinite alternate;
+		animation: shopinvite 1.6s ease-in-out infinite;
 	}
 
+	/* The beckon, pronounced (owner feedback): a double hop-nudge with a small
+	   wobble and a glow bloom, then a settle — readable from across the couch.
+	   A tap interrupts it (`:active` below), so the press still reads as a press. */
 	@keyframes shopinvite {
-		from {
-			transform: scale(1);
+		0% {
+			transform: scale(1) rotate(0deg);
 			box-shadow: 0 6px 18px var(--amber-glow);
 		}
-		to {
-			transform: scale(1.07);
-			box-shadow: 0 10px 30px color-mix(in srgb, var(--amber) 55%, transparent);
+		10% {
+			transform: scale(1.17) rotate(-3deg);
+			box-shadow: 0 12px 34px color-mix(in srgb, var(--amber) 75%, transparent);
 		}
+		22% {
+			transform: scale(1.03) rotate(1.5deg);
+			box-shadow: 0 8px 22px color-mix(in srgb, var(--amber) 50%, transparent);
+		}
+		34% {
+			transform: scale(1.13) rotate(-2deg);
+			box-shadow: 0 11px 30px color-mix(in srgb, var(--amber) 70%, transparent);
+		}
+		48% {
+			transform: scale(1.02) rotate(0.5deg);
+			box-shadow: 0 7px 20px color-mix(in srgb, var(--amber) 45%, transparent);
+		}
+		60% {
+			transform: scale(1.07) rotate(0deg);
+			box-shadow: 0 9px 26px color-mix(in srgb, var(--amber) 55%, transparent);
+		}
+		100% {
+			transform: scale(1) rotate(0deg);
+			box-shadow: 0 6px 18px var(--amber-glow);
+		}
+	}
+
+	#bottegaBtn.invite:active {
+		animation: none;
 	}
 
 	/* Reduced motion: the beckon loop stops, the pill still asks — statically,
@@ -239,7 +266,7 @@
 		#bottegaBtn.invite {
 			animation: none;
 			box-shadow: 0 8px 26px color-mix(in srgb, var(--amber) 60%, transparent);
-			outline: 2px solid color-mix(in srgb, var(--amber) 70%, transparent);
+			outline: 3px solid color-mix(in srgb, var(--amber) 80%, transparent);
 			outline-offset: 2px;
 		}
 	}
