@@ -254,12 +254,13 @@ describe('scrubbing', () => {
 		expect(typeof out.trunc).toBe('number');
 	});
 
-	it('keeps a full heartbeat-shaped payload intact (the 18-key shape)', () => {
+	it('keeps a full heartbeat-shaped payload intact (the 20-key shape)', () => {
 		// The regression this pins: a 12-key object cap silently swallowed the
 		// heartbeat's tail once the voice counters joined — exactly the fields
-		// the device crash hunt reads. The live shape is 18 keys today.
+		// the device crash hunt reads. The live shape is 20 keys today.
 		const out = scrubPayload({
 			el: 1700,
+			svg: 240,
 			aC: 10,
 			aD: 9,
 			aX: 'running',
@@ -269,6 +270,7 @@ describe('scrubbing', () => {
 			vx: 0,
 			vs: 0,
 			anim: 120,
+			js: 12.3,
 			cq: 40,
 			cd: 2,
 			bag: 100,
@@ -278,10 +280,12 @@ describe('scrubbing', () => {
 			fps: 60,
 			lag: 0
 		});
-		expect(Object.keys(out)).toHaveLength(18);
+		expect(Object.keys(out)).toHaveLength(20);
 		expect(out.fps).toBe(60);
 		expect(out.lag).toBe(0);
 		expect(out.anim).toBe(120);
+		expect(out.svg).toBe(240);
+		expect(out.js).toBe(12.3);
 		expect(out.ph).toBe('roam');
 		expect(out.menu).toBe(0);
 	});
@@ -351,6 +355,10 @@ describe('the report', () => {
 		expect(text).toContain('sessione attuale');
 		expect(text).toContain('legenda');
 		expect(text).toContain('[+0.0s] boot');
+		// The owner-requested synopsis: start → end with peaks, per session.
+		expect(text).toContain('inizio → fine');
+		expect(text).toContain('nodi: el 100 → 100');
+		expect(text).toContain('heap JS: — (non leggibile su questa piattaforma)');
 	});
 
 	it('clearPrev drops the archive', () => {

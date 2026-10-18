@@ -27,8 +27,21 @@
 				const audio = sfxStats();
 				const amb = ambienceStats();
 				const voice = voiceInfo();
+				// The JS heap is Chromium-only; WebKit (Safari/iOS) exposes no
+				// process-memory read to a page — the field stays `null` there
+				// and the report shows growth of everything countable instead.
+				let heap: number | null = null;
+				try {
+					const m = (performance as Performance & { memory?: { usedJSHeapSize?: number } }).memory;
+					if (typeof m?.usedJSHeapSize === 'number') {
+						heap = Math.round((m.usedJSHeapSize / 1048576) * 10) / 10;
+					}
+				} catch {
+					/* no heap API: keep null */
+				}
 				return {
 					el: document.getElementsByTagName('*').length,
+					svg: document.getElementsByTagName('svg').length,
 					aC: audio.created,
 					aD: audio.disconnected,
 					aX: audio.ctx,
@@ -38,6 +51,7 @@
 					vx: voice.errors,
 					vs: voice.live,
 					anim: typeof document.getAnimations === 'function' ? document.getAnimations().length : -1,
+					js: heap,
 					cq: audio.cues,
 					cd: candies().length,
 					bag: bag(),

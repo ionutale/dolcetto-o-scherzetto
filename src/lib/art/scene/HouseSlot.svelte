@@ -134,7 +134,14 @@
 		left: 0;
 		width: 620px;
 		height: 200px;
-		will-change: transform;
+		/* No `will-change` here on purpose (memory pass, 2026-10-18): the
+		 * slot's transform is *static* (its position; the scroll lives on
+		 * `.homes`), so promoting it bought only a permanent composited layer
+		 * + a full raster backing per mounted house — ~20 backings of
+		 * ~4 MB each at iPhone DPR, allocated as the scroll sweeps them into
+		 * view and pruned only at idle. That is the page's mid-play memory
+		 * front; the genuinely animated layers (`.homes`, the parallax pair)
+		 * keep their promotion, where it buys real compositing. */
 	}
 
 	.cottage {

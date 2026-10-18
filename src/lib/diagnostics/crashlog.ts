@@ -463,6 +463,7 @@ export function createCrashLog(storage: Storage | null, opts: CrashLogOptions = 
 				lines.push(
 					`— sessione precedente: ${crashed ? '⚠ INTERROTTA (niente chiusura)' : 'chiusa'} · ${archived.length} eventi · ${fmtDur(last.t)}`
 				);
+				lines.push(...synopsis(archived));
 				for (const e of archived) lines.push(entryLine(e));
 			} else {
 				lines.push('— nessuna sessione precedente registrata');
@@ -470,17 +471,86 @@ export function createCrashLog(storage: Storage | null, opts: CrashLogOptions = 
 			lines.push(
 				`— sessione attuale: viva · ${entries.length} eventi · +${fmtDur(entries[entries.length - 1]?.t ?? 0)}`
 			);
+			lines.push(...synopsis(entries));
 			for (const e of entries) lines.push(entryLine(e));
 			lines.push(
-				'(legenda: el=nodi DOM · aC/aD=nodi WebAudio creati/chiusi · aX=stato AudioContext · ' +
+				'(legenda: el=nodi DOM · svg=nodi SVG · aC/aD=nodi WebAudio creati/chiusi · aX=stato AudioContext · ' +
 					'amb=loop ambience vivi · sy=voce avviata · vc=clip voce decodificati · vx=errori voce · ' +
-					'vs=fonti voce vive · anim=animazioni attive · lag=blocco main-thread ms · ' +
-					'cq=cue SFX suonati · fps=frame/s · cd=caramelle a schermo · ' +
+					'vs=fonti voce vive · anim=animazioni attive · js=heap JS MB (dove leggibile) · ' +
+					'lag=blocco main-thread ms · cq=cue SFX suonati · fps=frame/s · cd=caramelle a schermo · ' +
 					'bag=caramelle in sacca · k=isolato · ph=fase · menu=menu aperto)'
 			);
 			return lines.join('\n');
 		}
 	};
+}
+
+/** Numeric payload read for the synopsis; absent fields read `null`. */
+function num(e: LogEntry | undefined, key: string): number | null {
+	const v = e?.d?.[key];
+	return typeof v === 'number' ? v : null;
+}
+
+/**
+ * The per-session "inizio → fine" summary (owner request, 2026-10-18): the
+ * first heartbeat against the last, with peaks — the memory-adjacent story the
+ * raw entries only imply. Fields an older build never wrote read `—`.
+ */
+function synopsis(entries: LogEntry[]): string[] {
+	const beats = entries.filter((e) => e.k === 'hb');
+	if (!beats.length) return ['  (nessun battito registrato)'];
+	const first = beats[0];
+	const last = beats[beats.length - 1];
+	const values = (key: string): number[] =>
+		beats.map((e) => num(e, key)).filter((v): v is number => v !== null);
+	const range = (key: string, unit = ''): string | null => {
+		const from = num(first, key);
+		const to = num(last, key);
+		if (from === null && to === null) return null;
+		const all = values(key);
+		const peak = all.length ? Math.max(...all) : null;
+		let out = `${from ?? '?'} → ${to ?? '?'}${unit}`;
+		if (peak !== null && peak !== from && peak !== to) out += ` (picco ${peak}${unit})`;
+		return out;
+	};
+	const lines: string[] = [];
+	lines.push(
+		`  inizio → fine: ${fmtDur(last.t)} · porte ${num(first, 'k') ?? '?'} → ${num(last, 'k') ?? '?'} · bag ${num(first, 'bag') ?? '?'} → ${num(last, 'bag') ?? '?'}`
+	);
+	const label = (name: string, key: string, unit = ''): string | null => {
+		const r = range(key, unit);
+		return r === null ? null : `${name} ${r}`;
+	};
+	const nodes = [label('el', 'el'), label('svg', 'svg'), label('anim', 'anim')].filter(
+		(s): s is string => s !== null
+	);
+	lines.push(`  nodi: ${nodes.length ? nodes.join(' · ') : '—'}`);
+	const audio: string[] = [];
+	const aC = range('aC');
+	const aD = range('aD');
+	if (aC && aD) audio.push(`webAudio ${aC} / ${aD}`);
+	const vs = range('vs');
+	if (vs) audio.push(`fonti vive ${vs}`);
+	if (num(last, 'vc') !== null) audio.push(`clip ${num(last, 'vc')}`);
+	if (num(last, 'cq') !== null) audio.push(`cue ${num(last, 'cq')}`);
+	const amb = range('amb');
+	if (amb) audio.push(`ambience ${amb}`);
+	lines.push(`  audio: ${audio.length ? audio.join(' · ') : '—'}`);
+	const voice: string[] = [];
+	const sy = range('sy');
+	if (sy) voice.push(`voci ${sy}`);
+	if (num(last, 'vx') !== null && num(last, 'vx') !== 0)
+		voice.push(`errori voce ${num(last, 'vx')}`);
+	if (voice.length) lines.push(`  voce: ${voice.join(' · ')}`);
+	lines.push(`  heap JS: ${range('js', ' MB') ?? '— (non leggibile su questa piattaforma)'}`);
+	const fpsAll = values('fps');
+	const lagAll = values('lag');
+	lines.push(
+		`  fps min ${fpsAll.length ? Math.min(...fpsAll) : '?'} · lag max ${lagAll.length ? Math.max(...lagAll) : '?'} ms`
+	);
+	const errors = entries.filter((e) => e.k === 'err' || e.k === 'rej' || e.k === 'ce').length;
+	lines.push(`  errori pagina: ${errors}`);
+	return lines;
 }
 
 function entryLine(e: LogEntry): string {
