@@ -291,9 +291,14 @@ function applyMaster(): void {
 let cueNodes: AudioNode[] = [];
 let cueEnd = 0;
 
+/** Black-box counters: what this graph has created, and swept away. */
+let nodesCreated = 0;
+let nodesDisconnected = 0;
+
 /** Register one node the current cue created, at the ctx time it goes quiet. */
 function track(n: AudioNode, stopAt: number): void {
 	cueNodes.push(n);
+	nodesCreated += 1;
 	if (stopAt > cueEnd) cueEnd = stopAt;
 }
 
@@ -308,6 +313,7 @@ function sweepCue(a: AudioContext): void {
 	const ms = Math.max(0, (cueEnd - a.currentTime) * 1000) + 300;
 	setTimeout(() => {
 		for (const n of nodes) {
+			nodesDisconnected += 1;
 			try {
 				n.disconnect();
 			} catch {
@@ -315,6 +321,28 @@ function sweepCue(a: AudioContext): void {
 			}
 		}
 	}, ms);
+}
+
+/** A read-only snapshot for the black box (`diagnostics/crashlog`). */
+export interface SfxStats {
+	/** How many cue nodes this graph has created since the page loaded. */
+	created: number;
+	/** How many a sweep has disconnected (created − disconnected = live). */
+	disconnected: number;
+	/** The AudioContext state (`running`/`suspended`), or `null` before init. */
+	ctx: string | null;
+	/** Whether the witch's `<audio>` element exists (created lazily). */
+	witch: boolean;
+}
+
+/** The SFX graph's counters — never throws, `null` before the context exists. */
+export function sfxStats(): SfxStats {
+	return {
+		created: nodesCreated,
+		disconnected: nodesDisconnected,
+		ctx: ctx ? String(ctx.state) : null,
+		witch: witchFile !== null
+	};
 }
 
 /**

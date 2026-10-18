@@ -75,7 +75,7 @@
 	 * they unmount, which is the same guarantee with no stale hold to leak —
 	 * Review Focus #2.)
 	 */
-	import { onDestroy, onMount } from 'svelte';
+	import { onDestroy, onMount, untrack } from 'svelte';
 	import MotionStyles from '$lib/art/sprites/MotionStyles.svelte';
 	import ParallaxLayers from '$lib/art/scene/ParallaxLayers.svelte';
 	import Sky from '$lib/art/scene/Sky.svelte';
@@ -130,6 +130,7 @@
 		tricks,
 		worldX
 	} from '$lib/state/game.svelte';
+	import { logEvent } from '$lib/diagnostics/crashlog';
 	import { persist } from '$lib/persist/persist';
 	import type { RunState } from '$lib/persist/persist';
 	import type { Phase } from '$lib/sim/loop';
@@ -173,6 +174,17 @@
 			scheduleKnock(flow, showBubble, setTimeout, playCue, say);
 		// One show per trick: the reducer only ever starts one from `refuse`.
 		if (prevPhase === 'refuse' && p === 'trick') startShow();
+		// The black box's phase trail. The world's numbers are read in
+		// `untrack`, so this effect still depends on `phase()` alone — the
+		// knock/show guards above must never re-run for a bag change.
+		if (p !== prevPhase) {
+			const trail = untrack(() => ({
+				k: activeK(),
+				bag: bag(),
+				menu: menuState.open ? 1 : 0
+			}));
+			logEvent('ph', { to: p, ...trail });
+		}
 		prevPhase = p;
 	});
 
@@ -262,6 +274,7 @@
 			say
 		);
 		trick = show;
+		logEvent('trick', { id, k });
 
 		theatre?.start(id, doorScreenX(flow, k), SHOW_DOOR_Y, {
 			sound: playCue, // T27: theatre-setup + the eight fire:<id> + theatre-laugh
@@ -287,6 +300,7 @@
 	 */
 	function onScare(active: boolean): void {
 		scareActive = active;
+		logEvent('scare', { on: active });
 		duckAmbience(active); // T23: the bed dips ~6 dB for the beat
 		duckMusic(active); // T25: the loop dips to its owner ducked mix
 		if (active) dispatch({ type: 'STOP' });
@@ -338,6 +352,7 @@
 		startAmbience(); // T23: create/resume the AudioContext + give the bed a graph
 		startMusic(); // T25: decode + loop the owner's street track (own AudioContext)
 		initSfx(); // T27: resume the SFX context + build the master gate
+		logEvent('audio', { init: 1 });
 	}
 
 	/**
@@ -363,6 +378,7 @@
 	function play(): void {
 		unlockAudio();
 		tryLandscapeLock();
+		logEvent('play', { bag: bag(), k: furthest() });
 	}
 
 	/**

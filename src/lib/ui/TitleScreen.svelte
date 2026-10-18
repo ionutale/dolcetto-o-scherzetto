@@ -31,8 +31,12 @@
 	 * calls `onPlay`; the audio unlock and the landscape-lock attempt belong to
 	 * the page (`+page.svelte`), which owns the process-wide gesture listener.
 	 */
+	import { onMount } from 'svelte';
+	import { crashlog } from '$lib/diagnostics/crashlog';
 	import { settings } from '$lib/persist/settings';
 	import type { Lang } from '$lib/sim/loop';
+	import BlackBox from './BlackBox.svelte';
+	import CrashBanner from './CrashBanner.svelte';
 	import Settings from './Settings.svelte';
 	import { menuState, closeMenu } from './menu-state.svelte';
 
@@ -50,6 +54,39 @@
 	/** The live language; the settings envelope holds it, `Settings` writes it. */
 	let lang = $state<Lang>(settings.read().lang);
 
+	/* ------------------------------------------------------------------ */
+	/* the black box (owner request) — crash banner + the hidden viewer    */
+	/* ------------------------------------------------------------------ */
+
+	/** The boot verdict: was the previous session interrupted? (once). */
+	const crashInfo = crashlog.info();
+	/** ✕ on the banner hides it for this boot. */
+	let crashDismissed = $state(false);
+	/** The full-log viewer. */
+	let boxOpen = $state(false);
+	/** Triple-tap the build line to open the viewer (kid-proof by accident). */
+	let versionTaps = 0;
+	let versionTimer: ReturnType<typeof setTimeout> | undefined;
+	function tapVersion(): void {
+		versionTaps += 1;
+		clearTimeout(versionTimer);
+		if (versionTaps >= 3) {
+			versionTaps = 0;
+			boxOpen = true;
+			return;
+		}
+		versionTimer = setTimeout(() => (versionTaps = 0), 700);
+	}
+
+	/** `?debug` opens the viewer directly (desktop triage). */
+	onMount(() => {
+		try {
+			if (new URLSearchParams(location.search).has('debug')) boxOpen = true;
+		} catch {
+			/* no location: no debug entry */
+		}
+	});
+
 	/** A reopened menu always comes back to the home card. */
 	$effect(() => {
 		if (menuState.open) panel = 'home';
@@ -61,13 +98,15 @@
 					eyebrow: '🎃 Una notte di caramelle',
 					play: 'Gioca ▶',
 					settings: '⚙️ Impostazioni',
-					menu: 'Menu principale'
+					menu: 'Menu principale',
+					build: 'Diario di bordo — tocca tre volte'
 				}
 			: {
 					eyebrow: '🎃 A night of candy',
 					play: 'Play ▶',
 					settings: '⚙️ Settings',
-					menu: 'Main menu'
+					menu: 'Main menu',
+					build: 'Flight log — tap 3 times'
 				}
 	);
 
@@ -99,15 +138,23 @@
 	<img class="menu-hero" src="/art/hero.v1.webp" alt="" aria-hidden="true" />
 
 	<div class="menu-card" hidden={panel !== 'home'}>
+		{#if crashInfo.crashed && !crashDismissed}
+			<CrashBanner onDismiss={() => (crashDismissed = true)} onOpenLogs={() => (boxOpen = true)} />
+		{/if}
 		<p class="menu-eyebrow">{copy.eyebrow}</p>
 		<h1 class="menu-title">Dolcetto o Scherzetto</h1>
 		<button type="button" class="menu-play reduce-motion-off" onclick={play}>{copy.play}</button>
 		<button type="button" class="menu-settings" onclick={showSettings}>{copy.settings}</button>
+		<button type="button" class="menu-build" aria-label={copy.build} onclick={tapVersion}
+			>build {crashInfo.meta.v}</button
+		>
 	</div>
 
 	<div class="menu-card" hidden={panel !== 'settings'}>
 		<Settings {lang} onLang={(next) => (lang = next)} onBack={showHome} />
 	</div>
+
+	<BlackBox open={boxOpen} onClose={() => (boxOpen = false)} />
 </div>
 
 <style>
@@ -148,7 +195,9 @@
 		user-select: none;
 	}
 
-	/* `.menu-card` (prototype ~336-338): the frosted night card. */
+	/* `.menu-card` (prototype ~336-338): the frosted night card. The max-height
+	   + scroll guard the crash-banner case: banner + card can exceed a 393 pt
+	   landscape screen, and a clipped Gioca would strand the player. */
 	.menu-card {
 		position: relative;
 		z-index: 1;
@@ -162,6 +211,9 @@
 		border-radius: var(--r-lg);
 		box-shadow: 0 30px 80px var(--shadow-night);
 		backdrop-filter: blur(6px);
+		max-height: calc(100vh - 20px);
+		max-height: calc(100dvh - 20px);
+		overflow-y: auto;
 	}
 
 	/* `.menu-card[hidden]` (prototype ~354): the swap must beat the card's own
@@ -216,9 +268,23 @@
 		background: rgba(247, 236, 217, 0.18);
 	}
 
+	/* The build line (the black box's hidden door): tiny, muted, triple-tap. */
+	.menu-build {
+		font-family: inherit;
+		font-size: 10px;
+		letter-spacing: 0.06em;
+		color: var(--cream);
+		opacity: 0.4;
+		background: none;
+		border: none;
+		padding: 4px 8px;
+		cursor: default;
+	}
+
 	/* T32 focus rings (amber on the night card). */
 	.menu-play:focus-visible,
-	.menu-settings:focus-visible {
+	.menu-settings:focus-visible,
+	.menu-build:focus-visible {
 		outline: 3px solid var(--amber);
 		outline-offset: 3px;
 	}

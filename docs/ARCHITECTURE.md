@@ -53,6 +53,7 @@ above it).
 | **Play** | `src/lib/play/` | the interaction widgets — knock chain, bubbles, candy layer, fan, theatre, scares, cars, NPCs — plus their pure `*-model.ts` maths | owning sim math |
 | **Audio** | `src/lib/audio/` | **four independent engines**, each with its own lazy `AudioContext` and self-driven rAF frame: `sfx.ts` (26-cue WebAudio synth), `ambience.svelte.ts` (per-theme beds + sprinkles + duck), `music.svelte.ts` (the decoded street loop), `voice.svelte.ts` (a media-element pool); `volumes.svelte.ts` is the shared gain seam | throwing on a hostile `AudioContext` |
 | **Persist** | `src/lib/persist/persist.ts` · `settings.ts` | defensive `localStorage`: the run slot `dos.run.v1` and the one settings envelope `dos.settings.v1` | throwing (`read`/`write` degrade to no-save/defaults) |
+| **Diagnostics** | `src/lib/diagnostics/crashlog.ts` · `share-text.ts` | the black box: the crash/heartbeat log (`dos.log.live.v1` / `dos.log.prev.v1`), the crash verdict, the copy/share helpers — read by the title banner and viewer | throwing (every path degrades to memory-only) |
 | **i18n** | `src/lib/i18n/lines.ts` | the UI copy + the IT/EN voice-line inventory (the copy lock) | — |
 | **Service worker** | `src/service-worker.ts` | **precache** (hashed build + static assets), the versioned **shell** (network-first navigations, cached under `/`), and the runtime **voice cache** (cache-first `/voice/**`, never precached) | caching anything unversioned |
 | **Routes** | `src/routes/` (`+page.svelte`, `ssr = false`) | composition only — mounts the scene, runs the loop, wires the single knock/trick edge | game logic |
@@ -65,7 +66,7 @@ master toggle.
 
 ### Save schema
 
-Two versioned keys, both read/written defensively (`read`/`write` never throw; a corrupt,
+Four versioned keys, all read/written defensively (`read`/`write` never throw; a corrupt,
 truncated, hand-edited or future-version payload is refused and the game falls back to
 defaults / a fresh run):
 
@@ -73,11 +74,13 @@ defaults / a fresh run):
 |---|---|---|
 | `dos.run.v1` | `{ version: 1, bag, record, tricks: string[], furthestK }` | `src/lib/persist/persist.ts` `RunState` + `isRunState` |
 | `dos.settings.v1` | `{ version: 1, lang: 'it'\|'en', sound, musicVolume: 0..1, sfxVolume: 0..1 }` | `src/lib/persist/settings.ts` `Settings` + `isSettings` |
+| `dos.log.live.v1` | `[{ t, k, d? }]` — the live session's flight log (ring, ≤ 320 entries) | `src/lib/diagnostics/crashlog.ts` |
+| `dos.log.prev.v1` | the same shape — the previous session, archived only when it ended abruptly | `src/lib/diagnostics/crashlog.ts` |
 
 The run is autosaved after every change (a `$effect` in `+page.svelte`) and seeds the boot;
 the settings envelope is a device preference (written by the title's sliders/toggle). A future
 setting joins the envelope as an optional field — except the volume pair, which was added as
-required. The hidden parent reset clears **both** keys (`Settings.svelte`).
+required. The hidden parent reset clears **all of them** (`Settings.svelte`).
 
 ### Audio graph
 
@@ -121,13 +124,18 @@ Settings first, then the save, then the title, then one gesture, then the engine
    change.
 6. **Service worker** — `+layout.svelte` registers `/service-worker.js` client-only, guarded;
    the offline shell and the versioned caches come from `src/service-worker.ts`.
+7. **Black box** — `+layout.svelte` also installs the crashlog (owner request): it reads the
+   previous session's log, decides *crash* (abrupt tail + a recent last heartbeat), shows the
+   title banner when true, and starts the 4 s heartbeat that records the leak-hunt numbers
+   (DOM nodes, WebAudio created/disconnected, ambience loops, fps, phase/bag). See
+   `src/lib/diagnostics/crashlog.ts`.
 
 ## Testing map
 
 | Layer | Command | Backer / shape |
 |---|---|---|
-| **Unit** | `pnpm test:unit` | Vitest — **625 tests / 22 files** (1.47 s), covering the pure sim, the play/scene models, the audio modules and the store. Count backed by the Budgets table below. |
-| **e2e** | `pnpm test:e2e` | Playwright — **8 tests in 6 specs** (`tests/e2e/*.spec.ts`), run against the **built** app at 852×393: audio unlock, the full loop + reduced motion, Bottega, settings/language, the reopenable menu, and save→reload. See `tests/README.md`. |
+| **Unit** | `pnpm test:unit` | Vitest — **651 tests / 23 files** (0.7 s), covering the pure sim, the play/scene models, the audio modules, the black box and the store. Count backed by the Budgets table below. |
+| **e2e** | `pnpm test:e2e` | Playwright — **12 tests in 7 specs** (`tests/e2e/*.spec.ts`), run against the **built** app at 852×393: audio unlock, the full loop + reduced motion, Bottega, settings/language, the reopenable menu, save→reload, and the black box (crash banner + viewer, error capture, clean close, reachability). See `tests/README.md`. |
 | **Perf / memory** | `node tools/perf-probe.mjs --launch` | the CDP harness behind the Budgets table: audio-node gap, loop replacement, DOM count, heap, page errors. Re-measure recipe in *Budgets → Re-measuring*. |
 | **Voice gate** | `pnpm check:voice` | `tools/check-voice.mjs` — a non-empty clip + a manifest row per id, both languages. |
 
@@ -160,7 +168,7 @@ a backer is a guess, so none of these are.
 
 | Budget | Ceiling | Measured | Backer |
 |---|---|---|---|
-| Unit suite green | 100 % · ≤ 5 s | **625 tests / 22 files · 1.47 s** (wall 2.6 s) | `pnpm test:unit` |
+| Unit suite green | 100 % · ≤ 5 s | **651 tests / 23 files · 0.73 s** (wall ~2 s) | `pnpm test:unit` |
 | Type/component check | clean | **clean** (0 errors) | `pnpm check` |
 | Route chunk (`+page.svelte`) | ≤ 200 kB | **184.2 kB** (gzip **55.9 kB**) | `pnpm build` |
 | Client JS total | ≤ 300 kB | **270.2 kB** (gzip ≈ **89 kB**) incl. SW | `pnpm build` |

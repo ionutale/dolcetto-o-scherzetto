@@ -48,6 +48,7 @@
 		scareTick
 	} from './scare-model';
 	import type { BeatClass, ScareKind } from './scare-model';
+	import { logEvent } from '$lib/diagnostics/crashlog';
 
 	/** The smoke/dev seam: the prototype exposed `window.Scares` too. */
 	type ScaresHandle = { trigger: (kind?: ScareKind) => boolean; cancel: () => void };
@@ -649,6 +650,7 @@
 		reset();
 		active = true;
 		lastKind = pick;
+		logEvent('scareK', { kind: pick });
 
 		findKids();
 		if (kidsEl) kidsEl.classList.add(SCARE_STOP_CLASS);

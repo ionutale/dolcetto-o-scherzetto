@@ -48,4 +48,11 @@
 - [ ] Sound balance: music vs effects vs voices — any slider default to change? → ______________________
 - [ ] Parent licence note (public repo): the **music track** and the **witch laugh clip** have unverified terms — decide: keep public / make the repo private / swap the assets. → ______________________
 
-**When A–H pass: the game ships. 🎃**
+## I · If it restarts by itself (black box — instructions, not a gate)
+> New since this checklist was written. If the crash ever comes back, this is how we catch it.
+- [ ] On the next launch, the title shows a card **"🕯️ Il gioco si è riavviato da solo"** with a one-line summary (build · duration · DOM · audio).
+- [ ] Tap **📤 Invia** (iOS share sheet → send to dad) or **📋 Copia** → paste the text back in chat.
+- [ ] Anytime: **triple-tap the tiny `build …` line** at the bottom of the title card → the full "Scatola nera" viewer (copy / share / clear).
+- [ ] Read the summary's **build** value: it names exactly which deployment the phone ran, so a not-yet-updated app can't fool us.
+
+**When A–H pass: the game ships. 🎃 · I is only needed if F ever fails again.**

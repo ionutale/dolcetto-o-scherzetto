@@ -377,6 +377,29 @@ function noiseBuffer(ctx: AudioContext): AudioBuffer {
  * and the bed gain so the wind breathes. Throws only where WebAudio does; the
  * caller swallows it and the engine stays a no-op.
  */
+/* ------------------------------------------------------------------ */
+/* the black-box counters (diagnostics/crashlog's heartbeat)           */
+/* ------------------------------------------------------------------ */
+
+/** Loop sources the module tracks as alive (wind, LFOs, adopted loop). */
+let loopsLive = 0;
+/** Cumulative loop starts this page. */
+let loopsStarted = 0;
+/** Cumulative stops (replacement, adoption, teardown). */
+let loopsStopped = 0;
+/** The synth wind's latch: adopted once, never double-counted. */
+let windAlive = false;
+
+function loopStarted(): void {
+	loopsLive += 1;
+	loopsStarted += 1;
+}
+
+function loopStopped(): void {
+	loopsLive = Math.max(0, loopsLive - 1);
+	loopsStopped += 1;
+}
+
 function buildGraph(ctx: AudioContext): AmbienceGraph {
 	const master = ctx.createGain();
 	master.gain.value = 0;
@@ -397,6 +420,8 @@ function buildGraph(ctx: AudioContext): AmbienceGraph {
 	filter.connect(bed);
 	bed.connect(master);
 	noise.start();
+	loopStarted();
+	windAlive = true;
 
 	const l1 = ctx.createOscillator();
 	l1.frequency.value = 0.05;
@@ -405,6 +430,7 @@ function buildGraph(ctx: AudioContext): AmbienceGraph {
 	l1.connect(lg1);
 	lg1.connect(filter.frequency);
 	l1.start();
+	loopStarted();
 
 	const l2 = ctx.createOscillator();
 	l2.frequency.value = 0.083;
@@ -413,6 +439,7 @@ function buildGraph(ctx: AudioContext): AmbienceGraph {
 	l2.connect(lg2);
 	lg2.connect(bed.gain);
 	l2.start();
+	loopStarted();
 
 	return { ctx, master, filter, bed, noise };
 }
@@ -481,6 +508,7 @@ async function adoptLoop(theme: Theme, bytes: ArrayBuffer): Promise<void> {
 		src.loop = true;
 		src.connect(g.bed);
 		src.start();
+		loopStarted();
 		// Replace any previously adopted loop: leaving it connected would layer
 		// every theme forever AND retain each decoded ~10 MB buffer — a real
 		// session crosses themes repeatedly (the iOS leak guard, applied to the
@@ -488,6 +516,7 @@ async function adoptLoop(theme: Theme, bytes: ArrayBuffer): Promise<void> {
 		if (loopSrc && loopSrc !== src) {
 			try {
 				loopSrc.stop();
+				loopStopped();
 				loopSrc.disconnect();
 			} catch {
 				/* already gone */
@@ -495,8 +524,16 @@ async function adoptLoop(theme: Theme, bytes: ArrayBuffer): Promise<void> {
 		}
 		loopSrc = src;
 		g.bed.gain.setTargetAtTime(AMB_BEDS[theme].gain, g.ctx.currentTime, AMB_MASTER_RAMP_S);
-		g.noise.stop();
-		g.noise.disconnect();
+		if (windAlive) {
+			try {
+				g.noise.stop();
+				g.noise.disconnect();
+			} catch {
+				/* already gone */
+			}
+			windAlive = false;
+			loopStopped();
+		}
 	} catch {
 		// A corrupt loop keeps the synth bed: nothing to do.
 	}
@@ -624,6 +661,7 @@ export function stopAmbience(): void {
 	if (loopSrc) {
 		try {
 			loopSrc.stop();
+			loopStopped();
 			loopSrc.disconnect();
 		} catch {
 			/* already gone */
@@ -640,6 +678,26 @@ export function stopAmbience(): void {
 			// A hostile context: dropping the graph is enough.
 		}
 	}
+	// The context is gone (or the graph was dropped): every loop it held dies
+	// with it, so the black box's live count lands back at zero by construction.
+	loopsStopped += loopsLive;
+	loopsLive = 0;
+	windAlive = false;
+}
+
+/** A read-only snapshot for the black box (`diagnostics/crashlog`). */
+export interface AmbienceStats {
+	/** Loop sources alive right now (wind, the two LFOs, the adopted loop). */
+	live: number;
+	/** Cumulative loop starts this page. */
+	started: number;
+	/** Cumulative loop stops (replacements, adoption, teardown included). */
+	stopped: number;
+}
+
+/** The ambience engine's loop counters (never throws). */
+export function ambienceStats(): AmbienceStats {
+	return { live: loopsLive, started: loopsStarted, stopped: loopsStopped };
 }
 
 /**

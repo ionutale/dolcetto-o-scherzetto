@@ -85,6 +85,10 @@
 		try {
 			localStorage.removeItem('dos.run.v1');
 			localStorage.removeItem('dos.settings.v1');
+			// The black box's two keys (diagnostics/crashlog) go with the rest:
+			// "delete everything" means everything.
+			localStorage.removeItem('dos.log.live.v1');
+			localStorage.removeItem('dos.log.prev.v1');
 		} catch {
 			/* a hostile storage must not stop the reset */
 		}
