@@ -20,7 +20,10 @@
 	 *
 	 * Both bands are 2400 logical px wide, the prototype's two-and-a-bit screens of
 	 * coverage for the +-2400px of street the recycling window can reveal; the
-	 * stage clips the overspill.
+	 * stage clips the overspill. **C1 bounded paints (2026-10-18):** past that
+	 * coverage the endless street never meets them again, so each band's offset
+	 * is clamped at its off-stage pose and the band is hidden while it is fully
+	 * away — no painted offset grows with the walk.
 	 *
 	 * Colours are §3 tokens. The prototype's two-tone silhouettes collapse onto
 	 * the nearest stops: far roofs `--night-2` against `--night-1` for the second
@@ -30,6 +33,8 @@
 	 * front of the far band and still darker than the horizon sky at that height.
 	 * Decorative only: `pointer-events: none`, hidden from assistive technology.
 	 */
+	import { STAGE_W } from './theme-model';
+
 	interface Props {
 		/** World scroll position in logical px (negative = further left). */
 		worldX?: number;
@@ -41,8 +46,21 @@
 	const FAR_FACTOR = 0.45;
 	const MID_FACTOR = 0.7;
 
-	const farShift = $derived(-worldX * FAR_FACTOR);
-	const midShift = $derived(-worldX * MID_FACTOR);
+	/** Band width and the off-stage apron (px) that keeps the flip invisible. */
+	const BAND_W = 2400;
+	const APRON = 300;
+
+	/** Raw (unbounded) prototype offsets — the values the walk drives. */
+	const farRaw = $derived(-worldX * FAR_FACTOR);
+	const midRaw = $derived(-worldX * MID_FACTOR);
+
+	/** Painted offsets: raw clamped to the band's off-stage pose. */
+	const farShift = $derived(Math.min(Math.max(farRaw, -BAND_W), STAGE_W));
+	const midShift = $derived(Math.min(Math.max(midRaw, -BAND_W), STAGE_W));
+
+	/** Fully off-stage (plus apron) — hidden so the compositor can let go. */
+	const farAway = $derived(farRaw <= -BAND_W - APRON || farRaw >= STAGE_W + APRON);
+	const midAway = $derived(midRaw <= -BAND_W - APRON || midRaw >= STAGE_W + APRON);
 
 	/** Far rooftops: 8 blocks of 300 px starting at -40 (the prototype's `i * 300 - 40`). */
 	const ROOF_BLOCKS = Array.from({ length: 8 }, (_, i) => i * 300 - 40);
@@ -56,7 +74,12 @@
 	];
 </script>
 
-<div class="far" aria-hidden="true" style="transform: translateX({farShift}px)">
+<div
+	class="far"
+	aria-hidden="true"
+	class:away={farAway}
+	style="transform: translateX({farShift}px)"
+>
 	<svg width="2400" height="393" viewBox="0 0 2400 393" preserveAspectRatio="none">
 		{#each ROOF_BLOCKS as x (x)}
 			<!-- lit house: gabled roof, wall, one warm window -->
@@ -71,7 +94,12 @@
 	</svg>
 </div>
 
-<div class="mid" aria-hidden="true" style="transform: translateX({midShift}px)">
+<div
+	class="mid"
+	aria-hidden="true"
+	class:away={midAway}
+	style="transform: translateX({midShift}px)"
+>
 	{#each FOG as wisp, i (i)}
 		<div
 			class="fog reduce-motion-off"
@@ -116,6 +144,14 @@
 		height: 100%;
 		pointer-events: none;
 		will-change: transform;
+	}
+
+	/* C1: once the walk has left a band fully off-stage (300 px apron) it is
+	   hidden outright — its layer, backing and rasters go with it; walking back
+	   un-hides it at the same clamped, correct pose (see the script note). */
+	.far.away,
+	.mid.away {
+		display: none;
 	}
 
 	/* The global `svg { max-width: 100% }` reset in app.css would squeeze this

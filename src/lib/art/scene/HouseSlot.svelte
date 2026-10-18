@@ -33,8 +33,12 @@
 	 * match — it added the class to the slot itself, not to a child — so the
 	 * working selector here is `.slot.active.knocking .cottage`.
 	 *
-	 * `worldX` does not move this slot (the `Street` container already carries
-	 * `-worldX`); it is read only to expose `data-screen-x`, the prototype's
+	 * The slot rides the recycled window: `Street` passes the window's base as
+	 * `baseX` and this slot paints at `k*SPACING - baseX` (never more than one
+	 * house period — C1 bounded paints, 2026-10-18), while the container adds
+	 * the bounded `-(worldX - baseX)` on top. The composed position stays
+	 * `k*SPACING - worldX`, but no painted offset grows with the walk.
+	 * `worldX` itself is read for `data-screen-x`, the prototype's
 	 * `k*SPACING - worldX + 310` seam (minus the 310 player offset) that T10/T11
 	 * use to place the knock affordance. Colours are the validated artefact's,
 	 * ported verbatim.
@@ -48,6 +52,8 @@
 		k: number;
 		/** World scroll position in logical px, for the screen-x seam. */
 		worldX: number;
+		/** The live window's base (`firstK * SPACING`) — the bounded-paint anchor. */
+		baseX: number;
 		/** Windows dim and the glow dies. */
 		done: boolean;
 		/** The door leaf swings open. */
@@ -56,7 +62,7 @@
 		active: boolean;
 	}
 
-	let { k, worldX, done, open, active }: Props = $props();
+	let { k, worldX, baseX, done, open, active }: Props = $props();
 
 	/** Prototype constant: one home every 620 logical px. */
 	const SPACING = 620;
@@ -88,7 +94,7 @@
 	class:knocking
 	data-house-slot={k}
 	data-screen-x={screenX}
-	style="transform: translateX({k * SPACING}px)"
+	style="transform: translateX({k * SPACING - baseX}px)"
 >
 	<div class="cottage">
 		<!-- trusted static SVG from the validated house pack -->

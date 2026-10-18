@@ -12,12 +12,12 @@
 	 * live set — four cars per five-block window (every block but one driveway
 	 * skip, spec §4.4's 3–5), their four dusk tones assigned by the car's stable
 	 * ordinal so **every window shows all four tones** and no two neighbours
-	 * share one. The whole layer is translated by `-worldX` once and each car
-	 * parks at its fixed `k*SPACING + off` (the `Street` trick: one compositor
-	 * transform per frame instead of one per car). Cars are keyed by `k`, so a
-	 * block sliding into the window adds a node and one sliding out removes it —
-	 * bounded, like every other recycling layer. Tones come from the sprite pack
-	 * (`car(color)`), their shadow from `--shadow-night`.
+	 * share one. The whole layer carries the window's bounded `-(worldX - baseX)`
+	 * once per frame and each car parks at `k*SPACING + off - baseX` (the
+	 * `Street` trick with its C1 bounded-paint rebase, 2026-10-18). Cars are
+	 * keyed by `k`, so a block sliding into the window adds a node and one
+	 * sliding out removes it — bounded, like every other recycling layer. Tones
+	 * come from the sprite pack (`car(color)`), their shadow from `--shadow-night`.
 	 *
 	 * **The passer.** A self-driven, time-only event: the first crosses ~45 s
 	 * after mount, then one every 70–100 s (the prototype's `70000 + rng*30000`;
@@ -75,8 +75,14 @@
 
 	/** Live parked cars — the prototype's `renderCars()` window. */
 	const slots = $derived(carSlots(worldX));
-	/** One container transform by `-worldX`; each car then parks at `k*SPACING + off`. */
-	const shift = $derived(-worldX);
+	/**
+	 * C1 bounded paints: the track and every car are painted relative to the
+	 * live window's base (`(floor(worldX / SPACING) - 1) * SPACING`, the model's
+	 * own `k0`), so no painted offset grows with the walk (see `Street`'s note).
+	 */
+	const baseX = $derived((Math.floor(worldX / SPACING) - 1) * SPACING);
+	/** The track carries the window's bounded `-(worldX - baseX)` once per frame. */
+	const shift = $derived(-(worldX - baseX));
 
 	/* ---- the passer: one time-only crossing, then the next gap ---- */
 
@@ -151,10 +157,11 @@
 		<div class="headcone"></div>
 	</div>
 
-	<!-- The parked cars: one container transform by -worldX, cars at k*SPACING+off. -->
+	<!-- The parked cars: the track carries the bounded window shift, cars park
+	     relative to the window base. -->
 	<div class="track" style="transform: translateX({shift}px)">
 		{#each slots as slot (slot.k)}
-			<div class="car" style="transform: translateX({slot.k * SPACING + slot.off}px)">
+			<div class="car" style="transform: translateX({slot.k * SPACING + slot.off - baseX}px)">
 				<!-- trusted static SVG from the validated sprite pack -->
 				<!-- eslint-disable-next-line svelte/no-at-html-tags -->
 				{@html car(slot.color)}
@@ -172,7 +179,7 @@
 		overflow: hidden;
 	}
 
-	/* The scrolling half: translated by -worldX once per frame (Street's trick). */
+	/* The scrolling half: carries the bounded window shift (Street's trick, C1). */
 	.track {
 		position: absolute;
 		inset: 0;

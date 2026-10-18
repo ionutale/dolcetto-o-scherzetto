@@ -24,9 +24,10 @@
 	 *
 	 * **Windowing.** `decorSlots(theme, worldX)` is the street/cars window
 	 * (`floor(worldX / SPACING) - 1` plus four more houses). One container per
-	 * tier is translated by `-worldX` once per frame and each node parks at its
-	 * fixed `k*SPACING + off` — one compositor transform per frame, bounded
-	 * nodes (≤ 30 per window, recycled as the window slides).
+	 * tier carries the window's bounded `-(worldX - baseX)` and each node parks
+	 * at `k*SPACING + off - baseX` — one compositor transform per frame,
+	 * bounded nodes (≤ 30 per window, recycled as the window slides) **and
+	 * bounded painted offsets** (C1, 2026-10-18 — see `Street`'s note).
 	 *
 	 * **Layering (why this mounts before `<Street/>`).** The layer sits with the
 	 * background group — after `<ParallaxLayers/>` and `<Ghosts/>`, before
@@ -66,6 +67,7 @@
 		SHOOT_FROM_Y,
 		decorSlots,
 		decorTone,
+		firstDecorK,
 		isSkyKind,
 		shootProgress,
 		shootTick,
@@ -105,12 +107,18 @@
 	const skySlots = $derived(slots.filter((s) => isSkyKind(s.kind)));
 	const groundSlots = $derived(slots.filter((s) => !isSkyKind(s.kind)));
 
-	/** One container transform by `-worldX`; each node then parks at `k*SPACING + off`. */
-	const shift = $derived(-worldX);
+	/**
+	 * C1 bounded paints: the container and every node are painted relative to
+	 * the live window's base (`firstDecorK * SPACING`), so no painted offset
+	 * grows past one house period however far the walk has gone — the composed
+	 * position (`k*SPACING + off - worldX`) is unchanged (see `Street`'s note).
+	 */
+	const baseX = $derived(firstDecorK(worldX) * SPACING);
+	const shift = $derived(-(worldX - baseX));
 
 	/** A node's inline style: placement, box, §3 tone and stagger delay. */
 	function styleOf(slot: DecorSlot): string {
-		const x = slot.k * SPACING + slot.off;
+		const x = slot.k * SPACING + slot.off - baseX;
 		return [
 			`transform: translate3d(${x}px, ${slot.y}px, 0)`,
 			`width: ${slot.w}px`,
@@ -258,8 +266,8 @@
 		overflow: hidden;
 	}
 
-	/* One scrolling container per tier — translated by `-worldX` once per frame
-	 * (the `Street` / `Cars` trick); nodes park at their fixed `k*SPACING + off`. */
+	/* One scrolling container per tier — carries the window's bounded shift once
+	 * per frame (the `Street` / `Cars` trick); nodes park at `k*SPACING + off - baseX`. */
 	.track {
 		position: absolute;
 		inset: 0;

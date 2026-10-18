@@ -11,11 +11,15 @@
 	 *   slot.style.transform = translateX(k*SPACING - worldX)
 	 *
 	 * The prototype moves every slot by `k*SPACING - worldX`; here the same sum
-	 * is split in two — this component translates the `.homes` container by
-	 * `-worldX` once and each `HouseSlot` parks at its fixed `k*SPACING`, which
-	 * is one compositor transform per frame instead of five. The result is
-	 * pixel-identical and the parallax bands are untouched (they own their own
-	 * `worldX` factors).
+	 * is split in two — this component translates the `.homes` container and
+	 * each `HouseSlot` parks relative to the window base — **rebased to the
+	 * live window** (C1, 2026-10-18): the container only carries
+	 * `-(worldX - baseX)` and every slot sits at `k*SPACING - baseX`, so no
+	 * painted offset ever grows past one house period however long the walk.
+	 * The composed position (`k*SPACING - worldX`) is pixel-identical; the
+	 * unbounded value it used to drag through the compositor — the "huge
+	 * offset … dies after a long walk on iOS" class T09b first hit on
+	 * backgrounds — is gone.
 	 *
 	 * **Window & node budget.** The spec's endless street is rendered with a
 	 * *recycling window* of ~20 homes (ADR-0001; T32 pins "≤20 slots after
@@ -43,7 +47,6 @@
 	 * token, the same convention T08 used for the sky.
 	 */
 	import HouseSlot from './HouseSlot.svelte';
-	import { createBreathClock } from './breath-model';
 
 	interface Props {
 		/** World scroll position in logical px — the sim's only street input. */
@@ -66,92 +69,27 @@
 	/** First live slot: the prototype's `floor(worldX / SPACING) - 1`. */
 	const firstK = $derived(Math.floor(worldX / SPACING) - 1);
 	const slots = $derived(Array.from({ length: WINDOW }, (_, i) => firstK + i));
-	/** One container transform by `-worldX`; each slot then parks at `k*SPACING`. */
-	const shift = $derived(-worldX);
 	/**
-	 * The pattern offsets are taken **modulo each pattern's period** (T09b):
-	 * an identical visual (both gradients repeat), but the painted
-	 * `background-position` stays inside one period instead of growing to
-	 * thousands of px — WebKit never has to rasterize a huge gradient offset,
-	 * which is exactly the kind of thing that dies after a long walk on iOS.
+	 * C1 bounded paints. The window's base in world px: every scrolling layer
+	 * is painted relative to it, so the container only carries
+	 * `-(worldX - baseX)` — inside one house period, forever — and each slot
+	 * parks at `k*SPACING - baseX ∈ [0, 2480]`. Before this the container was
+	 * translated by the raw `-worldX` (≈ −186 000 px at k 300) and the slots
+	 * sat at `k*SPACING` + ≈186 000 px locally, so the layer's painted
+	 * coordinate space grew without bound as the kid walked.
 	 */
-	const seams = $derived(shift % 86);
-	const dashes = $derived(shift % 60);
-
-	/* ------------------------------------------------------------------ */
-	/* the raster breath (the pure-walk diagnosis, 2026-10-18)             */
-	/* ------------------------------------------------------------------ */
-
+	const baseX = $derived(firstK * SPACING);
+	const shift = $derived(-(worldX - baseX));
 	/**
-	 * While the world scrolls, WebKit rasterizes newly exposed street pixels
-	 * into its tile cache and releases them only when the page idles — the
-	 * owner's controlled nonstop-walk test died in **20 seconds** with every
-	 * page-side counter flat. The breath is the page-side idle trim: once
-	 * ~12 s of actual walking accumulates, the scrolling subtree is hidden
-	 * for one *committed* frame — forcing the renderer to drop the layer and
-	 * its raster cache — then restored. A synchronous hide+restore inside one
-	 * task can be coalesced away and release nothing, hence the frame
-	 * hand-off; a timed fallback restores even when the frame callback never
-	 * lands (a hidden tab). Never throws.
+	 * The pattern offsets still ride the **true** scroll — not the rebased
+	 * shift — opened **modulo each pattern's period** (T09b): an identical
+	 * visual (both gradients repeat), but the painted `background-position`
+	 * stays inside one period instead of growing to thousands of px — WebKit
+	 * never has to rasterize a huge gradient offset, which is exactly the kind
+	 * of thing that dies after a long walk on iOS.
 	 */
-	const breathClock = createBreathClock();
-	/** The scrolling subtree — the raster-heavy layer the breath resets. */
-	let homesEl: HTMLElement | undefined = $state();
-	/** Breaths taken — mirrored onto `data-breaths` for tests and the probe. */
-	let breaths = 0;
-	/** The in-flight breath's token (`null` = none) — restore runs once. */
-	let breathToken: object | null = null;
-
-	/** `performance.now()` guarded against absent or hostile hosts. */
-	function perfNow(): number {
-		try {
-			return typeof performance === 'undefined' ? Date.now() : performance.now();
-		} catch {
-			return Date.now();
-		}
-	}
-
-	/** One breath: hide → one *painted* frame → restore. */
-	function breathe(): void {
-		const el = homesEl;
-		if (!el || breathToken !== null) return;
-		const token = {};
-		breathToken = token;
-		const done = (): void => {
-			if (breathToken !== token) return;
-			breathToken = null;
-			try {
-				el.style.display = '';
-				breaths += 1;
-				el.dataset.breaths = String(breaths);
-			} catch {
-				/* a hostile element: the breath count simply does not grow */
-			}
-		};
-		try {
-			el.style.display = 'none';
-			// Make the hide a real layout change now…
-			void el.offsetHeight;
-			// …and restore only on the *second* frame callback. A same-frame (or
-			// one-rAF) restore runs before style/paint and lets the renderer
-			// coalesce the hide away entirely — the 2026-10-18 device run: `br`
-			// fired on cadence and nothing was released. The hidden subtree must
-			// survive one painted frame for the layer (and its tiles) to drop.
-			requestAnimationFrame(() => requestAnimationFrame(done));
-			setTimeout(done, 400);
-		} catch {
-			breathToken = null;
-		}
-	}
-
-	/**
-	 * One tick per scroll update — the frames that move the world are exactly
-	 * the ones that grow the tile cache, so `worldX` reads are the clock's
-	 * "walking" signal (the effect's only dependency).
-	 */
-	$effect(() => {
-		if (breathClock.tick(perfNow(), Number.isFinite(worldX))) breathe();
-	});
+	const seams = $derived(-worldX % 86);
+	const dashes = $derived(-worldX % 60);
 </script>
 
 <div
@@ -163,11 +101,12 @@
 	<div class="sidewalk"></div>
 	<div class="road"></div>
 
-	<div class="homes" bind:this={homesEl} style="transform: translateX({shift}px)">
+	<div class="homes" style="transform: translateX({shift}px)">
 		{#each slots as k (k)}
 			<HouseSlot
 				{k}
 				{worldX}
+				{baseX}
 				done={!!homes[k]?.done}
 				open={openK >= 0 && k === openK}
 				active={activeK >= 0 && k === activeK}
@@ -184,7 +123,8 @@
 		overflow: hidden;
 	}
 
-	/* The scrolling half: translated by -worldX once per frame. */
+	/* The scrolling half: carries the window's bounded `-(worldX - baseX)`
+	   (C1 bounded paints — see the script note). */
 	.homes {
 		position: absolute;
 		inset: 0;
