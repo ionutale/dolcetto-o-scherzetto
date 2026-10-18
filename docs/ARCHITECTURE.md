@@ -8,7 +8,7 @@ The game is **SvelteKit 5 + TypeScript + Vite**, shipped as a PWA on Vercel,
 landscape-first for iPhone 16, voiced in IT + EN, and saved **on the device
 only** (ADR-0006). The whole engine is one web page: a pure, DOM-free sim drives
 a hand-built **DOM/SVG** scene — *no canvas* (ADR-0001) — while three WebAudio
-engines and one media-element voice pool make the sound. All audio/raster assets
+engines and one voice-clip layer on the synth's bus make the sound. All audio/raster assets
 are baked at build time with the maintainer's local studios, never at runtime
 (ADR-0002).
 
@@ -20,7 +20,7 @@ are baked at build time with the maintainer's local studios, never at runtime
 | **State** | `src/lib/state/game.svelte.ts` (+ test) | the one reactive `GameState` + the read seams (`worldX`, `phase`, `candies`, `bag`, `furthest`…) and the rAF loop | reimplementing sim rules |
 | **Scene** | `src/lib/art/scene/`, `src/lib/art/sprites/` | sky, parallax, the **recycling window** of ≤ 20 homes, yards, decorations, the sprite motion CSS | deciding outcomes |
 | **Play** | `src/lib/play/` | knock chain, bubbles, candy layer, fan, theatre, scares, cars, NPCs, kids | owning sim math |
-| **Audio** | `src/lib/audio/` — `sfx.ts` · `ambience.svelte.ts` · `music.svelte.ts` · `voice.svelte.ts` · `volumes.svelte.ts` | the 26-cue synth pack, the per-theme beds, the decoded street loop, the voiced lines | throwing on a hostile `AudioContext` |
+| **Audio** | `src/lib/audio/` — `sfx.ts` · `ambience.svelte.ts` · `music.svelte.ts` · `voice.ts` · `volumes.svelte.ts` | the 26-cue synth pack, the per-theme beds, the decoded street loop, the voiced lines | throwing on a hostile `AudioContext` |
 | **Persist** | `src/lib/persist/` | the defensive `dos.run.v1` / `dos.settings.v1` mirror | throwing (`read`/`write` degrade to no-save) |
 | **i18n** | `src/lib/i18n/` | UI copy + the IT/EN voice-line inventory | — |
 | **Routes** | `src/routes/` (`+page.svelte`, `ssr = false`) | composition only — mounts the scene, runs the loop, wires the single knock/trick edges | game logic |
@@ -51,7 +51,7 @@ above it).
 | **State** | `src/lib/state/game.svelte.ts` | the one reactive runes store, the read seams (`worldX`/`phase`/`candies`/`bag`/`furthest`…), the clamped rAF loop, and the `bootState()` that seeds the sim from the save | reimplementing sim rules |
 | **Scene** | `src/lib/art/scene/`, `src/lib/art/sprites/` | sky, parallax, the **recycling window** of ≤ 20 homes, yards, decorations, the sprite-motion CSS | deciding outcomes |
 | **Play** | `src/lib/play/` | the interaction widgets — knock chain, bubbles, candy layer, fan, theatre, scares, cars, NPCs — plus their pure `*-model.ts` maths | owning sim math |
-| **Audio** | `src/lib/audio/` | **four independent engines**, each with its own lazy `AudioContext` and self-driven rAF frame: `sfx.ts` (26-cue WebAudio synth), `ambience.svelte.ts` (per-theme beds + sprinkles + duck), `music.svelte.ts` (the decoded street loop), `voice.svelte.ts` (a media-element pool); `volumes.svelte.ts` is the shared gain seam | throwing on a hostile `AudioContext` |
+| **Audio** | `src/lib/audio/` | **three independent engines**, each with its own lazy `AudioContext` and self-driven rAF frame: `sfx.ts` (26-cue WebAudio synth), `ambience.svelte.ts` (per-theme beds + sprinkles + duck), `music.svelte.ts` (the decoded street loop); `voice.ts` decodes clips once and plays them on the synth's bus; `volumes.svelte.ts` is the shared gain seam | throwing on a hostile `AudioContext` |
 | **Persist** | `src/lib/persist/persist.ts` · `settings.ts` | defensive `localStorage`: the run slot `dos.run.v1` and the one settings envelope `dos.settings.v1` | throwing (`read`/`write` degrade to no-save/defaults) |
 | **Diagnostics** | `src/lib/diagnostics/crashlog.ts` · `share-text.ts` | the black box: the crash/heartbeat log (`dos.log.live.v1` / `dos.log.prev.v1`), the crash verdict, the copy/share helpers — read by the title banner and viewer | throwing (every path degrades to memory-only) |
 | **i18n** | `src/lib/i18n/lines.ts` | the UI copy + the IT/EN voice-line inventory (the copy lock) | — |
@@ -59,10 +59,11 @@ above it).
 | **Routes** | `src/routes/` (`+page.svelte`, `ssr = false`) | composition only — mounts the scene, runs the loop, wires the single knock/trick edge | game logic |
 | **Assets / Tools** | `static/`, `tools/` | the shipped files; `gen-icons.mjs` · `check-voice.mjs` · `perf-probe.mjs` · `gen-art.py` | shipping to the bundle |
 
-The four audio engines are the "four independent engines" the module map refers to — three
-WebAudio graphs (`sfx` / `ambience` / `music`) plus the one media-element `voice` pool. None
-shares state with another; they agree only through `volumes.svelte.ts` and the `sound`
-master toggle.
+Three WebAudio engines (`sfx` / `ambience` / `music`), each with its own context and frame,
+plus the **voice clips**: `voice.ts` fetches each line once, decodes it once (a small
+LRU) and plays a `BufferSource` **on the synth's bus** (`sfxBus()` — no media elements, no
+second context; `volumes.svelte.ts` and the `sound` master toggle apply to it exactly as they
+do to cues). The engine split exists for isolation, not for voices.
 
 ### Save schema
 
@@ -96,11 +97,12 @@ its own rAF frame; there is no shared node graph.
   on the same master. Duck −6 dB on `phase === 'trick'` and on a manual `duckAmbience`.
 - **music** — one master `GainNode`; one decoded buffer source looped into it (`loop = true`),
   gap-free at the wrap.
-- **voice** — a pool of ≤ `VOICE_POOL_SIZE` (6) `<audio>` elements, one per bound line; a
-  rebind **unloads the old clip first** (`removeAttribute('src')` + `load()` — the iOS
-  media-memory guard; the owner's device trail traced the recurring ~6-7-home process kill
-  to resource accumulation outside every page-visible counter, 2026-10-18); volume
-  = the SFX slider; a missing clip is silence, never an error.
+- **voice** — fetch → `decodeAudioData` once per clip (LRU of 12), played as a
+  `BufferSource` on the **SFX bus** (`sfxBus()`), disconnected on `onended`; re-saying a line
+  stops the old source (rewind, not stack); volume/mute ride the shared master. The
+  media-element pool this replaced (2026-10-18) was the killer the owner's device trail
+  finally cornered: ~12-18 distinct `<audio>` loads — one native WebKit media session each,
+  outside every page-visible counter — and the process died at ~6-7 homes, every run.
 
 `volumes.svelte.ts` is the only cross-engine state: the two 0..1 gains the audio frames read.
 
@@ -122,9 +124,9 @@ Settings first, then the save, then the title, then one gesture, then the engine
    `unlockAudio()`: `startAmbience()`, `startMusic()`, `initSfx()`. The same gesture attempts
    `screen.orientation.lock('landscape')` (iOS refuses; the rotate overlay covers it).
 5. **Engines** — each audio engine lazily creates and resumes its own `AudioContext` and
-   drives its own frame; voice plays on demand through the pooled `<audio>` elements. An
-   autosave `$effect` writes `{ bag, record, tricks, furthestK }` to `dos.run.v1` on any
-   change.
+   drives its own frame; voice clips decode once and play on the synth's bus (no media
+   elements). An autosave `$effect` writes `{ bag, record, tricks, furthestK }` to
+   `dos.run.v1` on any change.
 6. **Service worker** — `+layout.svelte` registers `/service-worker.js` client-only, guarded;
    the offline shell and the versioned caches come from `src/service-worker.ts`.
 7. **Black box** — `+layout.svelte` also installs the crashlog (owner request): it reads the

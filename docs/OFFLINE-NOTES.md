@@ -109,7 +109,7 @@ disguised by a live fetch) → reload. Server down confirmed: `curl → 000`.
 The single console line is the optional audio fetch for clips **not yet cached**
 (`/voice/it/greet-strega.mp3`, `/voice/it/treat-strega.mp3`) — a resource-load
 failure, not a JS error, and it never rejects the page (the `<audio>` `error` and
-`play()` rejection are both swallowed by `voice.svelte.ts`).
+`play()` rejection are both swallowed by `voice.ts`: a failed fetch/decode is silence).
 
 **Definitive voice-from-cache isolation** (server down): fetch the cached clip →
 `200/23085 B`; **delete its `VOICE_CACHE` entry → the same fetch `FAILED (TypeError)`**;
@@ -160,7 +160,7 @@ cap/prune was added. The real defect was elsewhere (next section).
 
 **Symptom:** after three `/voice/…` fetches, `dos-cache-V-voice` was **empty**.
 
-**Root cause:** a media element (`<audio>`, `voice.svelte.ts`) requests with a
+**Root cause:** a media element (the voice player's original implementation) requests with a
 `Range` header, so the network answers **`206 Partial Content`** — and the Cache API
 refuses to store a 206. The original voice branch keyed on the element's own request
 and did `cache.put(request, copy)`, which threw and was swallowed by the

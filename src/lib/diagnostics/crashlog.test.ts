@@ -254,29 +254,31 @@ describe('scrubbing', () => {
 		expect(typeof out.trunc).toBe('number');
 	});
 
-	it('keeps a full heartbeat-shaped payload intact (the 15-key shape)', () => {
+	it('keeps a full heartbeat-shaped payload intact (the 16-key shape)', () => {
 		// The regression this pins: a 12-key object cap silently swallowed the
-		// heartbeat's tail (`ph`/`menu`/`fps`) once `sy`/`rb`/`cq` joined —
-		// exactly the fields the device crash hunt reads.
+		// heartbeat's tail once the voice counters joined — exactly the fields
+		// the device crash hunt reads. The live shape is 16 keys today.
 		const out = scrubPayload({
 			el: 1700,
 			aC: 10,
 			aD: 9,
 			aX: 'running',
 			amb: 3,
-			vf: 6,
 			sy: 12,
-			rb: 7,
+			vc: 7,
+			vx: 0,
 			cq: 40,
 			cd: 2,
 			bag: 100,
 			k: 5,
 			ph: 'roam',
 			menu: 0,
-			fps: 60
+			fps: 60,
+			lag: 0
 		});
-		expect(Object.keys(out)).toHaveLength(15);
+		expect(Object.keys(out)).toHaveLength(16);
 		expect(out.fps).toBe(60);
+		expect(out.lag).toBe(0);
 		expect(out.ph).toBe('roam');
 		expect(out.menu).toBe(0);
 	});

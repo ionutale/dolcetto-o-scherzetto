@@ -154,6 +154,6 @@ defaults full at 1). The owner-tuned ceilings below sit **under** those sliders.
 | Music unducked master | **MUSIC_MAX = 0.143** | `src/lib/audio/music.svelte.ts` `MUSIC_MAX` |
 | Music duck (show / scare) | **MUSIC_DUCK_MAX = 0.042** | `music.svelte.ts` `MUSIC_DUCK_MAX` |
 | Music ramp | τ = **0.25** s | `MUSIC_RAMP_S` |
-| Voice one-shots | played at the SFX slider (`volumes().sfx`), clamped 0..1 | `src/lib/audio/voice.svelte.ts` `say` |
+| Voice one-shots | played through the SFX bus (mute latches + slider on the master) | `src/lib/audio/voice.ts` `say` |
 | Master mute | `settings.sound === false` zeroes every layer (polled ~500 ms in the frame engines) | `src/lib/persist/settings.ts`; `ambience.svelte.ts`/`music.svelte.ts`/`sfx.ts` |
 | Decoded street loop | 95.9 s; gap-free via WebAudio decode | `src/lib/audio/music.svelte.ts`; spec §11 |

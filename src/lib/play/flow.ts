@@ -104,7 +104,7 @@ export type PlayCue = (cue: string) => void;
 const NO_CUE: PlayCue = () => {};
 
 /**
- * The voice sink — T28b's `voice.svelte.ts` `say`, or a test recorder. Optional
+ * The voice sink — T28b's `voice.ts` `say`, or a test recorder. Optional
  * everywhere, like {@link PlayCue}: a chain with no voice is a no-op. The
  * `(lang, key, arch?)` shape is exactly `say`'s, so the page passes the real
  * module straight in.

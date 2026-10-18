@@ -1,6 +1,5 @@
 import { afterEach, describe, expect, it } from 'vitest';
 import { NEIGHBOR_ARCHES } from '$lib/art/sprites/neighbors';
-import { setSfx } from './volumes.svelte';
 import {
 	VOICE_ARCH_KEYS,
 	VOICE_IDS,
@@ -8,80 +7,93 @@ import {
 	say,
 	stopVoice,
 	voiceId,
-	voiceInfo,
-	voiceUrl
-} from './voice.svelte';
+	voiceUrl,
+	voiceInfo
+} from './voice';
+import type { VoiceBus } from './voice';
 
 /**
- * T28b — the voice playback seam (`voice.svelte.ts`), tested through a **fake
- * `Audio` element** the module's factory injects. The four contract points the
- * acceptance names: the §3 id mapping (for every key × arch, and the null
- * arms), the SFX-slider volume binding, the missing-`Audio` no-op, and a
- * concurrent say of the same line restarting from 0. The environment is `node`
- * (vite.config `test.environment`), so the *real* entry point (`say` with no
- * factory) is exactly the "no `Audio`" case: silent, never throwing.
+ * Pinning suite for the voice seam (`voice.ts`), post the 2026-10-18
+ * media-session migration: clips are fetched once, decoded once (small LRU)
+ * and played as `AudioBufferSourceNode`s on the SFX synth's bus. The suite
+ * pins:
+ *
+ *   1. the §3 id scheme (unchanged — the copy/voice contract);
+ *   2. the playback contract: decode-once → replay from cache, rewind the old
+ *      source instead of stacking, bounded cache, `onended` disconnect;
+ *   3. total safety: muted, no bus, missing clip, failed decode, hostile
+ *      seams — silence, an error counter at most, never a throw.
  */
 
 /* ------------------------------------------------------------------ */
-/* A fake HTMLAudioElement that records what the module asks of it     */
+/* Fakes: a recording context, a recording source, bytes, the bus      */
 /* ------------------------------------------------------------------ */
 
-class FakeElement {
-	preload = '';
-	src = '';
-	volume = 1;
-	currentTime = 0;
-	playing = false;
-	playCalls = 0;
-	pauseCalls = 0;
-	/** Attribute removals, in order — the iOS unload teardown uses `src`. */
-	removed: string[] = [];
-	loadCalls = 0;
-	listeners: string[] = [];
-	/** Make the next `play()` reject (a blocked autoplay / decode failure). */
-	rejectPlay = false;
+class FakeSource {
+	buffer: unknown = null;
+	started = false;
+	stopped = false;
+	disconnected = false;
+	connectedTo: unknown = null;
+	onended: (() => void) | null = null;
 
-	play(): Promise<void> {
-		this.playCalls++;
-		this.playing = true;
-		return this.rejectPlay ? Promise.reject(new Error('blocked')) : Promise.resolve();
+	start(): void {
+		this.started = true;
 	}
-
-	pause(): void {
-		this.pauseCalls++;
-		this.playing = false;
+	stop(): void {
+		this.stopped = true;
 	}
-
-	removeAttribute(name: string): void {
-		this.removed.push(name);
-		if (name === 'src') this.src = '';
+	disconnect(): void {
+		this.disconnected = true;
 	}
-
-	load(): void {
-		this.loadCalls++;
-	}
-
-	addEventListener(type: string): void {
-		this.listeners.push(type);
+	connect(node: unknown): void {
+		this.connectedTo = node;
 	}
 }
 
-/** A factory that mints fakes and keeps the list, so tests can inspect identity. */
-function fakeFactory(): { made: FakeElement[]; createAudio: () => HTMLAudioElement } {
-	const made: FakeElement[] = [];
+class FakeContext {
+	sources: FakeSource[] = [];
+	decodeCalls = 0;
+	decodeFails = false;
+
+	createBufferSource(): FakeSource {
+		const source = new FakeSource();
+		this.sources.push(source);
+		return source;
+	}
+
+	async decodeAudioData(): Promise<unknown> {
+		this.decodeCalls += 1;
+		if (this.decodeFails) throw new Error('decode');
+		return { clip: true };
+	}
+}
+
+/** A bus factory over the fake context (the master is an opaque tag). */
+function makeBus(ctx: FakeContext, master: unknown = {}): () => VoiceBus {
+	return () => ({ ctx: ctx as unknown as AudioContext, master: master as unknown as AudioNode });
+}
+
+/** A fetchBytes seam that records URLs; `ok=false` answers "missing clip". */
+function bytesOf(ok = true): {
+	fetches: string[];
+	fetchBytes: (url: string) => Promise<ArrayBuffer | null>;
+} {
+	const fetches: string[] = [];
 	return {
-		made,
-		createAudio: () => {
-			const el = new FakeElement();
-			made.push(el);
-			return el as unknown as HTMLAudioElement;
+		fetches,
+		fetchBytes: async (url: string) => {
+			fetches.push(url);
+			return ok ? new ArrayBuffer(8) : null;
 		}
 	};
 }
 
+/** Flush the say → bus → fetch → decode → source chain (all microtasks). */
+const tick = (): Promise<void> => new Promise((resolve) => setTimeout(resolve, 0));
+
 afterEach(() => {
 	stopVoice();
-	setSfx(1); // put the real slider back for the next case
 });
 
 /* ------------------------------------------------------------------ */
@@ -150,179 +162,198 @@ describe('voiceId — the §3 id scheme', () => {
 });
 
 /* ------------------------------------------------------------------ */
-/* Playing — the pool, the volume, the no-ops                          */
+/* Playback — the bus, the cache, the rewind                           */
 /* ------------------------------------------------------------------ */
 
-describe('say — playback through the reused pool', () => {
-	it('plays the mapped clip through one element', async () => {
-		const { made, createAudio } = fakeFactory();
-		initVoice({ createAudio });
+describe('say — playback through the shared SFX bus', () => {
+	it('decodes a clip once and plays it through a source on the bus', async () => {
+		const ctx = new FakeContext();
+		const master = {};
+		const { fetches, fetchBytes } = bytesOf();
+		initVoice({ bus: makeBus(ctx, master), fetchBytes });
 
-		say('en', 'treat', 'wolf');
-		await Promise.resolve();
+		say('it', 'treat', 'wolf');
+		await tick();
 
-		expect(made).toHaveLength(1);
-		expect(made[0].src).toBe('/voice/en/treat-wolf.mp3');
-		expect(made[0].playCalls).toBe(1);
-		expect(made[0].listeners).toContain('error'); // a missing clip is swallowed
+		expect(fetches).toEqual(['/voice/it/treat-wolf.mp3']);
+		expect(ctx.decodeCalls).toBe(1);
+		expect(ctx.sources).toHaveLength(1);
+		expect(ctx.sources[0].started).toBe(true);
+		expect(ctx.sources[0].connectedTo).toBe(master);
+		expect(voiceInfo()).toMatchObject({ plays: 1, clips: 1, errors: 0, cached: 1 });
 	});
 
-	it('binds the clip volume to the SFX slider', () => {
-		const { made, createAudio } = fakeFactory();
-		initVoice({ createAudio });
+	it('replays the same line from the cache, rewinding the old source', async () => {
+		const ctx = new FakeContext();
+		const { fetches, fetchBytes } = bytesOf();
+		initVoice({ bus: makeBus(ctx), fetchBytes });
 
-		setSfx(0.5);
+		say('it', 'seen', 'ghost');
+		await tick();
+		const first = ctx.sources[0];
+
+		say('it', 'seen', 'ghost');
+		await tick();
+
+		expect(fetches).toHaveLength(1); // decoded once
+		expect(ctx.decodeCalls).toBe(1);
+		expect(ctx.sources).toHaveLength(2);
+		expect(first.stopped).toBe(true); // rewind, not stack
+		expect(voiceInfo().plays).toBe(2);
+	});
+
+	it('fetches once when the same line is asked twice at once', async () => {
+		const ctx = new FakeContext();
+		const { fetches, fetchBytes } = bytesOf();
+		initVoice({ bus: makeBus(ctx), fetchBytes });
+
 		say('it', 'shout');
-		expect(made[0].volume).toBe(0.5);
+		say('it', 'shout');
+		await tick();
 
-		setSfx(0);
-		say('it', 'greet', 'nonna'); // a different line → the second element
-		expect(made[1].volume).toBe(0);
+		expect(fetches).toHaveLength(1); // one in-flight fetch, shared
+		expect(ctx.decodeCalls).toBe(1);
+		expect(ctx.sources).toHaveLength(2);
 	});
 
-	it('restarts from 0 when the same line is said again', () => {
-		const { made, createAudio } = fakeFactory();
-		initVoice({ createAudio });
+	it('bounds the cache and re-decodes an evicted clip', async () => {
+		const ctx = new FakeContext();
+		const { fetchBytes } = bytesOf();
+		initVoice({ bus: makeBus(ctx), fetchBytes });
 
-		say('it', 'seen', 'ghost');
-		made[0].currentTime = 4.2; // pretend it has been playing
-
-		say('it', 'seen', 'ghost');
-		expect(made).toHaveLength(1); // one element, reused
-		expect(made[0].currentTime).toBe(0); // rewound, not stacked
-		expect(made[0].playCalls).toBe(2);
-	});
-
-	it('keeps the pool bounded and round-robins past it', () => {
-		const { made, createAudio } = fakeFactory();
-		initVoice({ createAudio });
-
-		// Seven distinct lines: six fill the pool, the seventh rebinds slot 0.
-		const ids = [
+		// Thirteen distinct clips: `shout` + the six keys in two archetypes.
+		const ids: [string, string | undefined][] = [
 			['shout', undefined],
-			['greet', 'ghost'],
-			['treat', 'ghost'],
-			['refuse', 'ghost'],
-			['regift', 'ghost'],
-			['seen', 'ghost'],
-			['scherzo', 'ghost']
-		] as const;
+			...VOICE_ARCH_KEYS.map((key): [string, string] => [key, 'ghost']),
+			...VOICE_ARCH_KEYS.map((key): [string, string] => [key, 'nonna'])
+		];
 		for (const [key, arch] of ids) {
 			if (arch) say('it', key, arch);
 			else say('it', key);
+			await tick();
 		}
 
-		expect(voiceInfo().pooled).toBe(6); // bounded
-		expect(voiceInfo().bound).toHaveLength(6);
-		expect(made).toHaveLength(6); // no seventh element built
-		expect(made[0].src).toBe('/voice/it/scherzo-ghost.mp3'); // slot 0 rebound
-		expect(made[0].playCalls).toBe(2); // once as `shout`, again as the rebound line
-		// The iOS unload teardown: the old clip is released before the rebind.
-		expect(made[0].removed).toEqual(['src']);
-		expect(made[0].loadCalls).toBe(1);
-		// Only the rebound element was unloaded; the other five kept their clip.
-		for (const el of made.slice(1)) {
-			expect(el.removed).toEqual([]);
-			expect(el.loadCalls).toBe(0);
-		}
+		expect(ctx.decodeCalls).toBe(13);
+		expect(voiceInfo().cached).toBeLessThanOrEqual(12);
+
+		say('it', 'shout'); // the oldest fell out of the LRU: decoded again
+		await tick();
+		expect(ctx.decodeCalls).toBe(14);
 	});
 
-	it('counts plays and rebinds for the black box', () => {
-		const { createAudio } = fakeFactory();
-		initVoice({ createAudio });
-
-		expect(voiceInfo().plays).toBe(0);
-		expect(voiceInfo().rebinds).toBe(0);
+	it('disconnects the source when it ends', async () => {
+		const ctx = new FakeContext();
+		const { fetchBytes } = bytesOf();
+		initVoice({ bus: makeBus(ctx), fetchBytes });
 
 		say('it', 'shout');
-		say('it', 'shout'); // same line: a reuse, not a rebind
-		expect(voiceInfo().plays).toBe(2);
-		expect(voiceInfo().rebinds).toBe(0);
+		await tick();
 
-		const rest = [
-			['greet', 'ghost'],
-			['treat', 'ghost'],
-			['refuse', 'ghost'],
-			['regift', 'ghost'],
-			['seen', 'ghost']
-		] as const;
-		for (const [key, arch] of rest) say('it', key, arch);
-		expect(voiceInfo().pooled).toBe(6);
-		expect(voiceInfo().rebinds).toBe(0); // the pool filled, no swap yet
-
-		say('it', 'scherzo', 'ghost'); // the seventh distinct line → first rebind
-		expect(voiceInfo().rebinds).toBe(1);
-		expect(voiceInfo().plays).toBe(8);
+		ctx.sources[0].onended?.();
+		expect(ctx.sources[0].disconnected).toBe(true);
 	});
 
-	it('is a no-op for a pair that is not a voiced line', () => {
-		const { made, createAudio } = fakeFactory();
-		initVoice({ createAudio });
+	it('is a no-op for a pair that is not a voiced line', async () => {
+		const ctx = new FakeContext();
+		const { fetches, fetchBytes } = bytesOf();
+		initVoice({ bus: makeBus(ctx), fetchBytes });
 
 		say('it', 'knock');
 		say('it', 'greet'); // no arch
 		say('it', 'shout', 'ghost'); // shout takes no arch
 		say('it', 'greet', 'dragon'); // unknown arch
+		await tick();
 
-		expect(made).toHaveLength(0);
-		expect(voiceInfo().pooled).toBe(0);
+		expect(fetches).toHaveLength(0);
+		expect(ctx.sources).toHaveLength(0);
 	});
 
-	it('is a no-op while the device is muted', () => {
-		const { made, createAudio } = fakeFactory();
-		initVoice({ createAudio, muted: () => true });
+	it('is a no-op while the device is muted (no fetch at all)', async () => {
+		const ctx = new FakeContext();
+		const { fetches, fetchBytes } = bytesOf();
+		initVoice({ bus: makeBus(ctx), fetchBytes, muted: () => true });
 
 		say('it', 'shout');
-		expect(made).toHaveLength(0);
+		await tick();
+
+		expect(fetches).toHaveLength(0);
+		expect(ctx.sources).toHaveLength(0);
 	});
 
-	it('swallows a rejected play()', () => {
-		const made: FakeElement[] = [];
-		initVoice({
-			createAudio: () => {
-				const el = new FakeElement();
-				el.rejectPlay = true;
-				made.push(el);
-				return el as unknown as HTMLAudioElement;
-			}
-		});
+	it('stays silent when the bus is closed (muted synth, no context)', async () => {
+		const { fetches, fetchBytes } = bytesOf();
+		initVoice({ bus: () => null, fetchBytes });
 
-		expect(() => say('it', 'shout')).not.toThrow();
-		expect(made[0].playCalls).toBe(1);
+		say('it', 'shout');
+		await tick();
+
+		expect(fetches).toHaveLength(0); // no decode work without a bus
+		expect(voiceInfo().plays).toBe(0);
+	});
+
+	it('treats a missing clip as silence without an error', async () => {
+		const ctx = new FakeContext();
+		const { fetchBytes } = bytesOf(false);
+		initVoice({ bus: makeBus(ctx), fetchBytes });
+
+		say('it', 'treat', 'nonna');
+		await tick();
+
+		expect(ctx.sources).toHaveLength(0);
+		expect(voiceInfo()).toMatchObject({ plays: 0, clips: 0, errors: 0 });
+	});
+
+	it('counts a decode failure, stays silent, never throws', async () => {
+		const ctx = new FakeContext();
+		ctx.decodeFails = true;
+		const { fetchBytes } = bytesOf();
+		initVoice({ bus: makeBus(ctx), fetchBytes });
+
+		expect(() => say('it', 'treat', 'nonna')).not.toThrow();
+		await tick();
+
+		expect(ctx.sources).toHaveLength(0);
+		expect(voiceInfo().errors).toBe(1);
 	});
 });
 
-describe('no Audio: every entry point is a silent no-op', () => {
-	it('say() under node builds nothing and never throws', () => {
+/* ------------------------------------------------------------------ */
+/* Hostile seams: everything degrades to silence                       */
+/* ------------------------------------------------------------------ */
+
+describe('hostile seams: every entry point is a silent no-op', () => {
+	it('with the default seams under node, say builds nothing and never throws', async () => {
 		expect(() => say('it', 'shout')).not.toThrow();
 		expect(() => say('en', 'scherzo', 'vlad')).not.toThrow();
-		expect(voiceInfo().pooled).toBe(0);
+		await tick();
+		expect(voiceInfo()).toMatchObject({ plays: 0, clips: 0, cached: 0 });
 	});
 
-	it('swallows a factory that returns null', () => {
-		initVoice({ createAudio: () => null });
-		expect(() => say('it', 'treat', 'nonna')).not.toThrow();
-		expect(voiceInfo().pooled).toBe(0);
-	});
-
-	it('swallows a factory that throws', () => {
+	it('swallows a bus factory that throws', async () => {
 		initVoice({
-			createAudio: () => {
+			bus: () => {
 				throw new Error('no audio');
 			}
 		});
 		expect(() => say('it', 'treat', 'nonna')).not.toThrow();
+		await tick();
+		expect(voiceInfo().errors).toBe(1);
 	});
 
-	it('stopVoice drops the pool and is safe twice', () => {
-		const { createAudio } = fakeFactory();
-		initVoice({ createAudio });
+	it('stopVoice drops sources and cache and is safe twice', async () => {
+		const ctx = new FakeContext();
+		const { fetchBytes } = bytesOf();
+		initVoice({ bus: makeBus(ctx), fetchBytes });
+
 		say('it', 'shout');
-		expect(voiceInfo().pooled).toBe(1);
+		await tick();
+		expect(voiceInfo().plays).toBe(1);
 
 		stopVoice();
-		expect(voiceInfo().pooled).toBe(0);
+		expect(ctx.sources[0].stopped).toBe(true);
+		expect(voiceInfo()).toMatchObject({ plays: 0, clips: 0, cached: 0 });
+
 		expect(() => stopVoice()).not.toThrow();
-		expect(() => say('it', 'shout')).not.toThrow(); // back to the default (no Audio)
+		expect(() => say('it', 'shout')).not.toThrow(); // back to the defaults (no context under node)
 	});
 });

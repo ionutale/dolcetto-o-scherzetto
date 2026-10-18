@@ -208,7 +208,7 @@ There is no on-screen text in the scares or the sky ghosts (`src/lib/play/Scares
 
 ## 8. The voice-clip id scheme and counts
 
-Source: `voice/VOICES.md` §3/§6.2; consumed by `src/lib/audio/voice.svelte.ts`.
+Source: `voice/VOICES.md` §3/§6.2; consumed by `src/lib/audio/voice.ts`.
 
 - **Id scheme (language-neutral):** `shout`, then `<key>-<arch>` for each of the six keys ×
   six archetypes. The language lives in the **directory**:

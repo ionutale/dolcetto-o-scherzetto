@@ -103,8 +103,9 @@ worker.addEventListener('fetch', (event) => {
 	// header). A clip is immutable per id + language, so a cached copy is always
 	// correct, and a miss fetches once and warms VOICE_CACHE for the next visit.
 	//
-	// **Key on the URL, not the element's request.** A media element (`<audio>`
-	// in `voice.svelte.ts`) fetches with a `Range` header, so the network answers
+	// **Key on the URL, not the element's request.** A media element fetched
+	// with a `Range` header (the voice player did, before its 2026-10-18
+	// WebAudio migration), so the network answered
 	// **206 Partial Content** — and the Cache API refuses a 206 (`put` throws
 	// `TypeError: Partial response (status code 206) is unsupported`). Keying on
 	// the element's own request therefore stored *nothing* (the write failed

@@ -98,7 +98,7 @@
 	import { duckAmbience, startAmbience } from '$lib/audio/ambience.svelte';
 	import { duckMusic, startMusic, stopMusic } from '$lib/audio/music.svelte';
 	import { initSfx, playCue, setSfxVolume } from '$lib/audio/sfx';
-	import { say } from '$lib/audio/voice.svelte';
+	import { say } from '$lib/audio/voice';
 	import { volumes } from '$lib/audio/volumes.svelte';
 	import Hud from '$lib/ui/Hud.svelte';
 	import { menuState } from '$lib/ui/menu-state.svelte';

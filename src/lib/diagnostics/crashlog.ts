@@ -80,6 +80,9 @@ const PAYLOAD_CAP = 700;
 /** The default heartbeat cadence. */
 export const HEARTBEAT_MS = 4000;
 
+/** The main-thread lag meter's tick: lateness past this reads as a hang. */
+export const LAG_TICK_MS = 1000;
+
 /** Keys worth a synchronous write the moment they happen (near-death events). */
 const CRITICAL = new Set(['boot', 'end', 'err', 'rej', 'ce', 'vis', 'freeze']);
 
@@ -470,9 +473,9 @@ export function createCrashLog(storage: Storage | null, opts: CrashLogOptions = 
 			for (const e of entries) lines.push(entryLine(e));
 			lines.push(
 				'(legenda: el=nodi DOM · aC/aD=nodi WebAudio creati/chiusi · aX=stato AudioContext · ' +
-					'amb=loop ambience vivi · vf=voci in pool · sy=voce in play · rb=scambi clip voce · ' +
-					'cq=cue SFX suonati · fps=frame/s · cd=caramelle a schermo · bag=caramelle in sacca · ' +
-					'k=isolato · ph=fase · menu=menu aperto)'
+					'amb=loop ambience vivi · sy=voce avviata · vc=clip voce decodificati · vx=errori voce · ' +
+					'lag=blocco main-thread ms · cq=cue SFX suonati · fps=frame/s · cd=caramelle a schermo · ' +
+					'bag=caramelle in sacca · k=isolato · ph=fase · menu=menu aperto)'
 			);
 			return lines.join('\n');
 		}
@@ -516,6 +519,8 @@ let statsProvider: (() => Record<string, unknown>) | null = null;
 let frames = 0;
 let lastBeatAt = 0;
 let lastFrames = 0;
+let lagPeak = 0;
+let lastLagTick = 0;
 
 function perfNow(): number {
 	try {
@@ -538,7 +543,9 @@ function beat(): void {
 		} catch {
 			sampled = { statsErr: 1 };
 		}
-		crashlog.log('hb', { ...sampled, fps: Math.round(framesDelta / secs) });
+		const lag = Math.round(lagPeak);
+		lagPeak = 0;
+		crashlog.log('hb', { ...sampled, fps: Math.round(framesDelta / secs), lag });
 		// Persist immediately. On iOS the process can be killed between beats,
 		// and a kill **while foreground** never fires the critical events
 		// (visibility/pagehide/error) — without this write-through the whole
@@ -588,7 +595,13 @@ export function installCrashLog(opts: InstallOptions = {}): void {
 	}
 	document.addEventListener('visibilitychange', () => {
 		crashlog.log('vis', { v: document.visibilityState });
-		if (document.visibilityState === 'visible') beat();
+		if (document.visibilityState === 'visible') {
+			// Background throttling must never look like a hang: restart the lag
+			// meter's clock (and clear any pending peak) on the way back.
+			lastLagTick = perfNow();
+			lagPeak = 0;
+			beat();
+		}
 	});
 	try {
 		const originalError = console.error.bind(console);
@@ -628,4 +641,22 @@ export function installCrashLog(opts: InstallOptions = {}): void {
 			/* a throttled interval must never throw */
 		}
 	}, opts.heartbeatMs ?? HEARTBEAT_MS);
+
+	// The main-thread lag meter: a 1 s tick measuring its own lateness. A
+	// watchdog-style kill (a multi-second hang) would surface as `lag`
+	// climbing past 1000 ms on the beats right before death — the hang-vs-
+	// memory discriminator the device hunts needed (owner's 2026-10-18 logs).
+	lastLagTick = perfNow();
+	window.setInterval(() => {
+		try {
+			const t = perfNow();
+			if (document.visibilityState === 'visible') {
+				const late = t - lastLagTick - LAG_TICK_MS;
+				if (late > lagPeak) lagPeak = late;
+			}
+			lastLagTick = t;
+		} catch {
+			/* a throttled interval must never throw */
+		}
+	}, LAG_TICK_MS);
 }

@@ -42,7 +42,7 @@
 	import { showBubble } from '$lib/play/bubble.svelte';
 	import { t } from '$lib/i18n/lines';
 	import { lang, worldX } from '$lib/state/game.svelte';
-	import type { SayLine } from '$lib/audio/voice.svelte';
+	import type { SayLine } from '$lib/audio/voice';
 	import {
 		SHOUT_BUBBLE_DX,
 		SHOUT_BUBBLE_MS,
@@ -67,7 +67,7 @@
 		sound?: (cue: string) => void;
 		/**
 		 * Voice hook for the on-screen kid's shout. Deliberately a no-op by
-		 * default — T28b replaces it with `voice.svelte.ts`'s `say`, so the
+		 * default — T28b replaces it with `voice.ts`'s `say`, so the
 		 * distant shout speaks the same `shout` clip the duo does.
 		 */
 		say?: SayLine;

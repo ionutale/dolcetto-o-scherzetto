@@ -357,14 +357,14 @@ describe('the outcome sound cue (T27)', () => {
 });
 
 describe('the voice line (T28b)', () => {
-	/** One recorded `say` call, in the shape `voice.svelte.ts` takes. */
+	/** One recorded `say` call, in the shape `voice.ts` takes. */
 	interface Said {
 		lang: Lang;
 		key: string;
 		arch?: string;
 	}
 
-	/** A recorder standing in for `voice.svelte.ts`'s `say`. */
+	/** A recorder standing in for `voice.ts`'s `say`. */
 	function sayRecorder(): { said: Said[]; say: SayLine } {
 		const said: Said[] = [];
 		return { said, say: (lang, key, arch) => said.push({ lang, key, arch }) };

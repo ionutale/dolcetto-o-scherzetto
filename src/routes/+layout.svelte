@@ -5,7 +5,7 @@
 	import { installCrashLog } from '$lib/diagnostics/crashlog';
 	import { ambienceStats } from '$lib/audio/ambience.svelte';
 	import { sfxStats } from '$lib/audio/sfx';
-	import { voiceInfo } from '$lib/audio/voice.svelte';
+	import { voiceInfo } from '$lib/audio/voice';
 	import { bag, candies, furthest, phase } from '$lib/state/game.svelte';
 	import { menuState } from '$lib/ui/menu-state.svelte';
 
@@ -33,9 +33,9 @@
 					aD: audio.disconnected,
 					aX: audio.ctx,
 					amb: amb.live,
-					vf: voice.pooled,
 					sy: voice.plays,
-					rb: voice.rebinds,
+					vc: voice.clips,
+					vx: voice.errors,
 					cq: audio.cues,
 					cd: candies().length,
 					bag: bag(),

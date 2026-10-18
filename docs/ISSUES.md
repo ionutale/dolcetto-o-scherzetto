@@ -56,7 +56,7 @@
 | T35 | P8 | iPhone device pass | human | T34 | Checklist signed (H2HS, safe areas, audio, feel) |
 | T36 | P8 | Docs finalize (ARCHITECTURE/CONTENT-BIBLE/BALANCE/ART-MUSIC/CREDITS) | free-coder | T25–T35 | Open spec items closed or re-ticketed |
 | T37 | P9 | Street life: firecracker kids · monster strollers · mystery van + candy toss | free-coder | T35 | Owner-approved design; prototype first (kids/strollers/vans → live approval) → integration |
-| T38 | P9 | Black box: crash log to localStorage (banner + viewer + heartbeat) | free-coder | T35 | ✅ shipped + flush-per-beat fix (first device logs: a silent kill had left boot-only) + **voice media teardown** (unload-before-rebind; device trail showed all page counters healthy, kill at ~6-7 homes = voice `<audio>` swaps) + sy/rb/cq heartbeat counters + scrub key-cap fix (12-key cap silently swallowed the beat tail — caught by e2e); **654 unit / 13 e2e suite-green** |
+| T38 | P9 | Black box: crash log to localStorage (banner + viewer + heartbeat) | free-coder | T35 | ✅ per-beat flush · scrub key-cap fix · **crash cornered by device trails: WebKit media sessions — voice now fetches→decodes→plays on the SFX bus (media-element pool retired), plus `sy/vc/vx` + `lag` (hang meter) heartbeat fields**; 654+ unit / 13 e2e suite-green |
 
 ## Parked (v2+ — not now)
 

@@ -259,6 +259,33 @@ function sink(a: AudioContext): AudioNode {
 	}
 }
 
+/** The synth's context + master gate, handed to the voice clips' playback. */
+export interface SfxBus {
+	/** The synth's AudioContext (shared — never a second context). */
+	ctx: AudioContext;
+	/** The master gate: mute latch + SFX slider already applied. */
+	master: AudioNode;
+}
+
+/**
+ * The bus other one-shot voices play through (the voice lines, since the
+ * 2026-10-18 media-session migration): the same lazy context, resume and
+ * master gate a cue gets — no new `AudioContext`, no media element. `null`
+ * while the mute gate is closed or there is no context to have (node, SSR,
+ * a hostile window): the caller stays silent.
+ */
+export function sfxBus(): SfxBus | null {
+	try {
+		if (!gate()) return null;
+		const a = ac();
+		if (!a) return null;
+		resume(a);
+		return { ctx: a, master: sink(a) };
+	} catch {
+		return null;
+	}
+}
+
 /** Re-apply the gate to the live master and the witch element (best-effort). */
 function applyMaster(): void {
 	if (master) {
