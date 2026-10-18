@@ -24,7 +24,9 @@
  * played as `AudioBufferSourceNode`s **on the SFX synth's bus**
  * (`sfxBus()` — one shared context, its mute latch and SFX slider applied):
  * no media sessions, deterministic memory, and the volume/mute behaviour the
- * rest of the audio stack already has.
+ * rest of the audio stack already has. Clips decode at their native 24 kHz
+ * (see `decode.ts`) — half the resident memory of a device-rate decode, which
+ * the iPhone's process budget notices (owner memory pass, 2026-10-18).
  *
  * **Never throws, never spikes.** Every entry point is total: with no context,
  * no clip on disk, a rejected fetch or a failed decode, the call is a silent
@@ -37,6 +39,7 @@
  * short-circuits a muted `say` before any fetch happens.
  */
 import { sfxBus } from '$lib/audio/sfx';
+import { decodeAt, CLIP_DECODE_RATE } from './decode';
 import { settings } from '$lib/persist/settings';
 import { NEIGHBOR_ARCHES } from '$lib/art/sprites/neighbors';
 import type { ArchLineKey } from '$lib/i18n/lines';
@@ -113,6 +116,12 @@ export interface VoiceBus {
 /** The bytes fetcher — `fetch(url)` → `arrayBuffer()`, injectable for tests. */
 type BytesFetcher = (url: string) => Promise<ArrayBuffer | null>;
 
+/** The clip decoder — injectable; defaults to the 24 kHz decode. */
+type ClipDecoder = (bytes: ArrayBuffer) => Promise<AudioBuffer | null>;
+
+/** The default decoder — clips at their native 24 kHz (see `decode.ts`). */
+const defaultDecode: ClipDecoder = (bytes) => decodeAt(bytes, CLIP_DECODE_RATE);
+
 /** `null`-returning on every failure: a missing clip is silence. */
 async function defaultBytes(url: string): Promise<ArrayBuffer | null> {
 	try {
@@ -152,6 +161,7 @@ let errorsTotal = 0;
 let busFactory: () => VoiceBus | null = defaultBus;
 let fetchBytes: BytesFetcher = defaultBytes;
 let isMuted: () => boolean = () => settings.read().sound === false;
+let decodeClip: ClipDecoder = defaultDecode;
 
 /** Drop everything this module holds, counters included (init/stop share it). */
 function reset(): void {
@@ -183,7 +193,7 @@ function touch(url: string, buffer: AudioBuffer): void {
 }
 
 /** The decoded clip for `url` — cache, then one in-flight fetch+decode. */
-function load(a: AudioContext, url: string): Promise<AudioBuffer | null> {
+function load(url: string): Promise<AudioBuffer | null> {
 	const hit = cache.get(url);
 	if (hit) {
 		touch(url, hit);
@@ -195,7 +205,8 @@ function load(a: AudioContext, url: string): Promise<AudioBuffer | null> {
 		try {
 			const bytes = await fetchBytes(url);
 			if (!bytes) return null; // a missing clip is silence, not an error
-			const decoded = await a.decodeAudioData(bytes);
+			const decoded = await decodeClip(bytes);
+			if (!decoded) return null; // an undecodable clip: silence too
 			clipsTotal += 1;
 			touch(url, decoded);
 			return decoded;
@@ -236,7 +247,7 @@ async function play(url: string): Promise<void> {
 	try {
 		const bus = busFactory();
 		if (!bus) return; // muted / no context: silent
-		const buffer = await load(bus.ctx, url);
+		const buffer = await load(url);
 		if (!buffer) return;
 		const now = busFactory();
 		if (!now) return; // muted mid-decode: stay silent
@@ -284,6 +295,8 @@ export interface VoiceOptions {
 	bus?: () => VoiceBus | null;
 	/** The bytes fetcher; defaults to the SW-friendly `fetch`. */
 	fetchBytes?: BytesFetcher;
+	/** The clip decoder; defaults to the native-rate 24 kHz decode. */
+	decode?: ClipDecoder;
 	/** Whether the device is muted; defaults to `settings.sound === false`. */
 	muted?: () => boolean;
 }
@@ -296,6 +309,7 @@ export interface VoiceOptions {
 export function initVoice(opts: VoiceOptions = {}): void {
 	if (opts.bus) busFactory = opts.bus;
 	if (opts.fetchBytes) fetchBytes = opts.fetchBytes;
+	if (opts.decode) decodeClip = opts.decode;
 	if (opts.muted) isMuted = opts.muted;
 	reset();
 }
@@ -305,6 +319,7 @@ export function stopVoice(): void {
 	reset();
 	busFactory = defaultBus;
 	fetchBytes = defaultBytes;
+	decodeClip = defaultDecode;
 	isMuted = () => settings.read().sound === false;
 }
 

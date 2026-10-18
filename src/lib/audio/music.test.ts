@@ -72,6 +72,7 @@ interface Fake {
 	sources: FakeSource[];
 	resumeCalls: number;
 	closeCalls: number;
+	decode: (bytes: ArrayBuffer) => Promise<AudioBuffer | null>;
 }
 
 /** The last value a param was told to ramp *to*. */
@@ -96,7 +97,8 @@ function fakeContext(opts: { decode?: 'ok' | 'fail' } = {}): Fake {
 		gains,
 		sources,
 		resumeCalls: 0,
-		closeCalls: 0
+		closeCalls: 0,
+		decode: null as unknown as Fake['decode']
 	};
 
 	const destination = { connect: () => destination } as unknown as AudioNode;
@@ -136,14 +138,14 @@ function fakeContext(opts: { decode?: 'ok' | 'fail' } = {}): Fake {
 			fake.closeCalls++;
 			ctx.state = 'closed';
 			return Promise.resolve();
-		},
-		decodeAudioData() {
-			if (opts.decode === 'fail') return Promise.reject(new Error('undecodable'));
-			return Promise.resolve({ duration: 95.9 } as unknown as AudioBuffer);
 		}
 	};
 
 	fake.ctx = ctx as unknown as AudioContext;
+	fake.decode = async () => {
+		if (opts.decode === 'fail') throw new Error('undecodable');
+		return { duration: 95.9 } as unknown as AudioBuffer;
+	};
 	return fake;
 }
 
@@ -165,7 +167,7 @@ function notFoundFetch(): typeof fetch {
 
 /** Starts the engine on a fake context, frames/load driven by hand. */
 function start(fake: Fake, fetcher: typeof fetch = okFetch()): void {
-	startMusic({ createContext: () => fake.ctx, fetcher, animate: false });
+	startMusic({ createContext: () => fake.ctx, fetcher, animate: false, decode: fake.decode });
 }
 
 /** Lets the fire-and-forget fetch/decode chain settle. */

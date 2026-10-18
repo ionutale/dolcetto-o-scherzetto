@@ -61,12 +61,6 @@ class FakeContext {
 		this.sources.push(source);
 		return source;
 	}
-
-	async decodeAudioData(): Promise<unknown> {
-		this.decodeCalls += 1;
-		if (this.decodeFails) throw new Error('decode');
-		return { clip: true, duration: 1 };
-	}
 }
 
 /** A bus factory over the fake context (the master is an opaque tag). */
@@ -91,6 +85,15 @@ function bytesOf(ok = true): {
 
 /** Flush the say → bus → fetch → decode → source chain (all microtasks). */
 const tick = (): Promise<void> => new Promise((resolve) => setTimeout(resolve, 0));
+
+/** The injected clip decoder: counts calls, honors the failure flag. */
+function decodeOf(ctx: FakeContext): (bytes: ArrayBuffer) => Promise<AudioBuffer | null> {
+	return async () => {
+		ctx.decodeCalls += 1;
+		if (ctx.decodeFails) throw new Error('decode');
+		return { clip: true, duration: 1 } as unknown as AudioBuffer;
+	};
+}
 
 afterEach(() => {
 	stopVoice();
@@ -170,7 +173,7 @@ describe('say — playback through the shared SFX bus', () => {
 		const ctx = new FakeContext();
 		const master = {};
 		const { fetches, fetchBytes } = bytesOf();
-		initVoice({ bus: makeBus(ctx, master), fetchBytes });
+		initVoice({ bus: makeBus(ctx, master), fetchBytes, decode: decodeOf(ctx) });
 
 		say('it', 'treat', 'wolf');
 		await tick();
@@ -186,7 +189,7 @@ describe('say — playback through the shared SFX bus', () => {
 	it('replays the same line from the cache, rewinding the old source', async () => {
 		const ctx = new FakeContext();
 		const { fetches, fetchBytes } = bytesOf();
-		initVoice({ bus: makeBus(ctx), fetchBytes });
+		initVoice({ bus: makeBus(ctx), fetchBytes, decode: decodeOf(ctx) });
 
 		say('it', 'seen', 'ghost');
 		await tick();
@@ -205,7 +208,7 @@ describe('say — playback through the shared SFX bus', () => {
 	it('fetches once when the same line is asked twice at once', async () => {
 		const ctx = new FakeContext();
 		const { fetches, fetchBytes } = bytesOf();
-		initVoice({ bus: makeBus(ctx), fetchBytes });
+		initVoice({ bus: makeBus(ctx), fetchBytes, decode: decodeOf(ctx) });
 
 		say('it', 'shout');
 		say('it', 'shout');
@@ -219,7 +222,7 @@ describe('say — playback through the shared SFX bus', () => {
 	it('bounds the cache and re-decodes an evicted clip', async () => {
 		const ctx = new FakeContext();
 		const { fetchBytes } = bytesOf();
-		initVoice({ bus: makeBus(ctx), fetchBytes });
+		initVoice({ bus: makeBus(ctx), fetchBytes, decode: decodeOf(ctx) });
 
 		// Thirteen distinct clips: `shout` + the six keys in two archetypes.
 		const ids: [string, string | undefined][] = [
@@ -244,7 +247,7 @@ describe('say — playback through the shared SFX bus', () => {
 	it('disconnects the source when it ends', async () => {
 		const ctx = new FakeContext();
 		const { fetchBytes } = bytesOf();
-		initVoice({ bus: makeBus(ctx), fetchBytes });
+		initVoice({ bus: makeBus(ctx), fetchBytes, decode: decodeOf(ctx) });
 
 		say('it', 'shout');
 		await tick();
@@ -258,7 +261,7 @@ describe('say — playback through the shared SFX bus', () => {
 	it('is a no-op for a pair that is not a voiced line', async () => {
 		const ctx = new FakeContext();
 		const { fetches, fetchBytes } = bytesOf();
-		initVoice({ bus: makeBus(ctx), fetchBytes });
+		initVoice({ bus: makeBus(ctx), fetchBytes, decode: decodeOf(ctx) });
 
 		say('it', 'knock');
 		say('it', 'greet'); // no arch
@@ -273,7 +276,7 @@ describe('say — playback through the shared SFX bus', () => {
 	it('is a no-op while the device is muted (no fetch at all)', async () => {
 		const ctx = new FakeContext();
 		const { fetches, fetchBytes } = bytesOf();
-		initVoice({ bus: makeBus(ctx), fetchBytes, muted: () => true });
+		initVoice({ bus: makeBus(ctx), fetchBytes, decode: decodeOf(ctx), muted: () => true });
 
 		say('it', 'shout');
 		await tick();
@@ -296,7 +299,7 @@ describe('say — playback through the shared SFX bus', () => {
 	it('treats a missing clip as silence without an error', async () => {
 		const ctx = new FakeContext();
 		const { fetchBytes } = bytesOf(false);
-		initVoice({ bus: makeBus(ctx), fetchBytes });
+		initVoice({ bus: makeBus(ctx), fetchBytes, decode: decodeOf(ctx) });
 
 		say('it', 'treat', 'nonna');
 		await tick();
@@ -309,7 +312,7 @@ describe('say — playback through the shared SFX bus', () => {
 		const ctx = new FakeContext();
 		ctx.decodeFails = true;
 		const { fetchBytes } = bytesOf();
-		initVoice({ bus: makeBus(ctx), fetchBytes });
+		initVoice({ bus: makeBus(ctx), fetchBytes, decode: decodeOf(ctx) });
 
 		expect(() => say('it', 'treat', 'nonna')).not.toThrow();
 		await tick();
@@ -345,7 +348,7 @@ describe('hostile seams: every entry point is a silent no-op', () => {
 	it('stopVoice drops sources and cache and is safe twice', async () => {
 		const ctx = new FakeContext();
 		const { fetchBytes } = bytesOf();
-		initVoice({ bus: makeBus(ctx), fetchBytes });
+		initVoice({ bus: makeBus(ctx), fetchBytes, decode: decodeOf(ctx) });
 
 		say('it', 'shout');
 		await tick();

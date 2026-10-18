@@ -94,10 +94,11 @@ its own rAF frame; there is no shared node graph.
   prefers the owner `<audio>` file.
 - **ambience** — `master → destination`; a looped noise source → lowpass → bed gain → master,
   with two slow LFOs drifting the cutoff and gain; sprinkles and an adopted studio loop land
-  on the same master. Duck −6 dB on `phase === 'trick'` and on a manual `duckAmbience`.
+  on the same master (the adopted loop decodes **at 24 kHz** — `decode.ts`). Duck −6 dB on `phase === 'trick'` and on a manual `duckAmbience`.
 - **music** — one master `GainNode`; one decoded buffer source looped into it (`loop = true`),
-  gap-free at the wrap.
-- **voice** — fetch → `decodeAudioData` once per clip (LRU of 12), played as a
+  gap-free at the wrap; the loop decodes **at 32 kHz** (the owner's memory/ear call,
+  2026-10-18 — see `decode.ts`), trimming ~10–12 MB off the resident buffer.
+- **voice** — fetch → decode once per clip (LRU of 12, **at 24 kHz** — `decode.ts`), played as a
   `BufferSource` on the **SFX bus** (`sfxBus()`), disconnected on `onended`; re-saying a line
   stops the old source (rewind, not stack); volume/mute ride the shared master. The
   media-element pool this replaced (2026-10-18) was the killer the owner's device trail
@@ -181,6 +182,7 @@ a backer is a guess, so none of these are.
 | All client assets (pre-gzip) | ≤ 600 kB | **552.6 kB** (JS 270.2 · CSS 81.8 · fonts 191.5 · SW 9.1) | `pnpm build` |
 | **DOM nodes during play** | **≤ 2000** | **1567 – 1748** (boot 1679 · end 1666) | `tools/perf-probe.mjs` |
 | **Audio live-node gap** | **≤ 60** (alarm) | boot **12** · steady **≈ 11** after the meter fix — the old "12→46 drift" was non-node `createBuffer` counts (2026-10-18) | `tools/perf-probe.mjs` |
+| **Page memory (Mac Safari)** | iOS budget unknown — watch | idle **~225 MB** · play peak **~355–400 MB** (owner reading, 2026-10-18) — the suspected iOS kill axis; front collects within ~10–15 s of idling | Activity Monitor (owner) |
 | Ambience loop replacement | one live loop | **17 started / 15 stopped** → 1 ambience + 1 music live | `tools/perf-probe.mjs` |
 | Heap after a 30-min session | ≤ 50 MB · no monotonic rise | **14.5 → 21.2 MB** (peak 40.0) | `tools/perf-probe.mjs` |
 | Sim session (long run) | ≥ 30 sim-min · 0 page errors | **34.4 sim-min · 0 errors** (52 homes, 258.9 s wall) | `tools/perf-probe.mjs` |

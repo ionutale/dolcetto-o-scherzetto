@@ -40,6 +40,7 @@ import type { Theme } from '$lib/sim/progression';
 import { furthest, phase } from '$lib/state/game.svelte';
 import { settings } from '$lib/persist/settings';
 import { volumes } from '$lib/audio/volumes.svelte';
+import { decodeAt, CLIP_DECODE_RATE } from './decode';
 import type { Phase } from '$lib/sim/loop';
 
 /* ------------------------------------------------------------------ */
@@ -496,12 +497,24 @@ function playSprinkle(id: SprinkleId): void {
 	}
 }
 
-/** Decodes a real studio loop and cross-fades the synth wind out (T26). */
+/** How adopted studio loops decode — 24 kHz by default (see `decode.ts`). */
+type BedDecoder = (bytes: ArrayBuffer) => Promise<AudioBuffer | null>;
+
+/** The default bed decoder — native-rate 24 kHz, half a device-rate decode. */
+const defaultDecode: BedDecoder = (bytes) => decodeAt(bytes, CLIP_DECODE_RATE);
+
+/** The live seam — re-bound by `startAmbience` (the tests inject fakes). */
+let decodeBytes: BedDecoder = defaultDecode;
+
+/**
+ * Decodes a real studio loop and cross-fades the synth wind out (T26).
+ */
 async function adoptLoop(theme: Theme, bytes: ArrayBuffer): Promise<void> {
 	const g = graph;
 	if (!g || latchedTheme !== theme) return;
 	try {
-		const decoded = await g.ctx.decodeAudioData(bytes);
+		const decoded = await decodeBytes(bytes);
+		if (!decoded) return;
 		if (!graph || latchedTheme !== theme) return;
 		const src = g.ctx.createBufferSource();
 		src.buffer = decoded;
@@ -609,6 +622,8 @@ export interface StartAmbienceOptions {
 	createContext?: () => AudioContext | null;
 	/** The clock seed for the first sprinkle due time (tests pass `0`). */
 	now?: number;
+	/** The studio-loop decoder; defaults to the native-rate 24 kHz decode. */
+	decode?: BedDecoder;
 	/** Start the internal rAF loop (default `true`; tests drive frames by hand). */
 	animate?: boolean;
 }
@@ -628,6 +643,7 @@ export function startAmbience(opts: StartAmbienceOptions = {}): void {
 		graph = buildGraph(ctx);
 		running = true;
 		manualDuck = false;
+		if (opts.decode) decodeBytes = opts.decode;
 		latchedTheme = null;
 		soundCache = { at: Number.NEGATIVE_INFINITY, on: true };
 		const now = opts.now ?? nowMs();
@@ -658,6 +674,7 @@ export function stopAmbience(): void {
 	manualDuck = false;
 	latchedDucked = false;
 	latchedMaster = 0;
+	decodeBytes = defaultDecode;
 	if (loopSrc) {
 		try {
 			loopSrc.stop();

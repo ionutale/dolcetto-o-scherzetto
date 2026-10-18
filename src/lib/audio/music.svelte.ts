@@ -7,7 +7,8 @@
  * `new Audio(...)` element ~838, `musicStart()` ~861, `musicFrame(ducked)`
  * ~866) with one deliberate production change: the prototype streamed an
  * `<audio>` element and lerped `music.volume` toward its target by hand; here
- * the very same track is fetched, `decodeAudioData`d once and looped on an
+ * the very same track is fetched, `decodeAudioData`d once **at 32 kHz**
+ * (`decode.ts` — the owner's memory/ear call, 2026-10-18) and looped on an
  * `AudioBufferSourceNode`, and the target rides a single `GainNode` through
  * `setTargetAtTime`. Decoding is what makes the wrap gap-free on every device
  * (T25: "loops seamless (no click at wrap)") instead of trusting the media
@@ -39,6 +40,7 @@
 import { phase } from '$lib/state/game.svelte';
 import { settings } from '$lib/persist/settings';
 import { volumes } from '$lib/audio/volumes.svelte';
+import { decodeAt, MUSIC_DECODE_RATE } from './decode';
 import type { Phase } from '$lib/sim/loop';
 
 /* ------------------------------------------------------------------ */
@@ -63,6 +65,12 @@ export const MUSIC_RAMP_S = 0.25;
 
 /** How often the frame re-reads the `sound` master toggle from settings. */
 const SOUND_POLL_MS = 500;
+
+/** How the loop decodes — `decodeAt(…, MUSIC_DECODE_RATE)` unless injected. */
+type LoopDecoder = (bytes: ArrayBuffer) => Promise<AudioBuffer | null>;
+
+/** The default decode — 32 kHz, the owner's memory/ear call (see `decode.ts`). */
+const defaultDecode: LoopDecoder = (bytes) => decodeAt(bytes, MUSIC_DECODE_RATE);
 
 /* ------------------------------------------------------------------ */
 /* Pure logic: the numbers the tests pin                              */
@@ -196,14 +204,15 @@ async function fetchLoop(fetcher: typeof fetch): Promise<ArrayBuffer | null> {
  * drops the result. A corrupt or unsupported buffer simply keeps the engine
  * silent: nothing to play, nothing to throw.
  */
-async function loadLoop(fetcher: typeof fetch): Promise<void> {
+async function loadLoop(fetcher: typeof fetch, decode: LoopDecoder): Promise<void> {
 	const g = graph;
 	if (!g) return;
 	const gen = generation;
 	const bytes = await fetchLoop(fetcher);
 	if (!bytes || graph !== g || generation !== gen) return;
 	try {
-		const decoded = await g.ctx.decodeAudioData(bytes);
+		const decoded = await decode(bytes);
+		if (!decoded) return;
 		if (graph !== g || generation !== gen) return;
 		const source = g.ctx.createBufferSource();
 		source.buffer = decoded;
@@ -269,6 +278,8 @@ export interface StartMusicOptions {
 	createContext?: () => AudioContext | null;
 	/** The bytes fetcher; defaults to the global `fetch` (or none). */
 	fetcher?: typeof fetch;
+	/** The bytes decoder; defaults to the 32 kHz decode (see `decode.ts`). */
+	decode?: LoopDecoder;
 	/** Start the internal rAF loop (default `true`; tests drive frames by hand). */
 	animate?: boolean;
 }
@@ -297,7 +308,7 @@ export function startMusic(opts: StartMusicOptions = {}): void {
 		if (typeof ctx.resume === 'function') void ctx.resume().catch(() => {});
 		musicFrame(nowMs());
 		const fetcher = opts.fetcher ?? (typeof fetch === 'function' ? fetch : undefined);
-		if (fetcher) void loadLoop(fetcher);
+		if (fetcher) void loadLoop(fetcher, opts.decode ?? defaultDecode);
 		if (opts.animate !== false) {
 			rafAvailable = frameClock();
 			raf = rafAvailable ? rafAvailable(tick) : null;
