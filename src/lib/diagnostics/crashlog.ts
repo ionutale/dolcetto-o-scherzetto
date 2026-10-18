@@ -474,7 +474,8 @@ export function createCrashLog(storage: Storage | null, opts: CrashLogOptions = 
 			lines.push(
 				'(legenda: el=nodi DOM · aC/aD=nodi WebAudio creati/chiusi · aX=stato AudioContext · ' +
 					'amb=loop ambience vivi · sy=voce avviata · vc=clip voce decodificati · vx=errori voce · ' +
-					'lag=blocco main-thread ms · cq=cue SFX suonati · fps=frame/s · cd=caramelle a schermo · ' +
+					'vs=fonti voce vive · anim=animazioni attive · lag=blocco main-thread ms · ' +
+					'cq=cue SFX suonati · fps=frame/s · cd=caramelle a schermo · ' +
 					'bag=caramelle in sacca · k=isolato · ph=fase · menu=menu aperto)'
 			);
 			return lines.join('\n');

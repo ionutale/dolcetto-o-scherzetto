@@ -248,9 +248,11 @@ describe('say — playback through the shared SFX bus', () => {
 
 		say('it', 'shout');
 		await tick();
+		expect(voiceInfo().live).toBe(1);
 
 		ctx.sources[0].onended?.();
 		expect(ctx.sources[0].disconnected).toBe(true);
+		expect(voiceInfo().live).toBe(0);
 	});
 
 	it('is a no-op for a pair that is not a voiced line', async () => {
@@ -351,7 +353,7 @@ describe('hostile seams: every entry point is a silent no-op', () => {
 
 		stopVoice();
 		expect(ctx.sources[0].stopped).toBe(true);
-		expect(voiceInfo()).toMatchObject({ plays: 0, clips: 0, cached: 0 });
+		expect(voiceInfo()).toMatchObject({ plays: 0, clips: 0, cached: 0, live: 0 });
 
 		expect(() => stopVoice()).not.toThrow();
 		expect(() => say('it', 'shout')).not.toThrow(); // back to the defaults (no context under node)

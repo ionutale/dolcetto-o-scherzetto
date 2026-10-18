@@ -36,6 +36,8 @@
 					sy: voice.plays,
 					vc: voice.clips,
 					vx: voice.errors,
+					vs: voice.live,
+					anim: typeof document.getAnimations === 'function' ? document.getAnimations().length : -1,
 					cq: audio.cues,
 					cd: candies().length,
 					bag: bag(),

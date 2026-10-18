@@ -312,6 +312,8 @@ export interface VoiceInfo {
 	errors: number;
 	/** Clips resident in the cache right now. */
 	cached: number;
+	/** Sources still connected to the bus right now (the black box's `vs`). */
+	live: number;
 }
 
 /** The player's current snapshot (never throws). */
@@ -320,6 +322,7 @@ export function voiceInfo(): VoiceInfo {
 		plays: playsTotal,
 		clips: clipsTotal,
 		errors: errorsTotal,
-		cached: cache.size
+		cached: cache.size,
+		live: active.size
 	};
 }
