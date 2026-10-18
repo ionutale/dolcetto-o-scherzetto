@@ -111,7 +111,7 @@
 		}
 	}
 
-	/** One breath: hide → one committed frame → restore. */
+	/** One breath: hide → one *painted* frame → restore. */
 	function breathe(): void {
 		const el = homesEl;
 		if (!el || breathToken !== null) return;
@@ -130,8 +130,15 @@
 		};
 		try {
 			el.style.display = 'none';
-			requestAnimationFrame(done);
-			setTimeout(done, 250);
+			// Make the hide a real layout change now…
+			void el.offsetHeight;
+			// …and restore only on the *second* frame callback. A same-frame (or
+			// one-rAF) restore runs before style/paint and lets the renderer
+			// coalesce the hide away entirely — the 2026-10-18 device run: `br`
+			// fired on cadence and nothing was released. The hidden subtree must
+			// survive one painted frame for the layer (and its tiles) to drop.
+			requestAnimationFrame(() => requestAnimationFrame(done));
+			setTimeout(done, 400);
 		} catch {
 			breathToken = null;
 		}
