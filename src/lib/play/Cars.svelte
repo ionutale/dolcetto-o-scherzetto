@@ -42,6 +42,7 @@
 	import { onMount } from 'svelte';
 	import { car, passerCar } from '$lib/art/sprites';
 	import { SPACING } from '$lib/sim/loop';
+	import { createTreadmill, recycleLayer } from '$lib/art/scene/treadmill';
 	import {
 		PASSER_FIRST_MS,
 		PASSER_FROM_X,
@@ -146,6 +147,28 @@
 			if (rafHandle !== null) cancelAnimationFrame(rafHandle);
 		};
 	});
+
+	/* ------------------------------------------------------------------ */
+	/* the walk treadmill (see treadmill.ts for the why)                   */
+	/* ------------------------------------------------------------------ */
+
+	/** The recycling clock — one track rebuild per TREADMILL_PX walked. */
+	const treadmill = createTreadmill();
+	/** The parked cars' scrolling track — the layer the treadmill recycles. */
+	let trackEl: HTMLElement | undefined = $state();
+	/** Recycles of this layer — mirrored onto `data-recycles` for the tests. */
+	let cycles = $state(0);
+
+	$effect(() => {
+		if (!treadmill.tick(worldX)) return;
+		const el = trackEl;
+		if (!el) return;
+		// Deferred out of the effect flush — see `Street`'s note.
+		requestAnimationFrame(() => {
+			recycleLayer(el);
+			cycles += 1;
+		});
+	});
 </script>
 
 <div class="cars" aria-hidden="true" data-cars={slots.length} data-passing={passing}>
@@ -159,7 +182,12 @@
 
 	<!-- The parked cars: the track carries the bounded window shift, cars park
 	     relative to the window base. -->
-	<div class="track" style="transform: translateX({shift}px)">
+	<div
+		class="track"
+		bind:this={trackEl}
+		data-recycles={cycles}
+		style="transform: translateX({shift}px)"
+	>
 		{#each slots as slot (slot.k)}
 			<div class="car" style="transform: translateX({slot.k * SPACING + slot.off - baseX}px)">
 				<!-- trusted static SVG from the validated sprite pack -->

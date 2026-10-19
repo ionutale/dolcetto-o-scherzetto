@@ -47,6 +47,7 @@
 	 * token, the same convention T08 used for the sky.
 	 */
 	import HouseSlot from './HouseSlot.svelte';
+	import { createTreadmill, recycleLayer } from './treadmill';
 
 	interface Props {
 		/** World scroll position in logical px — the sim's only street input. */
@@ -90,6 +91,30 @@
 	 */
 	const seams = $derived(-worldX % 86);
 	const dashes = $derived(-worldX % 60);
+
+	/* ------------------------------------------------------------------ */
+	/* the walk treadmill (see treadmill.ts for the why)                   */
+	/* ------------------------------------------------------------------ */
+
+	/** The recycling clock — one layer rebuild per TREADMILL_PX walked. */
+	const treadmill = createTreadmill();
+	/** The scrolling half's element — the layer the treadmill recycles. */
+	let homesEl: HTMLElement | undefined = $state();
+	/** Recycles of this layer — mirrored onto `data-recycles` for the tests. */
+	let cycles = $state(0);
+
+	$effect(() => {
+		if (!treadmill.tick(worldX)) return;
+		const el = homesEl;
+		if (!el) return;
+		// Defer out of the effect flush: the recycle mutates the DOM tree
+		// Svelte is updating this frame. A frame later it is an ordinary DOM
+		// write, and the painted outcome is identical either way.
+		requestAnimationFrame(() => {
+			recycleLayer(el);
+			cycles += 1;
+		});
+	});
 </script>
 
 <div
@@ -101,7 +126,12 @@
 	<div class="sidewalk"></div>
 	<div class="road"></div>
 
-	<div class="homes" style="transform: translateX({shift}px)">
+	<div
+		class="homes"
+		bind:this={homesEl}
+		data-recycles={cycles}
+		style="transform: translateX({shift}px)"
+	>
 		{#each slots as k (k)}
 			<HouseSlot
 				{k}

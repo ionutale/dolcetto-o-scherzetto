@@ -436,7 +436,7 @@ export function stamp(at: number): string {
 
 /** The report's legend, shared by `format` and `formatAll`. */
 const LEGEND =
-	'(legenda: el=nodi DOM · svg=nodi SVG · ' +
+	'(legenda: el=nodi DOM · svg=nodi SVG · rc=ricicli scroll · ' +
 	'aC/aD=nodi WebAudio creati/chiusi · aX=stato AudioContext · ' +
 	'amb=loop ambience vivi · sy=voce avviata · vc=clip voce decodificati · vx=errori voce · ' +
 	'vs=fonti voce vive · anim=animazioni attive · js=heap JS MB (dove leggibile) · ' +

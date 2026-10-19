@@ -76,6 +76,7 @@
 		themeAt
 	} from './theme-model';
 	import type { DecorSlot, Rng } from './theme-model';
+	import { createTreadmill, recycleLayer } from './treadmill';
 
 	interface Props {
 		/** World scroll position in logical px — the window's only input (as `Street`). */
@@ -221,6 +222,28 @@
 		}
 		mounted = true;
 	});
+
+	/* ------------------------------------------------------------------ */
+	/* the walk treadmill (see treadmill.ts for the why)                   */
+	/* ------------------------------------------------------------------ */
+
+	/** The recycling clock — one tracks rebuild per TREADMILL_PX walked. */
+	const treadmill = createTreadmill();
+	/** The recyclable box around the two scrolling tracks. */
+	let tracksEl: HTMLElement | undefined = $state();
+	/** Recycles of this layer — mirrored onto `data-recycles` for the tests. */
+	let cycles = $state(0);
+
+	$effect(() => {
+		if (!treadmill.tick(worldX)) return;
+		const el = tracksEl;
+		if (!el) return;
+		// Deferred out of the effect flush — see `Street`'s note.
+		requestAnimationFrame(() => {
+			recycleLayer(el);
+			cycles += 1;
+		});
+	});
 </script>
 
 <div
@@ -232,20 +255,24 @@
 	data-sky={skySlots.length}
 	data-shooting={shooting}
 >
-	<!-- Sky half: no `z-index`, so DOM order keeps it behind the street's rooflines
+	<!-- The scrolling tracks wrapped in one recyclable box (the walk treadmill;
+	     `display: contents` — it never generates a box of its own). -->
+	<div class="tracks" bind:this={tracksEl} data-recycles={cycles}>
+		<!-- Sky half: no `z-index`, so DOM order keeps it behind the street's rooflines
 	     (the mist, the wisps, the shimmer and the star crossing). -->
-	<div class="track sky" style="transform: translateX({shift}px)">
-		{#each skySlots as slot (theme + ':' + slot.k + ':' + slot.i)}
-			<i class="decor d-{slot.kind}" style={styleOf(slot)}></i>
-		{/each}
-	</div>
+		<div class="track sky" style="transform: translateX({shift}px)">
+			{#each skySlots as slot (theme + ':' + slot.k + ':' + slot.i)}
+				<i class="decor d-{slot.kind}" style={styleOf(slot)}></i>
+			{/each}
+		</div>
 
-	<!-- Ground half: `z-index: 3` lifts it over the street's bands and yard dressing
+		<!-- Ground half: `z-index: 3` lifts it over the street's bands and yard dressing
 	     (the `Ghosts` cameo precedent) and keeps it under the kids' `z-index: 5`. -->
-	<div class="track ground" style="transform: translateX({shift}px)">
-		{#each groundSlots as slot (theme + ':' + slot.k + ':' + slot.i)}
-			<i class="decor d-{slot.kind}" style={styleOf(slot)}></i>
-		{/each}
+		<div class="track ground" style="transform: translateX({shift}px)">
+			{#each groundSlots as slot (theme + ':' + slot.k + ':' + slot.i)}
+				<i class="decor d-{slot.kind}" style={styleOf(slot)}></i>
+			{/each}
+		</div>
 	</div>
 
 	<!-- The rare shooting star: screen-space (a crossing, never riding the scroll). -->
@@ -264,6 +291,13 @@
 		inset: 0;
 		pointer-events: none;
 		overflow: hidden;
+	}
+
+	/* The treadmill's recyclable box: `display: contents` keeps the two tracks'
+	 * containing block and stacking exactly as they were (no box is generated;
+	 * the absolutely-positioned tracks keep resolving against `.themes`). */
+	.tracks {
+		display: contents;
 	}
 
 	/* One scrolling container per tier — carries the window's bounded shift once

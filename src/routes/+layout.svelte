@@ -8,6 +8,7 @@
 	import { voiceInfo } from '$lib/audio/voice';
 	import { bag, candies, furthest, phase } from '$lib/state/game.svelte';
 	import { menuState } from '$lib/ui/menu-state.svelte';
+	import { recycleCount } from '$lib/art/scene/treadmill';
 
 	let { children }: LayoutProps = $props();
 
@@ -42,6 +43,7 @@
 				return {
 					el: document.getElementsByTagName('*').length,
 					svg: document.getElementsByTagName('svg').length,
+					rc: recycleCount(),
 					aC: audio.created,
 					aD: audio.disconnected,
 					aX: audio.ctx,
