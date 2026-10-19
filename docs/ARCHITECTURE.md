@@ -49,7 +49,7 @@ above it).
 |---|---|---|---|
 | **Sim** (pure) | `src/lib/sim/loop.ts` · `economy.ts` · `progression.ts` | the pure reducer/tick (`initial`/`reduce`/`tick`), the trick catalogue, the price/burst/roll helpers, the neighborhood curves | touching the DOM, timers or storage |
 | **State** | `src/lib/state/game.svelte.ts` | the one reactive runes store, the read seams (`worldX`/`phase`/`candies`/`bag`/`furthest`…), the clamped rAF loop, and the `bootState()` that seeds the sim from the save | reimplementing sim rules |
-| **Scene** | `src/lib/art/scene/`, `src/lib/art/sprites/` | sky, parallax, the **recycling window** of ≤ 20 homes, yards, decorations, the sprite-motion CSS, **bounded-paint scrolling** (C1: every scrolling track rebased to the live window) and **the walk treadmill** (C1.5: each scrolling layer detaches + re-attaches in place every ~1500 px walked so the retained scroll raster is relinquished mid-walk; `rc`) | deciding outcomes |
+| **Scene** | `src/lib/art/canvas/`, `src/lib/art/scene/`, `src/lib/art/sprites/` | sky + the three static bands (DOM), the whole scrolling world as **one canvas** (`WorldCanvas`, T4 2026-10-19 — a single backing store redrawn in place; art ported 1:1 from the validated DOM components), the **manual flip** (T4b: landscape/portrait by button — no accelerometer, no rotate prompt), the sprite-motion CSS | deciding outcomes |
 | **Play** | `src/lib/play/` | the interaction widgets — knock chain, bubbles, candy layer, fan, theatre, scares, cars, NPCs — plus their pure `*-model.ts` maths | owning sim math |
 | **Audio** | `src/lib/audio/` | **three independent engines**, each with its own lazy `AudioContext` and self-driven rAF frame: `sfx.ts` (26-cue WebAudio synth), `ambience.svelte.ts` (per-theme beds + sprinkles + duck), `music.svelte.ts` (the decoded street loop); `voice.ts` decodes clips once and plays them on the synth's bus; `volumes.svelte.ts` is the shared gain seam | throwing on a hostile `AudioContext` |
 | **Persist** | `src/lib/persist/persist.ts` · `settings.ts` | defensive `localStorage`: the run slot `dos.run.v1` and the one settings envelope `dos.settings.v1` | throwing (`read`/`write` degrade to no-save/defaults) |
@@ -123,8 +123,8 @@ Settings first, then the save, then the title, then one gesture, then the engine
 3. **Title** — the scene mounts and the sim loop starts (`start()` in `+page.svelte`
    `onMount`); `TitleScreen.svelte` sits over it with `Gioca` / `Impostazioni`.
 4. **Gesture unlock** — the first `pointerdown` (the `Gioca` tap included) runs
-   `unlockAudio()`: `startAmbience()`, `startMusic()`, `initSfx()`. The same gesture attempts
-   `screen.orientation.lock('landscape')` (iOS refuses; the rotate overlay covers it).
+   `unlockAudio()`: `startAmbience()`, `startMusic()`, `initSfx()`. No orientation is
+   requested from the platform: the presentation flip is manual (T4b, `flip.svelte.ts`).
 5. **Engines** — each audio engine lazily creates and resumes its own `AudioContext` and
    drives its own frame; voice clips decode once and play on the synth's bus (no media
    elements). An autosave `$effect` writes `{ bag, record, tricks, furthestK }` to
@@ -141,8 +141,8 @@ Settings first, then the save, then the title, then one gesture, then the engine
 
 | Layer | Command | Backer / shape |
 |---|---|---|
-| **Unit** | `pnpm test:unit` | Vitest — **651 tests / 23 files** (0.7 s), covering the pure sim, the play/scene models, the audio modules, the black box and the store. Count backed by the Budgets table below. |
-| **e2e** | `pnpm test:e2e` | Playwright — **13 tests in 7 specs** (`tests/e2e/*.spec.ts`), run against the **built** app at 852×393: audio unlock, the full loop + reduced motion, Bottega, settings/language, the reopenable menu, save→reload, and the black box (crash banner + viewer, error capture, unassisted heartbeat flush, clean close, reachability). See `tests/README.md`. |
+| **Unit** | `pnpm test:unit` | Vitest — **746 tests / 29 files**, covering the pure sim, the play/scene models, the audio modules, the black box, the store and the canvas layers. Count backed by the Budgets table below. |
+| **e2e** | `pnpm test:e2e` | Playwright — **16 tests in 9 specs** (`tests/e2e/*.spec.ts`), run against the **built** app at 852×393: audio unlock, the full loop + reduced motion, Bottega, settings/language, the reopenable menu, save→reload, the canvas-world smoke, the flip, and the black box (crash banner + viewer, error capture, unassisted heartbeat flush, clean close, reachability). See `tests/README.md`. |
 | **Perf / memory** | `node tools/perf-probe.mjs --launch` | the CDP harness behind the Budgets table: audio-node gap, loop replacement, DOM count, heap, page errors. Re-measure recipe in *Budgets → Re-measuring*. |
 | **Voice gate** | `pnpm check:voice` | `tools/check-voice.mjs` — a non-empty clip + a manifest row per id, both languages. |
 
@@ -153,13 +153,16 @@ carry the full context/options/consequences).
 
 - **[ADR-0001](adr/0001-dom-svg-renderer-no-canvas.md) — DOM/SVG renderer, no canvas layer.** Everything is DOM + inline SVG animated
   by CSS (transform/opacity), with a recycling window of ~20 houses and pooled sprites.
+  *(The scrolling world moved to a single canvas in T4, 2026-10-19 — see the Scene row:
+  seven device logs proved DOM scroll retention is unreleasable on iOS.)*
 - **[ADR-0002](adr/0002-local-ai-asset-pipeline.md) — Local-AI asset pipeline, build-time only.** Music / ambience / SFX / voice /
   stills are generated with the maintainer's own studios and committed; nothing renders at
   runtime.
 - **[ADR-0003](adr/0003-random-candy-values-one-shot-homes.md) — Random candy values, one-shot homes, capped re-gift.** Values are a uniform
   1–10 rolled at drop (types are cosmetic); a home is one-shot and re-gifts at most once ever.
 - **[ADR-0004](adr/0004-landscape-iphone16-fluid-stage.md) — Landscape-first, iPhone 16 reference stage.** The design reference is
-  852×393 pt, height-scaled with fluid width; portrait shows a rotate overlay.
+  852×393 pt, height-scaled with fluid width; the presentation flip is manual (T4b) — no
+  rotate prompt, no accelerometer dependency.
 - **[ADR-0005](adr/0005-bilingual-voice-it-en.md) — Bilingual voice, Italian default + English toggle.** `voice/lines.ts` is the
   single copy source; both languages are rendered and shipped before a line ships.
 - **[ADR-0006](adr/0006-local-only-save-no-backend.md) — Local-only save, no backend.** One `localStorage` slot, autosaved, defensive,

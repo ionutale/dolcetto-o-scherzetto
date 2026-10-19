@@ -199,9 +199,11 @@ both languages; spoken names are `Usa uno scherzo` / `Use a trick`; the fan grou
 **Walk controls** (`src/lib/play/WalkControls.svelte`): `Cammina a sinistra` / `Cammina a
 destra` (IT), `Walk left` / `Walk right` (EN).
 
-**Rotate overlay** (`src/lib/ui/RotateOverlay.svelte`): both languages show at once —
-`Gira il telefono` and `Turn the phone to play`. The knock pill's spoken name is the `knock`
-label without the glyph (`Bussa` / `Knock`).
+**Flip button** (`src/lib/ui/FlipButton.svelte`, T4b): `Gira il gioco` / `Turn the game` —
+the manual screen flip (there is no rotate prompt any more; the accelerometer decides
+nothing). The Settings card labels the same control `Schermo` / `Screen` with
+`Orizzontale`/`Verticale` · `Landscape`/`Portrait`. The knock pill's spoken name is the
+`knock` label without the glyph (`Bussa` / `Knock`).
 
 There is no on-screen text in the scares or the sky ghosts (`src/lib/play/Scares.svelte`,
 `Ghosts.svelte`) — those beats are visual.

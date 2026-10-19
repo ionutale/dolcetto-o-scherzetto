@@ -77,13 +77,12 @@
 	 */
 	import { onDestroy, onMount, untrack } from 'svelte';
 	import MotionStyles from '$lib/art/sprites/MotionStyles.svelte';
-	import ParallaxLayers from '$lib/art/scene/ParallaxLayers.svelte';
 	import Sky from '$lib/art/scene/Sky.svelte';
 	import Stage from '$lib/art/scene/Stage.svelte';
-	import Street from '$lib/art/scene/Street.svelte';
-	import RotateOverlay from '$lib/ui/RotateOverlay.svelte';
+	import StreetBands from '$lib/art/canvas/StreetBands.svelte';
+	import WorldCanvas from '$lib/art/canvas/WorldCanvas.svelte';
+	import FlipButton from '$lib/ui/FlipButton.svelte';
 	import Kids from '$lib/play/Kids.svelte';
-	import Cars from '$lib/play/Cars.svelte';
 	import Ghosts from '$lib/play/Ghosts.svelte';
 	import Npcs from '$lib/play/Npcs.svelte';
 	import CandyLayer from '$lib/play/CandyLayer.svelte';
@@ -94,7 +93,6 @@
 	import Bubbles from '$lib/play/Bubbles.svelte';
 	import Celebration from '$lib/play/Celebration.svelte';
 	import Scares from '$lib/play/Scares.svelte';
-	import ThemeLayer from '$lib/art/scene/ThemeLayer.svelte';
 	import { duckAmbience, startAmbience } from '$lib/audio/ambience.svelte';
 	import { duckMusic, startMusic, stopMusic } from '$lib/audio/music.svelte';
 	import { initSfx, playCue, setSfxVolume } from '$lib/audio/sfx';
@@ -356,28 +354,14 @@
 	}
 
 	/**
-	 * The prototype's `tryLandscapeLock()` (~1790): ask the platform for a real
-	 * landscape lock where it permits one (installed PWA / Android). iOS refuses
-	 * and the rotate prompt stands in (spec §13), so every failure is swallowed.
+	 * The prototype's `tryLandscapeLock()` is gone (T4b, 2026-10-19): the game
+	 * no longer asks the platform — or the accelerometer — for an orientation.
+	 * The player flips the presentation with the HUD button (`flip.svelte.ts`).
 	 */
-	function tryLandscapeLock(): void {
-		try {
-			const orientation = screen.orientation as ScreenOrientation & {
-				lock?: (o: string) => Promise<void>;
-			};
-			if (orientation && typeof orientation.lock === 'function') {
-				const attempt = orientation.lock('landscape');
-				if (attempt && typeof attempt.catch === 'function') attempt.catch(() => {});
-			}
-		} catch {
-			/* No ScreenOrientation API, or a refusal: the rotate prompt covers it. */
-		}
-	}
 
-	/** Gioca: the tap itself is the unlock gesture, then we ask for landscape. */
+	/** Gioca: the tap itself is the audio-unlock gesture. */
 	function play(): void {
 		unlockAudio();
-		tryLandscapeLock();
 		logEvent('play', { bag: bag(), k: furthest() });
 	}
 
@@ -390,7 +374,6 @@
 		start();
 		const onFirstGesture = (): void => {
 			unlockAudio();
-			tryLandscapeLock();
 		};
 		window.addEventListener('pointerdown', onFirstGesture, { once: true });
 		return () => {
@@ -409,11 +392,13 @@
 <div class="scene" inert={menuState.open}>
 	<Stage>
 		<Sky />
-		<ParallaxLayers worldX={worldX()} />
 		<Ghosts worldX={worldX()} bind:this={ghosts} />
-		<ThemeLayer worldX={worldX()} />
-		<Street worldX={worldX()} homes={NO_HOMES} activeK={activeK()} {openK} />
-		<Cars worldX={worldX()} sound={playCue} />
+		<!-- T4 (2026-10-19): the static bands stay DOM (T09b modulo patterns are
+		     repaint-in-place); the whole scrolling world is one canvas — a single
+		     backing store redrawn in place, no per-scrolled-pixel retention.
+		     Evidence + plan: docs/T4-CANVAS-PLAN.md. -->
+		<StreetBands worldX={worldX()} />
+		<WorldCanvas worldX={worldX()} homes={NO_HOMES} activeK={activeK()} {openK} sound={playCue} />
 		<Npcs sound={playCue} {say} />
 		<Kids dir={dir()} />
 		<Scares {onScare} sound={playCue} />
@@ -421,6 +406,7 @@
 		{#if !scareActive}
 			<WalkControls />
 		{/if}
+		<FlipButton />
 		<KnockButton sound={playCue} />
 		<Scherzo sound={playCue} />
 		<Theatre bind:this={theatre} />
@@ -429,8 +415,6 @@
 		<Hud sound={playCue} />
 	</Stage>
 </div>
-
-<RotateOverlay />
 
 <TitleScreen onPlay={play} />
 

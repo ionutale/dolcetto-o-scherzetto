@@ -79,8 +79,18 @@ describe('defaults', () => {
 			lang: 'it',
 			sound: true,
 			musicVolume: 1,
-			sfxVolume: 1
+			sfxVolume: 1,
+			flip: 'landscape'
 		});
+	});
+
+	it('a pre-T4b envelope (no flip) loads with the native facing', () => {
+		const storage = memoryStorage();
+		storage.setItem(
+			SETTINGS_KEY,
+			JSON.stringify({ version: 1, lang: 'it', sound: true, musicVolume: 1, sfxVolume: 1 })
+		);
+		expect(createSettings(storage).read().flip).toBe('landscape');
 	});
 
 	it('read() answers with the defaults when storage is empty', () => {
@@ -247,7 +257,10 @@ describe('read falls back to defaults on anything unusable', () => {
 		expect(isSettings(settingsWith({ lang: 'en', sound: false }))).toBe(true);
 		expect(isSettings(settingsWith({ musicVolume: 0, sfxVolume: 0.5 }))).toBe(true);
 		expect(isSettings(settingsWith({ musicVolume: 5 }))).toBe(true); // out-of-band: clamped, not refused
+		expect(isSettings(settingsWith({ flip: 'portrait' }))).toBe(true);
+		expect(isSettings({ ...settingsWith(), flip: undefined })).toBe(true); // pre-T4b envelope
 		expect(isSettings({ ...settingsWith(), lang: 'fr' })).toBe(false);
+		expect(isSettings({ ...settingsWith(), flip: 'sideways' })).toBe(false);
 		expect(isSettings({ ...settingsWith(), version: 2 })).toBe(false);
 		expect(isSettings({ version: 1, lang: 'it', sound: true })).toBe(false); // no volumes
 		expect(isSettings(null)).toBe(false);

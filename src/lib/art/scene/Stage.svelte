@@ -32,6 +32,7 @@
 	 */
 	import { onMount } from 'svelte';
 	import type { Snippet } from 'svelte';
+	import { flip } from '$lib/ui/flip.svelte';
 
 	interface Props {
 		/** Scene layers composed inside the 852×393 frame (T09 adds the street, T10 the kids…). */
@@ -55,6 +56,13 @@
 	let frame = $state<HTMLElement | null>(null);
 	let scale = $state(1);
 
+	/**
+	 * T4b — the manual presentation flip. `portrait` turns the whole stage a
+	 * quarter turn (and swaps its footprint in `fit`); the accelerometer is
+	 * never consulted — see `flip.svelte.ts` for the why.
+	 */
+	const flipped = $derived(flip() === 'portrait');
+
 	function fit() {
 		if (!frame) return;
 		// The frame's padding is the safe-area inset already resolved to px by
@@ -64,8 +72,18 @@
 		const insetY = (parseFloat(cs.paddingTop) || 0) + (parseFloat(cs.paddingBottom) || 0);
 		const availW = window.innerWidth - CHROME_X - insetX;
 		const availH = Math.max(window.innerHeight - CHROME_Y - insetY, MIN_AVAIL_HEIGHT);
-		scale = Math.max(MIN_SCALE, Math.min(availW / REF_WIDTH, availH / REF_HEIGHT, MAX_SCALE));
+		// The flipped footprint is 393 × 852 instead of 852 × 393.
+		const footW = flipped ? REF_HEIGHT : REF_WIDTH;
+		const footH = flipped ? REF_WIDTH : REF_HEIGHT;
+		scale = Math.max(MIN_SCALE, Math.min(availW / footW, availH / footH, MAX_SCALE));
 	}
+
+	// A flip changes the footprint — refit immediately (the resize listeners
+	// only cover viewport changes).
+	$effect(() => {
+		flip();
+		fit();
+	});
 
 	onMount(() => {
 		fit();
@@ -81,10 +99,16 @@
 </script>
 
 <!-- `data-scale` is a read-only handle for the e2e placeholder (T30) and for
-     the T08 smoke: it reports the live fit() result without touching the DOM. -->
-<div class="stage-frame" bind:this={frame} data-scale={scale.toFixed(4)}>
-	<div class="stage-wrap" style="--stage-scale: {scale}">
-		<div class="stage">{@render children?.()}</div>
+     the T08 smoke: it reports the live fit() result without touching the DOM.
+     `data-flip` (T4b) reports the manual presentation flip. -->
+<div
+	class="stage-frame"
+	bind:this={frame}
+	data-scale={scale.toFixed(4)}
+	data-flip={flipped ? 'portrait' : 'landscape'}
+>
+	<div class="stage-wrap" class:flipped style="--stage-scale: {scale}">
+		<div class="stage" class:flipped>{@render children?.()}</div>
 	</div>
 </div>
 
@@ -109,6 +133,13 @@
 		height: calc(393px * var(--stage-scale));
 	}
 
+	/* T4b: the flipped wrapper reserves the rotated footprint (393 × 852 at
+	 * scale), so the frame's centring and the stage's rotated transform agree. */
+	.stage-wrap.flipped {
+		width: calc(393px * var(--stage-scale));
+		height: calc(852px * var(--stage-scale));
+	}
+
 	.stage {
 		position: absolute;
 		top: 0;
@@ -129,5 +160,13 @@
 		-webkit-user-select: none;
 		/* The stage is a game surface: no scroll chaining, no double-tap zoom. */
 		touch-action: none;
+	}
+
+	/* T4b: `portrait` turns the stage a quarter turn clockwise and parks the
+	 * rotated box at the wrapper's origin (393 × 852 at scale). The transform
+	 * chain, right to left: scale, rotate, then slide by the stage's height. */
+	.stage.flipped {
+		transform: translate(calc(393px * var(--stage-scale)), 0) rotate(90deg)
+			scale(var(--stage-scale));
 	}
 </style>

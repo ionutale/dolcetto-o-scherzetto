@@ -29,6 +29,7 @@
 	import type { Lang } from '$lib/sim/loop';
 	import { setMusic, setSfx, volumes } from '$lib/audio/volumes.svelte';
 	import { openLogs } from './log-panel-state.svelte';
+	import { flip, setFlip } from './flip.svelte';
 
 	interface Props {
 		/** The live language, owned by the title so its labels follow. */
@@ -48,6 +49,9 @@
 					music: '🎵 Musica',
 					sfx: '🔊 Effetti',
 					language: 'Lingua',
+					orientation: 'Schermo',
+					landscape: 'Orizzontale',
+					portrait: 'Verticale',
 					back: 'Indietro',
 					logs: '🐞 Registro errori',
 					exportLogs: '📤 Esporta log',
@@ -60,6 +64,9 @@
 					music: '🎵 Music',
 					sfx: '🔊 Sound effects',
 					language: 'Language',
+					orientation: 'Screen',
+					landscape: 'Landscape',
+					portrait: 'Portrait',
 					back: 'Back',
 					logs: '🐞 Error log',
 					exportLogs: '📤 Export logs',
@@ -208,6 +215,28 @@
 		aria-pressed={lang === 'en'}
 		aria-label="English"
 		onclick={() => pick('en')}>EN</button
+	>
+</div>
+
+<!-- T4b — the manual presentation flip (no accelerometer): the same control the
+     HUD's flip button drives, labelled for the parent. -->
+<div class="lang-row" role="group" aria-label={copy.orientation}>
+	<span class="lang-label">{copy.orientation}</span>
+	<button
+		type="button"
+		class="lang-btn"
+		class:on={flip() === 'landscape'}
+		aria-pressed={flip() === 'landscape'}
+		aria-label={copy.landscape}
+		onclick={() => setFlip('landscape')}>{copy.landscape}</button
+	>
+	<button
+		type="button"
+		class="lang-btn"
+		class:on={flip() === 'portrait'}
+		aria-pressed={flip() === 'portrait'}
+		aria-label={copy.portrait}
+		onclick={() => setFlip('portrait')}>{copy.portrait}</button
 	>
 </div>
 
