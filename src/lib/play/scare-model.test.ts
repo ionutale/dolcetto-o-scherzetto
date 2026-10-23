@@ -85,10 +85,10 @@ describe('pickKind — all six reachable, never twice in a row', () => {
 });
 
 describe('the gap — never before nextAt, always 60–120 s after a fire', () => {
-	it('first scare is not allowed before ~45 s after load', () => {
-		expect(SCARE_FIRST_MS).toBe(45000);
-		expect(firstScareAt(0)).toBe(45000);
-		expect(firstScareAt(1000)).toBe(46000);
+	it('first scare is not allowed before ~28 s after load', () => {
+		expect(SCARE_FIRST_MS).toBe(28000);
+		expect(firstScareAt(0)).toBe(28000);
+		expect(firstScareAt(1000)).toBe(29000);
 	});
 
 	it('does not fire one millisecond before it is due', () => {
@@ -153,7 +153,7 @@ describe('the gap — never before nextAt, always 60–120 s after a fire', () =
 			}
 		}
 		expect(fires.length).toBeGreaterThan(10);
-		expect(fires[0]).toBeGreaterThanOrEqual(45_000);
+		expect(fires[0]).toBeGreaterThanOrEqual(28_000);
 		for (let i = 1; i < fires.length; i += 1) {
 			expect(fires[i] - fires[i - 1]).toBeGreaterThanOrEqual(SCARE_MIN_MS);
 			expect(fires[i] - fires[i - 1]).toBeLessThan(SCARE_MIN_MS + SCARE_SPAN_MS);

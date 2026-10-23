@@ -19,8 +19,8 @@ See also: [`ARCHITECTURE.md`](ARCHITECTURE.md) (the module map and budgets) and
 |---|---|---|
 | Candy value roll | uniform **1–10** (`1 + ((rng()*10) \| 0)`), rolled per drop, revealed as `+N` | `src/lib/sim/economy.ts` `rollValue` (spec §8, ADR-0003) |
 | Treat candies per treating home | uniform **1–2** (`1 + ((rng()*2) \| 0)`) | `src/lib/sim/economy.ts` `treatCount` |
-| Treat probability (untouched home) | **0.60** | `src/lib/sim/loop.ts` `TREAT_P` |
-| Refuse probability (untouched home) | the complement — **0.40** at neighborhood 0 | `src/lib/sim/loop.ts` `TREAT_P`; baseline in `progression.ts` `REFUSAL_BASE` |
+| Treat probability (untouched home) | **0.60** at neighborhood 0 (`1 - refusalP(index)` thereafter) | `src/lib/sim/loop.ts` KNOCK; `TREAT_P` baseline; `progression.ts` `refusalP` |
+| Refuse probability (untouched home) | **0.40** → soft cap **0.55** by neighborhood index | `progression.ts` `refusalP` (live in `loop.ts`) |
 | One-shot homes | a home is **done** on treat-collected or trick-played | `src/lib/sim/loop.ts` (`HomeState.done`), ADR-0003 |
 | Re-gift odds (done home, first re-knock ever) | **0.30** | `src/lib/sim/loop.ts` `REGIFT_P` |
 | Re-gift cap | **at most once ever** per home (`used` flag) | `src/lib/sim/loop.ts` `HomeState.used`, ADR-0003 |
@@ -65,10 +65,11 @@ is ~10–12 candy events (ADR-0003).
 
 ## 4. Progression curves (tunable — the BALANCE-owned knobs)
 
-`progression.ts` exports these as **documented placeholders**: the *shapes* (monotone rise,
-soft cap, base value) are pinned by tests, the numbers are the tuning knobs. `refusalP` is
-the share of **untouched** homes that refuse in the `index`-th neighborhood; the sim's
-per-knock floor is `TREAT_P` — this curve is the rising-refusal intent described in spec §9.
+`progression.ts` exports these as **live** knobs wired into `loop.ts`: knock treat chance is
+`1 - refusalP(neighborhoodIndex(k))`, and candy value / treat-count rolls apply
+`richnessBias` at the active house. The *shapes* (monotone rise, soft cap, base value) are
+pinned by tests; the numbers are the tuning knobs. `TREAT_P` (0.60) remains the neighborhood-0
+baseline (`1 - REFUSAL_BASE`).
 
 | Knob | Value | Source |
 |---|---|---|
@@ -115,7 +116,7 @@ begins → **3050** clear.
 
 | Knob | Value | Source |
 |---|---|---|
-| First cameo | no earlier than **45 000 ms** after load | `SCARE_FIRST_MS`, `firstScareAt` |
+| First cameo | no earlier than **28 000 ms** after load | `SCARE_FIRST_MS`, `firstScareAt` |
 | Gap between cameos | **60 000 … 120 000 ms** (`[60 s, 120 s)`) | `SCARE_MIN_MS` + `SCARE_SPAN_MS` |
 | Trigger | **roam only** — not refused/door/collect/trick, not shop-open, and only while moving (`dir ≠ 0`) | `scareTick` |
 | Kinds | six: `witch`, `wolf`, `vampire`, `skeleton`, `mummy`, `thunder`; never twice in a row | `SCARE_KINDS`, `pickKind` |
@@ -128,11 +129,14 @@ begins → **3050** clear.
 | Event | Value | Source |
 |---|---|---|
 | Neighborhood celebration | fires on each 10-home boundary, **2600 ms** on screen | `src/lib/play/celebration-model.ts`; `src/lib/play/Celebration.svelte` `BEAT_MS` |
-| NPC kids pool | **5** recycled costumes | `src/lib/play/npc-model.ts` `NPC_POOL` |
+| NPC kids pool | **6** recycled costumes (incl. cat-ears) | `src/lib/play/npc-model.ts` `NPC_POOL` |
 | NPC walk speed | **120 … 160** px/s | `npc-model.ts` `NPC_SPEED_MIN`/`NPC_SPEED_SPAN` |
 | NPC shout | first after **24 000 ms**, then **26 000 … 46 000 ms**; on-screen kids only | `npc-model.ts` `SHOUT_FIRST_MS`, `SHOUT_MIN_MS`/`SHOUT_SPAN_MS` |
 | Parked cars | **4** per 5-block window (one in five blocks skipped) | `src/lib/play/car-model.ts` `CAR_SKIP_MOD`, `carSlots` |
-| Rare passer | first after **45 000 ms**, then **70 000 … 100 000 ms**; crossing **4.2 s** | `car-model.ts` `PASSER_FIRST_MS`, `PASSER_GAP_MIN_MS`/`PASSER_GAP_SPAN_MS`, `PASSER_DUR_MS` |
+| Rare passer | first after **30 000 ms**, then **70 000 … 100 000 ms**; crossing **4.2 s** | `car-model.ts` `PASSER_FIRST_MS`, `PASSER_GAP_MIN_MS`/`PASSER_GAP_SPAN_MS`, `PASSER_DUR_MS` |
+| Firecracker kids (T37) | first **50 000 ms**, then **80 000 … 120 000 ms**; dash **2.5 s** | `street-life-model.ts` |
+| Monster stroller (T37) | first **55 000 ms**, then **90 000 … 140 000 ms**; roll **5 s** | `street-life-model.ts` |
+| Mystery van (T37) | first **70 000 ms**, then **100 000 … 160 000 ms**; toss 1 candy at mid | `street-life-model.ts` + `AMBIENT_CANDY` |
 | Sky ghosts | **3** drifting behind the rooflines | `src/lib/play/ghost-model.ts` `GHOST_COUNT` |
 | Trash-can cameo | first after **30 000 ms**, then **32 000 … 52 000 ms**; only a visible can | `ghost-model.ts` `CAMEO_FIRST_MS`, `CAMEO_MIN_MS`/`CAMEO_SPAN_MS` |
 | Shooting star (`starry`) | first **40 000 ms**, then **40 000 … 60 000 ms**; shot lasts **1.4 s** | `src/lib/art/scene/theme-model.ts` `SHOOT_FIRST_MS`, `SHOOT_MIN_MS`/`SHOOT_SPAN_MS`, `SHOOT_DUR_MS` |

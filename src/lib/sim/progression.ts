@@ -10,11 +10,9 @@
  * Neighborhood ≈ 10 homes (spec §9: "Neighborhood every ~10 homes; theme
  * rotates; refusal/richness shift gently with the global index; soft caps").
  *
- * All numbers are **BALANCE.md placeholders**: `refusalP` and `richnessBias`
- * ship with the documented defaults below and are expected to be re-tuned (not
- * re-designed) once `BALANCE.md` exists. The *shapes* — monotonic rise, soft
- * cap, base value — are what the tests pin; the tuning knobs are exported
- * constants so BALANCE edits touch one line each.
+ * `refusalP` and `richnessBias` are **live** in `loop.ts` (knock treat rate and
+ * candy richness). Numbers are BALANCE-owned tunables — re-tune, don't redesign.
+ * The *shapes* — monotonic rise, soft cap, base value — are what the tests pin.
  *
  * Pure: no DOM, no timers, no randomness. Only `SPACING` is imported from
  * `loop.ts` (a read-only constant) so the house-index maths can never drift
@@ -56,7 +54,7 @@ export function themeFor(index: number): Theme {
 	return THEMES[((Math.trunc(index) % cycle) + cycle) % cycle];
 }
 
-// --- BALANCE.md placeholders -------------------------------------------------
+// --- BALANCE.md knobs (live in loop.ts) --------------------------------------
 // Soft-capped difficulty/drop knobs (spec §9: "refusal/richness shift gently
 // with the global index; soft caps"). Exposed so BALANCE.md owns the numbers.
 
@@ -70,8 +68,8 @@ export const REFUSAL_STEP = 0.015;
 export const REFUSAL_CAP = 0.55;
 
 /**
- * BALANCE placeholder: refusal probability of an untouched home in
- * `index`-th neighborhood.
+ * Refusal probability of an untouched home in the `index`-th neighborhood.
+ * Wired into `loop.ts` KNOCK as treat chance `1 - refusalP(...)`.
  *
  * `min(REFUSAL_CAP, REFUSAL_BASE + REFUSAL_STEP * max(0, index))` — starts at
  * **0.40**, rises **+0.015** per neighborhood, soft-capped at **0.55** (reached
@@ -89,9 +87,9 @@ export const RICHNESS_STEP = 0.03;
 export const RICHNESS_CAP = 0.35;
 
 /**
- * BALANCE placeholder: drop-roll bias the `index`-th neighborhood applies when
- * rolling candy richness (richer drops later on, gently — spec §9 "bigger
- * bursts vs slightly stingier homes" stays a knob, not a cliff).
+ * Drop-roll bias the `index`-th neighborhood applies when rolling candy
+ * richness (wired into `loop.ts` spawn / treat count — richer drops later,
+ * gently — spec §9).
  *
  * `min(RICHNESS_CAP, max(0, index) * RICHNESS_STEP)` — 0 at the start,
  * **+0.03** per neighborhood, soft-capped at exactly **0.35** (index 12+).

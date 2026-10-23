@@ -62,7 +62,7 @@ export const CAR_SKIP_MOD = 5;
 export const PASSER_DUR_MS = 4200;
 
 /** Prototype: the passer first appears 45 s into the run. */
-export const PASSER_FIRST_MS = 45_000;
+export const PASSER_FIRST_MS = 30_000;
 
 /** Prototype: the *shortest* gap between two passers — 70 s. */
 export const PASSER_GAP_MIN_MS = 70_000;

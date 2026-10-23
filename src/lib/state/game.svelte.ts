@@ -83,8 +83,9 @@ function restoreTricks(ids: string[]): TrickId[] {
  * `bag`, `tricks` and a `worldX` at the furthest doorstep — plus `record`,
  * lifted to the larger of the save's record and its bag (`initial` seeds
  * `record` from `bag`; a save may hold a higher one). What the sim *cannot*
- * take at boot is documented in `+page.svelte`: candies, homes, phase, dir and
- * the refused/active house are transient and start fresh.
+ * take at boot is documented in `+page.svelte`: candies, phase, dir and the
+ * refused/active house are transient and start fresh. `homes` is exposed live
+ * for dim windows but is not persisted across reload.
  */
 function bootState(): GameState {
 	const base = initial({
@@ -133,6 +134,14 @@ export function dir(): Dir {
 /** Reads the house under the kids' feet, or −1 when out of every window. */
 export function activeK(): number {
 	return state.activeK;
+}
+
+/**
+ * Completed / known homes by house index — session-transient (not persisted).
+ * Feeds the street canvas so done doors dim their windows.
+ */
+export function homes(): GameState['homes'] {
+	return state.homes;
 }
 
 /**

@@ -9,7 +9,7 @@
  * | prototype (`scene-prototype.html` / `pieces/scares.js`) | here |
  * |---------------------------------------------------------|------|
  * | `SCARE_GAP_MS = 28000` (dev frequency, ~1500)            | `SCARE_MIN_MS`/`SCARE_SPAN_MS` (spec: 60–120 s) |
- * | `lastScare = 0` (first scare fires ~28 s in)             | `SCARE_FIRST_MS` + `firstScareAt` (~45 s) |
+ * | `lastScare = 0` (first scare fires ~28 s in)             | `SCARE_FIRST_MS` + `firstScareAt` (~28 s) |
  * | `scareTick`: roam + `dir !== 0` + gap                    | `scareTick` (roam only) |
  * | `if (ambienceLock …) return` (one at a time)             | `scareTick({ active })` |
  * | `KINDS` (six, ~41-54)                                    | `SCARE_KINDS` |
@@ -62,11 +62,10 @@ export type Rng = () => number;
 /* ------------------------------------------------------------------- */
 
 /**
- * First scare no earlier than this after load, ms (spec §10 "rare"; the
- * prototype's `lastScare = 0` fired at its ~28 s dev gap — production gives the
- * player a longer settling-in walk before the first cameo, ~45 s).
+ * First scare no earlier than this after load, ms — short enough that a brief
+ * play session still sees a cameo (~28 s), while later gaps stay rare (60–120 s).
  */
-export const SCARE_FIRST_MS = 45000;
+export const SCARE_FIRST_MS = 28000;
 
 /** Shortest gap between two cameos, ms — the spec's floor ("at most once per 60–120 s"). */
 export const SCARE_MIN_MS = 60000;

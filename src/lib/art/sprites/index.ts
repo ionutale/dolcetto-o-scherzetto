@@ -409,6 +409,49 @@ export function npcBat(): string {
 	]);
 }
 
+/** Cat-ears kid — sixth costume promised by ART-STYLE (T37 density). */
+export function npcCat(): string {
+	return svg('npcCat', 56, 72, [
+		feet(21, 35, 66),
+		'<ellipse class="arm arm-l" cx="12" cy="43" rx="4.4" ry="7.2" fill="' +
+			C.pumpkin +
+			'" style="transform-origin:12px 37px"/>',
+		'<ellipse class="arm arm-r" cx="44" cy="43" rx="4.4" ry="7.2" fill="' +
+			C.pumpkin +
+			'" style="transform-origin:44px 37px"/>',
+		'<path class="s-body" d="M28 32 C21 32 15.5 45 14 61 C20 66 36 66 42 61 C40.5 45 35 32 28 32 Z" fill="' +
+			C.pumpkin +
+			'"/>',
+		'<path d="M15 57 C21 62 35 62 41 57 C41.6 58.8 42.2 60.4 42.8 62 C36 66.2 20 66.2 13.2 62 C13.8 60.4 14.4 58.8 15 57 Z" fill="' +
+			C.pumpkinDeep +
+			'" opacity=".55"/>',
+		'<circle cx="13.5" cy="49" r="3" fill="' +
+			C.skin +
+			'"/><circle cx="42.5" cy="49" r="3" fill="' +
+			C.skin +
+			'"/>',
+		'<circle class="head" cx="28" cy="22" r="11" fill="' + C.skin + '"/>',
+		face(28, 23, {
+			eyeDx: 4.9,
+			eyeRx: 1.85,
+			eyeRy: 2.05,
+			blushDx: 7,
+			blushDy: 4.5,
+			mouthW: 2.9,
+			mouthD: 1.9
+		}),
+		'<path d="M17.2 20 C17.8 12.5 38.2 12.5 38.8 20 C35 15.5 21 15.5 17.2 20 Z" fill="' +
+			C.hair +
+			'"/>',
+		/* soft cat-ear headband */
+		'<path d="M18.5 14.5 L21.2 4.8 L26.2 13.2 Z" fill="' + C.pumpkinDeep + '"/>',
+		'<path d="M37.5 14.5 L34.8 4.8 L29.8 13.2 Z" fill="' + C.pumpkinDeep + '"/>',
+		'<path d="M20.2 12.2 L21.4 8.2 L23.6 11.8 Z" fill="' + C.pumpkinLite + '"/>',
+		'<path d="M35.8 12.2 L34.6 8.2 L32.4 11.8 Z" fill="' + C.pumpkinLite + '"/>',
+		'<rect x="19" y="15.5" width="18" height="3.2" rx="1.6" fill="' + C.amberDeep + '"/>'
+	]);
+}
+
 /* ==== CARS — parked (i = 0..3) and a glowing passer ================== */
 
 /* front of the car is on the RIGHT */

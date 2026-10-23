@@ -8,8 +8,8 @@
  * ~1547-1559). Every number below is the prototype's; this module only lifts
  * the decisions out of the DOM so they can be pinned without a browser:
  *
- * - `createNpcs(rng)` — the **pool of 5** recycled costumed kids, one per
- *   `NPC_KINDS` entry (ghost sheet / pumpkin / witchling / skeleton / bat):
+ * - `createNpcs(rng)` — the **pool of 6** recycled costumed kids, one per
+ *   `NPC_KINDS` entry (ghost / pumpkin / witchling / skeleton / bat / cat-ears):
  *   `x = i*380 + rand*200`, `dir = i % 2 ? 1 : -1` (they start walking both
  *   ways), `speed = 120 + rand*40`. Deterministic given an injected `rng`.
  * - `advanceNpcs(npcs, dt, worldX, rng)` — one tick: every kid walks
@@ -21,7 +21,7 @@
  *   (`> 220`): **once per approach, reset when far** — a kid the player walks
  *   alongside waves once, never once a frame. Wrapping reuses the pool: a kid
  *   dragged past either screen edge is teleported just off the *opposite* edge
- *   and sent walking back in, so 5 nodes cover the whole endless street.
+ *   and sent walking back in, so 6 nodes cover the whole endless street.
  * - `pickShout` / `shoutDelay` — the distant shout: only an **on-screen** kid
  *   (`60 < screenX < 760`, the prototype's filter) is ever picked, and the
  *   cadence is bounded (`SHOUT_MIN_MS 26000 … +20000`, first shout after
@@ -33,23 +33,24 @@
  * bubble and the sound hook; this module owns only the numbers.
  */
 
-/** The five recycled costumes, in the prototype's `NPC_KINDS` order. */
+/** The six recycled costumes (ART-STYLE ×6, including cat-ears). */
 export const NPC_KINDS = [
 	'npcGhost',
 	'npcPumpkin',
 	'npcWitchling',
 	'npcSkeleton',
-	'npcBat'
+	'npcBat',
+	'npcCat'
 ] as const;
 
-/** One of the five kid costumes (a sprite id). */
+/** One of the six kid costumes (a sprite id). */
 export type NpcKind = (typeof NPC_KINDS)[number];
 
 /** The kids only ever face left (−1) or right (1) — never idle. */
 export type NpcDir = 1 | -1;
 
-/** Pool size: 4–6 recycled kids per spec §4.3; the prototype's exact five. */
-export const NPC_POOL = 5;
+/** Pool size: 6 recycled kids (spec §4.3 band 4–6; ART-STYLE catalogue). */
+export const NPC_POOL = 6;
 
 /** Initial spread: `x = i*380 + rand*200` (prototype `initNpcs`). */
 export const NPC_SEED_SPACING = 380;

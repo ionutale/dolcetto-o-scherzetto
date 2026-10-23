@@ -294,7 +294,7 @@ describe('KNOCK', () => {
 
 	it.each<{ roll: number; want: KnockOutcome }>([
 		{ roll: 0, want: 'treat' },
-		{ roll: 0.59, want: 'treat' }, // just under TREAT_P
+		{ roll: 0.59, want: 'treat' }, // just under TREAT_P (neighborhood 0)
 		{ roll: 0.6, want: 'refuse' }, // exactly TREAT_P: not a treat
 		{ roll: 0.99, want: 'refuse' }
 	])('rolls $want for an untouched home at roll $roll', ({ roll, want }) => {
@@ -302,6 +302,16 @@ describe('KNOCK', () => {
 		const n = reduce(atDoor(), { type: 'KNOCK' });
 		expect(n.pending).toBe(want);
 		expect(n.phase).toBe('door');
+	});
+
+	it.each<{ roll: number; want: KnockOutcome }>([
+		{ roll: 0.44, want: 'treat' }, // treatP at k=100 is 0.45 (refusal capped)
+		{ roll: 0.45, want: 'refuse' }
+	])('raises refusal at later neighborhoods — $want at roll $roll (k=100)', ({ roll, want }) => {
+		scriptRand([roll]);
+		const s = tick(initial({ worldX: 100 * SPACING }), 0);
+		expect(s.activeK).toBe(100);
+		expect(reduce(s, { type: 'KNOCK' }).pending).toBe(want);
 	});
 
 	it.each<Phase>(['door', 'collect', 'refuse', 'trick'])(
@@ -701,6 +711,28 @@ describe('shop', () => {
 		const n = reduce(s, { type: 'BUY', id: 'mano' });
 		expect(n.lang).toBe('en');
 		expect(n.note).toBe('Comprato: Mano pelosa!');
+	});
+});
+
+describe('AMBIENT_CANDY (T37 van toss)', () => {
+	it('spawns one flying candy and opens collect while roaming', () => {
+		scriptRand([0.1, 0.2, 0.3, 0.4]);
+		const s = initial();
+		const n = reduce(s, { type: 'AMBIENT_CANDY', sx: 400, sy: 180 });
+		expect(n.phase).toBe('collect');
+		expect(n.pending).toBe('treat');
+		expect(n.candies).toHaveLength(1);
+		expect(n.candies[0].state).toBe('fly');
+		expect(n.candies[0].sx).toBe(400);
+		expect(n.candies[0].sy).toBe(180);
+		expect(n.note).toBe('Una caramella dal furgone!');
+	});
+
+	it('refuses while the shop is open or mid-door', () => {
+		const shop = { ...initial(), shopOpen: true };
+		expect(reduce(shop, { type: 'AMBIENT_CANDY' })).toBe(shop);
+		const door = { ...atDoor(), phase: 'door' as const };
+		expect(reduce(door, { type: 'AMBIENT_CANDY' })).toBe(door);
 	});
 });
 

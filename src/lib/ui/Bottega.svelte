@@ -44,10 +44,11 @@
 	 * card carries the global `.reduce-motion-off` utility — it still appears,
 	 * just without the rise.
 	 */
+	import { onDestroy } from 'svelte';
 	import { bag, dispatch, shopOpen, tricks } from '$lib/state/game.svelte';
 	import { settings } from '$lib/persist/settings';
 	import type { Lang } from '$lib/sim/loop';
-	import type { TrickId } from '$lib/sim/economy';
+	import { priceFor, type TrickId } from '$lib/sim/economy';
 	import { NEIGHBORS } from '$lib/art/sprites/neighbors';
 	import { trickIcons } from '$lib/art/sprites/trick-icons';
 	import { bottegaRows, shopCopy } from './bottega-model';
@@ -58,8 +59,10 @@
 		 * shop never crashes without the SFX layer. Threaded from `Hud.svelte`.
 		 */
 		sound?: (cue: string) => void;
+		/** First paid purchase of the run — Hud pulses the bag chip once. */
+		onPaidBuy?: () => void;
 	}
-	let { sound = () => {} }: Props = $props();
+	let { sound = () => {}, onPaidBuy = () => {} }: Props = $props();
 
 	/** The live language — read like `Scherzo`'s card label (T17 wires the toggle). */
 	function lang(): Lang {
@@ -72,20 +75,56 @@
 	/** The chrome strings (title, subtitle, labels) in the same language. */
 	const copy = $derived(shopCopy(lang()));
 
+	/** Row id that just got bought — drives the scale-pop flourish. */
+	let justBought = $state<TrickId | null>(null);
+	/** One-shot “nuovo trucco!” chip after a purchase. */
+	let cheer = $state(false);
+	/** Whether a paid trick has already been bought this run (session). */
+	let paidBuySeen = false;
+	let cheerTimer: ReturnType<typeof setTimeout> | undefined;
+	let popTimer: ReturnType<typeof setTimeout> | undefined;
+
+	const CHEER: Record<Lang, string> = {
+		it: 'Nuovo trucco!',
+		en: 'New trick!'
+	};
+
+	const CLOSE_LABEL: Record<Lang, string> = {
+		it: 'Chiudi la Bottega',
+		en: 'Close the shop'
+	};
+
 	function close(): void {
 		dispatch({ type: 'SHOP_CLOSE' });
 	}
 
 	function buy(id: TrickId): void {
+		const price = priceFor(id);
+		const before = tricks();
 		dispatch({ type: 'BUY', id });
+		const after = tricks();
+		if (after.length <= before.length || !after.includes(id)) return;
 		sound('buy');
+		justBought = id;
+		cheer = true;
+		clearTimeout(popTimer);
+		clearTimeout(cheerTimer);
+		popTimer = setTimeout(() => {
+			justBought = null;
+		}, 450);
+		cheerTimer = setTimeout(() => {
+			cheer = false;
+		}, 1200);
+		if (price > 0 && !paidBuySeen) {
+			paidBuySeen = true;
+			onPaidBuy();
+		}
 	}
 
-	/** The scrim/close button's accessible name, both languages. */
-	const CLOSE_LABEL: Record<Lang, string> = {
-		it: 'Chiudi la Bottega',
-		en: 'Close the shop'
-	};
+	onDestroy(() => {
+		clearTimeout(cheerTimer);
+		clearTimeout(popTimer);
+	});
 </script>
 
 {#if shopOpen()}
@@ -106,9 +145,12 @@
 			<div class="shopbody">
 				<h2 id="shopTitle">{copy.title}</h2>
 				<p class="sub">{copy.sub}</p>
+				{#if cheer}
+					<p class="cheer reduce-motion-off" role="status">{CHEER[lang()]}</p>
+				{/if}
 				<div class="shoplist">
 					{#each rows as row (row.id)}
-						<div class="shopitem">
+						<div class="shopitem" class:just-bought={justBought === row.id}>
 							<!-- trusted static SVG from the validated trick pack -->
 							<!-- eslint-disable-next-line svelte/no-at-html-tags -->
 							{@html trickIcons[row.id]}
@@ -117,7 +159,7 @@
 								<p>{row.desc}</p>
 							</div>
 							{#if row.state === 'owned'}
-								<span class="pricechip">{copy.owned}</span>
+								<span class="pricechip" class:owned-pop={justBought === row.id}>{copy.owned}</span>
 							{:else}
 								<span class="pricechip" class:poor={row.state === 'poor'}>🍬 {row.price}</span>
 								<button
@@ -192,6 +234,66 @@
 		font-size: 12px;
 		opacity: 0.7;
 		margin-bottom: 10px;
+	}
+
+	.cheer {
+		margin: -4px 0 10px;
+		font-size: 14px;
+		font-weight: 700;
+		color: var(--amber-deep);
+		animation: cheerfade 1.2s ease forwards;
+	}
+
+	@keyframes cheerfade {
+		0% {
+			opacity: 0;
+			transform: translateY(4px) scale(0.96);
+		}
+		15% {
+			opacity: 1;
+			transform: translateY(0) scale(1.04);
+		}
+		75% {
+			opacity: 1;
+		}
+		100% {
+			opacity: 0;
+		}
+	}
+
+	.shopitem.just-bought {
+		animation: buypop 0.45s cubic-bezier(0.3, 1.4, 0.6, 1);
+	}
+
+	@keyframes buypop {
+		0% {
+			transform: scale(1);
+		}
+		40% {
+			transform: scale(1.06);
+		}
+		100% {
+			transform: scale(1);
+		}
+	}
+
+	.pricechip.owned-pop {
+		animation: ownedpop 0.45s ease;
+		background: color-mix(in srgb, var(--amber) 55%, var(--paper));
+	}
+
+	@keyframes ownedpop {
+		50% {
+			transform: scale(1.12);
+		}
+	}
+
+	@media (prefers-reduced-motion: reduce) {
+		.cheer,
+		.shopitem.just-bought,
+		.pricechip.owned-pop {
+			animation: none;
+		}
 	}
 
 	/* `.shopwitch` (~290): the keeper column, bottom-aligned. The T11 sprite is

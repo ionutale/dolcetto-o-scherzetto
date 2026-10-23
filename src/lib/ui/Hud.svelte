@@ -47,14 +47,19 @@
 	$effect(() => {
 		const count = bag();
 		if (count > prev) {
-			pulse = true;
-			clearTimeout(timer);
-			timer = setTimeout(() => {
-				pulse = false;
-			}, BAG_PULSE_MS);
+			pulseBag();
 		}
 		prev = count;
 	});
+
+	/** One-shot bag pulse — collect growth, or first paid Bottega buy. */
+	function pulseBag(): void {
+		pulse = true;
+		clearTimeout(timer);
+		timer = setTimeout(() => {
+			pulse = false;
+		}, BAG_PULSE_MS);
+	}
 
 	onDestroy(() => clearTimeout(timer));
 
@@ -137,7 +142,7 @@
 <!-- The shop panel is a **sibling** of `.hud`, not a child: its `z-15` then
      resolves against the stage's stacking context and covers the bubbles
      (`z-14`), exactly as the prototype's `#shop` did. -->
-<Bottega {sound} />
+<Bottega {sound} onPaidBuy={pulseBag} />
 
 <style>
 	/* Full-stage, click-through: only the pills take pointers. */

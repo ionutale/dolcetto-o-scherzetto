@@ -79,7 +79,7 @@ describe('themeFor', () => {
 	});
 });
 
-describe('refusalP (BALANCE placeholder)', () => {
+describe('refusalP (live in loop.ts)', () => {
 	it('starts at the documented base 0.40', () => {
 		expect(refusalP(0)).toBe(REFUSAL_BASE);
 		expect(refusalP(0)).toBe(0.4);
@@ -114,7 +114,7 @@ describe('refusalP (BALANCE placeholder)', () => {
 	});
 });
 
-describe('richnessBias (BALANCE placeholder)', () => {
+describe('richnessBias (live in loop.ts)', () => {
 	it('starts at 0 and rises +0.03 per neighborhood', () => {
 		expect(richnessBias(0)).toBe(0);
 		expect(richnessBias(-7)).toBe(0);

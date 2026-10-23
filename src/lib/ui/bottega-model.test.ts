@@ -146,6 +146,10 @@ describe('shop copy', () => {
 		expect(SHOP_COPY.en.owned).toBe('Yours!');
 		expect(SHOP_COPY.it.buy).toBe('Compra');
 		expect(SHOP_COPY.en.buy).toBe('Buy');
+		expect(SHOP_COPY.it.sub).toBe('Compra trucchi col sacchetto di caramelle.');
+		expect(SHOP_COPY.en.sub).toBe('Buy tricks with your candy bag.');
+		expect(SHOP_COPY.it.sub).not.toMatch(/BALANCE|provvisor/i);
+		expect(SHOP_COPY.en.sub).not.toMatch(/BALANCE|provisional/i);
 		for (const lang of ['it', 'en'] as const) {
 			const c = shopCopy(lang);
 			for (const text of [c.title, c.sub, c.owned, c.buy]) expect(text).toBeTruthy();

@@ -11,14 +11,14 @@
 	 * owns only the three things the model cannot: the rAF clock, the DOM, and
 	 * the bubble.
 	 *
-	 * - **The pool.** Five kids, one per sprite in `NPC_KINDS`
-	 *   (`npcGhost`/`npcPumpkin`/`npcWitchling`/`npcSkeleton`/`npcBat`, the
-	 *   validated sprite pack); the same five nodes are moved every frame and
-	 *   **recycled** across the screen edges, so a 60-minute walk never grows the
-	 *   node count (spec §13 node budget). `.walking` is always on — they are
-	 *   always travelling — and the walk cycle is the sprite pack's own
-	 *   `.walking` hooks, so the pack's `prefers-reduced-motion` kill switch
-	 *   parks the legs/body automatically.
+	 * - **The pool.** Six kids, one per sprite in `NPC_KINDS`
+	 *   (`npcGhost`/`npcPumpkin`/`npcWitchling`/`npcSkeleton`/`npcBat`/`npcCat`);
+	 *   the same six nodes are moved every frame and **recycled** across the
+	 *   screen edges, so a 60-minute walk never grows the node count (spec §13
+	 *   node budget). `.walking` is always on — they are always travelling —
+	 *   and the walk cycle is the sprite pack's own `.walking` hooks, so the
+	 *   pack's `prefers-reduced-motion` kill switch parks the legs/body
+	 *   automatically.
 	 * - **The wave.** The model reports the indices that enter the near band; a
 	 *   kid gets the `.wave` class for 1300 ms (the prototype's
 	 *   `setTimeout(…, 1300)`). `.wave` is a rotation flourish, so it carries its
@@ -38,7 +38,7 @@
 	 * for tests and the smoke.
 	 */
 	import { onDestroy, onMount } from 'svelte';
-	import { npcBat, npcGhost, npcPumpkin, npcSkeleton, npcWitchling } from '$lib/art/sprites';
+	import { npcBat, npcCat, npcGhost, npcPumpkin, npcSkeleton, npcWitchling } from '$lib/art/sprites';
 	import { showBubble } from '$lib/play/bubble.svelte';
 	import { t } from '$lib/i18n/lines';
 	import { lang, worldX } from '$lib/state/game.svelte';
@@ -74,13 +74,14 @@
 	}
 	let { sound = () => {}, say = () => {} }: Props = $props();
 
-	/** The five costumes' markup, resolved once (the pack is a static string). */
+	/** The six costumes' markup, resolved once (the pack is a static string). */
 	const SPRITES: Record<NpcKind, string> = {
 		npcGhost: npcGhost(),
 		npcPumpkin: npcPumpkin(),
 		npcWitchling: npcWitchling(),
 		npcSkeleton: npcSkeleton(),
-		npcBat: npcBat()
+		npcBat: npcBat(),
+		npcCat: npcCat()
 	};
 
 	/** The live pool — replaced once per frame, never grown (bounded nodes). */

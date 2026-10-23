@@ -75,8 +75,8 @@ function kid(over: Partial<Npc> = {}): Npc {
 	return { kind: 'npcGhost', x: 0, dir: 1, speed: 120, waved: false, ...over };
 }
 
-describe('createNpcs — the pool of five (prototype initNpcs)', () => {
-	it('makes exactly five kids, one costume per NPC_KINDS entry, in order', () => {
+describe('createNpcs — the pool of six (ART-STYLE catalogue)', () => {
+	it('makes exactly six kids, one costume per NPC_KINDS entry, in order', () => {
 		const pool = createNpcs(seededRng(1));
 		expect(pool).toHaveLength(NPC_POOL);
 		expect(pool.map((n) => n.kind)).toEqual([...NPC_KINDS]);
@@ -84,17 +84,17 @@ describe('createNpcs — the pool of five (prototype initNpcs)', () => {
 
 	it('seeds x = i*380 + rand*200 and speed = 120 + rand*40, in that draw order', () => {
 		// Two draws per kid, in the literal's order: x first, then speed.
-		const rand = scriptRand([0, 0, 0.25, 0.5, 0.5, 1, 0.75, 0.5, 1, 1]);
+		const rand = scriptRand([0, 0, 0.25, 0.5, 0.5, 1, 0.75, 0.5, 1, 1, 0.1, 0.25]);
 		const pool = createNpcs(rand.rng);
-		expect(pool.map((n) => n.x)).toEqual([0, 430, 860, 1290, 1720]);
-		expect(pool.map((n) => n.speed)).toEqual([120, 140, 160, 140, 160]);
+		expect(pool.map((n) => n.x)).toEqual([0, 430, 860, 1290, 1720, 1920]);
+		expect(pool.map((n) => n.speed)).toEqual([120, 140, 160, 140, 160, 130]);
 		// Exactly two draws per kid, no more.
 		expect(rand.calls()).toBe(2 * NPC_POOL);
 	});
 
 	it('alternates the starting direction i%2 ? 1 : -1', () => {
 		const pool = createNpcs(seededRng(2));
-		expect(pool.map((n) => n.dir)).toEqual([-1, 1, -1, 1, -1]);
+		expect(pool.map((n) => n.dir)).toEqual([-1, 1, -1, 1, -1, 1]);
 	});
 
 	it('keeps every speed inside the 120–160 band and every kid unlatched', () => {
@@ -313,7 +313,7 @@ describe('shoutDelay — the bounded shout cadence', () => {
 });
 
 describe('long walk — bounded pool, bounded window (Review Focus #3)', () => {
-	it('runs 60 s of walking with exactly five kids, all inside the wrap bands', () => {
+	it('runs 60 s of walking with exactly six kids, all inside the wrap bands', () => {
 		let pool = createNpcs(seededRng(0x1234));
 		const rng = seededRng(0x5678);
 		const dt = 1 / 60;

@@ -37,6 +37,7 @@
 
 import { TRICKS, TRICK_ORDER, burstFor, canBuy, priceFor, rollValue, treatCount } from './economy';
 import type { Trick, TrickId } from './economy';
+import { neighborhoodIndex, refusalP, richnessBias } from './progression';
 
 // The trick catalogue and its price/burst helpers live in `economy.ts`; they are
 // re-exported here so scene modules keep importing them from `loop.ts`.
@@ -52,7 +53,10 @@ export const SPEED = 190;
 /** Half-width in px of the "at the door" window around a doorstep (inclusive). */
 export const NEAR = 70;
 
-/** Chance a knock on an untouched home is answered with candy (spec §5). */
+/**
+ * Baseline treat chance at neighborhood 0 (`1 - REFUSAL_BASE`). Live knocks use
+ * `1 - refusalP(neighborhoodIndex(k))` so later neighborhoods refuse more.
+ */
 export const TREAT_P = 0.6;
 
 /** Chance a knock on a done home re-gifts — once ever per home (ADR-0003). */
@@ -180,6 +184,8 @@ export type Action =
 	| { type: 'PLAY_TRICK'; id: TrickId }
 	| { type: 'TRICK_RESOLVE' }
 	| { type: 'COLLECT'; id: number }
+	/** Mystery-van toss (T37) — one candy from screen `(sx, sy)` onto the pile. */
+	| { type: 'AMBIENT_CANDY'; sx?: number; sy?: number }
 	| { type: 'SHOP_OPEN' }
 	| { type: 'SHOP_CLOSE' }
 	| { type: 'BUY'; id: TrickId }
@@ -247,11 +253,36 @@ export function initial(opts: InitialOpts = {}): GameState {
 	};
 }
 
+/** Richness bias for the house under the kids' feet (0 at leafy start). */
+function activeRichness(s: GameState): number {
+	return richnessBias(neighborhoodIndex(Math.max(0, s.activeK)));
+}
+
+/**
+ * Candy value with neighborhood richness: with probability `bias`, take the
+ * better of two rolls so later streets drop slightly richer candy.
+ */
+function rollValueBiased(bias: number): number {
+	const first = rollValue(rand);
+	if (bias <= 0 || rand() >= bias) return first;
+	return Math.max(first, rollValue(rand));
+}
+
+/**
+ * Treat count with richness: with probability `bias`, force 2 candies; else the
+ * normal 1–2 roll.
+ */
+function treatCountBiased(bias: number): number {
+	if (bias > 0 && rand() < bias) return 2;
+	return treatCount(rand);
+}
+
 /* candies: light float — 2.0s per candy, staggered 0.12s, bobbing in the page */
 function spawnCandies(s: GameState, n: number): GameState {
 	const doorScreenX = s.activeK * SPACING - s.worldX + 310;
 	const candies = [...s.candies];
 	const landedCount = candies.filter((c) => c.state !== 'fly').length;
+	const bias = activeRichness(s);
 	for (let i = 0; i < n; i++) {
 		const tx = 332 + ((landedCount + i) % 5) * 30 + (rand() * 12 - 6);
 		const ty = 318 + (i % 2) * 8;
@@ -266,10 +297,33 @@ function spawnCandies(s: GameState, n: number): GameState {
 			tx,
 			ty,
 			type: CANDY_TYPES[(rand() * CANDY_TYPES.length) | 0],
-			value: rollValue(rand)
+			value: rollValueBiased(bias)
 		});
 	}
 	return { ...s, candies, nextId: s.nextId + n };
+}
+
+/** One candy from a free screen spawn (T37 van toss) onto the pile. */
+function spawnCandyFrom(s: GameState, sx: number, sy: number): GameState {
+	const candies = [...s.candies];
+	const landedCount = candies.filter((c) => c.state !== 'fly').length;
+	const bias = activeRichness(s);
+	const tx = 332 + (landedCount % 5) * 30 + (rand() * 12 - 6);
+	const ty = 318;
+	candies.push({
+		id: s.nextId,
+		state: 'fly',
+		elapsed: 0,
+		delay: 0,
+		dur: 2.0,
+		sx,
+		sy,
+		tx,
+		ty,
+		type: CANDY_TYPES[(rand() * CANDY_TYPES.length) | 0],
+		value: rollValueBiased(bias)
+	});
+	return { ...s, candies, nextId: s.nextId + 1 };
 }
 
 /**
@@ -288,8 +342,10 @@ export function reduce(s: GameState, a: Action): GameState {
 			const k = s.activeK;
 			const home = s.homes[k];
 			let outcome: KnockOutcome;
-			if (!home || !home.done) outcome = s.force[k] || (rand() < TREAT_P ? 'treat' : 'refuse');
-			else if (s.force[k] === 'regift') outcome = 'regift';
+			if (!home || !home.done) {
+				const treatP = 1 - refusalP(neighborhoodIndex(Math.max(0, k)));
+				outcome = s.force[k] || (rand() < treatP ? 'treat' : 'refuse');
+			} else if (s.force[k] === 'regift') outcome = 'regift';
 			else if (s.force[k] === 'seen') outcome = 'seen';
 			else outcome = !home.used && rand() < REGIFT_P ? 'regift' : 'seen';
 			return { ...s, phase: 'door', dir: 0, pending: outcome, note: 'Bussano...' };
@@ -305,7 +361,7 @@ export function reduce(s: GameState, a: Action): GameState {
 					homes: { ...s.homes, [k]: { done: true, used: false, kind: 'treat' } }
 				};
 				return {
-					...spawnCandies(n, treatCount(rand)),
+					...spawnCandies(n, treatCountBiased(activeRichness(n))),
 					phase: 'collect',
 					pending: 'treat',
 					note: 'Dolcetto!'
@@ -400,6 +456,21 @@ export function reduce(s: GameState, a: Action): GameState {
 				n = { ...n, phase: 'roam', pending: null, note: '+' + c.value + ' → sacchetto: ' + bag };
 			}
 			return n;
+		}
+
+		/* T37 mystery-van candy toss — one sidewalk candy while roaming (or
+		 * already collecting). Opens collect so the kid can pick it up. */
+		case 'AMBIENT_CANDY': {
+			if (s.shopOpen || (s.phase !== 'roam' && s.phase !== 'collect')) return s;
+			const sx = a.sx ?? 426;
+			const sy = a.sy ?? 200;
+			const n = spawnCandyFrom(s, sx, sy);
+			return {
+				...n,
+				phase: 'collect',
+				pending: s.phase === 'collect' && s.pending ? s.pending : 'treat',
+				note: 'Una caramella dal furgone!'
+			};
 		}
 
 		case 'SHOP_OPEN':

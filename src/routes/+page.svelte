@@ -39,8 +39,7 @@
 	 * bounces the doorway neighbour through its DOM seam and says the
 	 * archetype's payoff line +300 ms later. `openK` is the prototype's door
 	 * gate (phase in door/collect/trick/refuse → the home under the kids'
-	 * feet); `homes={{}}` → `NO_HOMES` is the one seam still open — the store
-	 * does not expose `homes`, so a done home's windows do not dim yet. The
+	 * feet); `homes()` feeds the canvas so done doors dim their windows. The
 	 * night background and cream ink come from `body` in `app.css`.
 	 *
 	 * **The title menu (T17).** `<TitleScreen/>` mounts over everything (its
@@ -93,6 +92,7 @@
 	import Bubbles from '$lib/play/Bubbles.svelte';
 	import Celebration from '$lib/play/Celebration.svelte';
 	import Scares from '$lib/play/Scares.svelte';
+	import StreetLife from '$lib/play/StreetLife.svelte';
 	import { duckAmbience, startAmbience } from '$lib/audio/ambience.svelte';
 	import { duckMusic, startMusic, stopMusic } from '$lib/audio/music.svelte';
 	import { initSfx, playCue, setSfxVolume } from '$lib/audio/sfx';
@@ -119,6 +119,7 @@
 		dir,
 		dispatch,
 		furthest,
+		homes,
 		phase,
 		record,
 		shopOpen,
@@ -132,9 +133,6 @@
 	import { persist } from '$lib/persist/persist';
 	import type { RunState } from '$lib/persist/persist';
 	import type { Phase } from '$lib/sim/loop';
-
-	/** The store still exposes no `homes`, so nothing can be marked done. */
-	const NO_HOMES: Record<number, { done?: boolean }> = {};
 
 	/** The knock chain's view of the store — one adapter for the page's life. */
 	const flow = createFlowStore();
@@ -218,9 +216,9 @@
 		if (decision.fire) beat = decision.fire;
 	});
 
-	/** The banner's stinger hook — silent until T23/T25/T27 play a cue. */
-	const noopStinger = (): void => {
-		/* intentionally silent — the audio tasks replace this hook */
+	/** Neighborhood banner stinger — soft sparkle for a new place. */
+	const celebrationStinger = (): void => {
+		playCue('twinkle');
 	};
 
 	/**
@@ -398,9 +396,10 @@
 		     backing store redrawn in place, no per-scrolled-pixel retention.
 		     Evidence + plan: docs/T4-CANVAS-PLAN.md. -->
 		<StreetBands worldX={worldX()} />
-		<WorldCanvas worldX={worldX()} homes={NO_HOMES} activeK={activeK()} {openK} sound={playCue} />
+		<WorldCanvas worldX={worldX()} homes={homes()} activeK={activeK()} {openK} sound={playCue} />
 		<Npcs sound={playCue} {say} />
 		<Kids dir={dir()} />
+		<StreetLife scareActive={scareActive} sound={playCue} />
 		<Scares {onScare} sound={playCue} />
 		<CandyLayer sound={playCue} />
 		{#if !scareActive}
@@ -411,7 +410,7 @@
 		<Scherzo sound={playCue} />
 		<Theatre bind:this={theatre} />
 		<Bubbles />
-		<Celebration {beat} onStinger={noopStinger} />
+		<Celebration {beat} onStinger={celebrationStinger} />
 		<Hud sound={playCue} />
 	</Stage>
 </div>

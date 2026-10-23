@@ -59,13 +59,13 @@ export interface ShopCopy {
 export const SHOP_COPY: Record<Lang, ShopCopy> = {
 	it: {
 		title: 'La Bottega della Strega',
-		sub: 'Compra trucchi col sacchetto. (Prezzi provvisori — BALANCE.md)',
+		sub: 'Compra trucchi col sacchetto di caramelle.',
 		owned: 'Tuo!',
 		buy: 'Compra'
 	},
 	en: {
 		title: 'The Witch’s Shop',
-		sub: 'Buy tricks with your candy bag. (Provisional prices — BALANCE.md)',
+		sub: 'Buy tricks with your candy bag.',
 		owned: 'Yours!',
 		buy: 'Buy'
 	}
