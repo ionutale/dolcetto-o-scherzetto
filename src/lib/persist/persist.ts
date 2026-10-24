@@ -2,91 +2,148 @@
  * The localStorage mirror of the run — the game's only save slot
  * (ADR-0006: local-only, no backend, autosaved after every change).
  *
- * The state is stored verbatim under one versioned key (`dos.run.v1`), so a
- * future schema bumps `version` and an older payload is recognised and dropped
- * instead of crashing the boot. `RunState` is plain JSON by design (the sim in
- * `src/lib/sim` keeps it that way), so `JSON.stringify` is the whole
- * serialisation.
+ * Schema **v2** adds session street memory (done homes), the candy album, and
+ * unlockable cosmetics. A v1 payload is migrated on read so older devices
+ * keep their bag/tricks/furthest without a wipe.
  *
  * **Nothing here ever throws.** localStorage is hostile in the wild — Safari
  * private mode throws on every access, a full quota throws on write, and a
  * half-written or hand-edited value throws on parse. Every one of those paths
  * degrades to "no save": `read()` returns `null` and `write()`/`clear()` stay
- * silent. A game that cannot save must still be playable.
- *
- * Validation is deliberately minimal (version, the types of every field the
- * sim reads): enough to tell a save from garbage, not a schema check. The
- * numbers must be *finite* — a hand-edited `1e999` parses to `Infinity`, which
- * would corrupt the run silently.
+ * silent.
  */
 
 /** The one key the run owns in localStorage. */
 export const RUN_KEY = 'dos.run.v1';
 
-/** Bumped whenever `RunState` changes shape; older payloads are dropped. */
-const RUN_VERSION = 1;
+/** Current schema version written by `write()`. */
+export const RUN_VERSION = 2 as const;
 
-/**
- * What survives a reload. Kept minimal for T03; the sim (T05) extends it with
- * the rest of the loop state.
- */
-export interface RunState {
-	version: 1;
-	/** Candies in the bag right now. */
-	bag: number;
-	/** The best bag ever held on this device. */
-	record: number;
-	/** Owned trick ids (the Bottega's eight scherzi). */
-	tricks: string[];
-	/** Furthest neighborhood index reached (progression, T07). */
-	furthestK: number;
+/** Candy skins the album counts (mirrors `CANDY_TYPES` in loop.ts). */
+export const ALBUM_TYPES = ['lolli', 'gummy', 'choco', 'toffee', 'corn', 'star'] as const;
+export type AlbumType = (typeof ALBUM_TYPES)[number];
+
+/** Unlockable cosmetics (Bottega cape for now). */
+export const COSMETIC_IDS = ['cape'] as const;
+export type CosmeticId = (typeof COSMETIC_IDS)[number];
+
+/** One completed home, serialised with a numeric house index. */
+export interface SavedHome {
+	done: boolean;
+	used: boolean;
+	kind: 'treat' | 'scherzo';
 }
 
 /**
- * True for a v1 run state the sim could run on. Anything else — a future
- * schema, a truncated write, a hand-edited value — is refused and the game
- * starts fresh instead of booting into a corrupt run.
+ * What survives a reload (v2).
+ */
+export interface RunState {
+	version: 2;
+	bag: number;
+	record: number;
+	tricks: string[];
+	furthestK: number;
+	/** Done / used homes by house index (string keys in JSON). */
+	homes: Record<string, SavedHome>;
+	/** Per-type collected counts this device (monotonic within a wipe). */
+	album: Record<AlbumType, number>;
+	/** Owned cosmetics (`cape`, …). */
+	cosmetics: string[];
+}
+
+/** Empty album — every type at 0. */
+export function emptyAlbum(): Record<AlbumType, number> {
+	const album = {} as Record<AlbumType, number>;
+	for (const t of ALBUM_TYPES) album[t] = 0;
+	return album;
+}
+
+function isFiniteNumber(v: unknown): v is number {
+	return typeof v === 'number' && Number.isFinite(v);
+}
+
+function isSavedHome(v: unknown): v is SavedHome {
+	if (typeof v !== 'object' || v === null) return false;
+	const h = v as Partial<SavedHome>;
+	return (
+		typeof h.done === 'boolean' &&
+		typeof h.used === 'boolean' &&
+		(h.kind === 'treat' || h.kind === 'scherzo')
+	);
+}
+
+function isAlbum(v: unknown): v is Record<AlbumType, number> {
+	if (typeof v !== 'object' || v === null) return false;
+	const a = v as Record<string, unknown>;
+	return ALBUM_TYPES.every((t) => isFiniteNumber(a[t]) && (a[t] as number) >= 0);
+}
+
+/**
+ * True for a v2 run the sim can boot. Foreign versions (except migratable v1)
+ * are refused by `read()` after migration attempt.
  */
 export function isRunState(value: unknown): value is RunState {
 	if (typeof value !== 'object' || value === null) return false;
 	const state = value as Partial<RunState>;
 	if (state.version !== RUN_VERSION) return false;
-	if (typeof state.bag !== 'number' || !Number.isFinite(state.bag)) return false;
-	if (typeof state.record !== 'number' || !Number.isFinite(state.record)) return false;
-	if (typeof state.furthestK !== 'number' || !Number.isFinite(state.furthestK)) return false;
-	return Array.isArray(state.tricks) && state.tricks.every((trick) => typeof trick === 'string');
+	if (!isFiniteNumber(state.bag) || !isFiniteNumber(state.record) || !isFiniteNumber(state.furthestK))
+		return false;
+	if (!Array.isArray(state.tricks) || !state.tricks.every((t) => typeof t === 'string')) return false;
+	if (!Array.isArray(state.cosmetics) || !state.cosmetics.every((c) => typeof c === 'string'))
+		return false;
+	if (!isAlbum(state.album)) return false;
+	if (typeof state.homes !== 'object' || state.homes === null) return false;
+	for (const home of Object.values(state.homes)) {
+		if (!isSavedHome(home)) return false;
+	}
+	return true;
+}
+
+/** Lift a legacy v1 payload into v2 (empty street memory / album / cosmetics). */
+export function migrateRunV1(value: unknown): RunState | null {
+	if (typeof value !== 'object' || value === null) return null;
+	const s = value as Record<string, unknown>;
+	if (s.version !== 1) return null;
+	if (!isFiniteNumber(s.bag) || !isFiniteNumber(s.record) || !isFiniteNumber(s.furthestK))
+		return null;
+	if (!Array.isArray(s.tricks) || !s.tricks.every((t) => typeof t === 'string')) return null;
+	return {
+		version: 2,
+		bag: s.bag,
+		record: s.record,
+		tricks: s.tricks as string[],
+		furthestK: s.furthestK,
+		homes: {},
+		album: emptyAlbum(),
+		cosmetics: []
+	};
+}
+
+/** Parse any stored payload into a v2 run, or null. */
+export function normalizeRun(value: unknown): RunState | null {
+	if (isRunState(value)) return value;
+	return migrateRunV1(value);
 }
 
 export interface Persist {
-	/** The saved run, or `null` when there is nothing usable to restore. */
 	read(): RunState | null;
-	/** Writes the run as the latest save (last write wins). Never throws. */
 	write(state: RunState): void;
-	/** Drops the save; the next boot starts a fresh run. */
 	clear(): void;
 }
 
-/**
- * Binds the mirror to a `Storage`. Pass `null` where there is none (SSR, or a
- * browser that refuses to expose localStorage) and every method no-ops.
- */
 export function createPersist(storage: Storage | null): Persist {
-	/** The stored run, parsed and shape-checked, or `null`. */
 	function read(): RunState | null {
 		if (!storage) return null;
 		let raw: string | null;
 		try {
 			raw = storage.getItem(RUN_KEY);
 		} catch {
-			// Private mode, blocked cookies, a revoked quota: no save, no crash.
 			return null;
 		}
 		if (raw === null) return null;
 		try {
-			const state: unknown = JSON.parse(raw);
-			return isRunState(state) ? state : null;
+			return normalizeRun(JSON.parse(raw));
 		} catch {
-			// Truncated or hand-edited payload: treat as no save at all.
 			return null;
 		}
 	}
@@ -99,8 +156,7 @@ export function createPersist(storage: Storage | null): Persist {
 			try {
 				storage.setItem(RUN_KEY, JSON.stringify(state));
 			} catch {
-				// Quota exceeded or a serialisation refusal: the run keeps playing,
-				// it just does not survive a reload.
+				/* quota — keep playing */
 			}
 		},
 
@@ -109,18 +165,12 @@ export function createPersist(storage: Storage | null): Persist {
 			try {
 				storage.removeItem(RUN_KEY);
 			} catch {
-				// Nothing to do: a save we cannot remove is one we cannot read back
-				// either, and read() has already proven it is a no-op for us.
+				/* ignore */
 			}
 		}
 	};
 }
 
-/**
- * `window.localStorage`, or `null` when there is none to have (SSR, or a
- * browser that refuses to expose it). The *access* itself throws in some
- * privacy modes, so even this read is guarded.
- */
 export function readLocalStorage(): Storage | null {
 	if (typeof window === 'undefined') return null;
 	try {
@@ -130,8 +180,40 @@ export function readLocalStorage(): Storage | null {
 	}
 }
 
-/**
- * The mirror this app uses. `window.localStorage` is read once, defensively:
- * building the instance is guarded and SSR gets a no-op mirror.
- */
 export const persist: Persist = createPersist(readLocalStorage());
+
+/* ------------------------------------------------------------------ */
+/* Save export / import (parent tool — survive device wipe copies)     */
+/* ------------------------------------------------------------------ */
+
+export const SAVE_EXPORT_KIND = 'dolcetto-o-scherzetto-save' as const;
+
+export interface SaveExport {
+	kind: typeof SAVE_EXPORT_KIND;
+	/** Schema hint for future importers. */
+	schema: 2;
+	exportedAt: string;
+	run: RunState;
+}
+
+export function buildSaveExport(run: RunState, now = new Date()): SaveExport {
+	return {
+		kind: SAVE_EXPORT_KIND,
+		schema: 2,
+		exportedAt: now.toISOString(),
+		run
+	};
+}
+
+/** Parse a pasted/uploaded save file into a RunState, or null. */
+export function parseSaveImport(raw: string): RunState | null {
+	try {
+		const value: unknown = JSON.parse(raw);
+		if (typeof value !== 'object' || value === null) return null;
+		const obj = value as Record<string, unknown>;
+		if (obj.kind === SAVE_EXPORT_KIND && obj.run) return normalizeRun(obj.run);
+		return normalizeRun(value);
+	} catch {
+		return null;
+	}
+}
