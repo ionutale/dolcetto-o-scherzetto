@@ -107,10 +107,11 @@ polish is a later pass).
 ## Status (2026-10-19, shipped)
 
 Done in one pass: all four layer modules (free agents), the `WorldCanvas` shell, the page
-swap (`StreetBands` + `WorldCanvas`), the canvas e2e + the flip e2e, parity screenshots
-(`tools/canvas-parity.mjs`). Shipped with it: **T4b** — the manual presentation flip
-(HUD button + Settings row; `RotateOverlay`, the lock attempt and the manifest
-`orientation: landscape` are gone; resize/orientationchange only re-measure).
+swap (`StreetBands` + `WorldCanvas`), the canvas e2e + the rotate e2e, parity screenshots
+(`tools/canvas-parity.mjs`). Shipped with it: **T4b** — the manual presentation rotation
+(HUD rotate button + Settings row; every tap turns a quarter turn to the left;
+`RotateOverlay`, the lock attempt and the manifest `orientation: landscape` are gone;
+resize/orientationchange only re-measure).
 
 Known polish (after the device gate): door-leaf plank contrast is a touch stronger than the
 DOM's, and CSS filter softness (drop-shadows) is approximated with canvas shadows.

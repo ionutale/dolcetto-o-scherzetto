@@ -49,7 +49,7 @@ above it).
 |---|---|---|---|
 | **Sim** (pure) | `src/lib/sim/loop.ts` · `economy.ts` · `progression.ts` | the pure reducer/tick (`initial`/`reduce`/`tick`), the trick catalogue, the price/burst/roll helpers, the neighborhood curves | touching the DOM, timers or storage |
 | **State** | `src/lib/state/game.svelte.ts` | the one reactive runes store, the read seams (`worldX`/`phase`/`candies`/`bag`/`furthest`…), the clamped rAF loop, and the `bootState()` that seeds the sim from the save | reimplementing sim rules |
-| **Scene** | `src/lib/art/canvas/`, `src/lib/art/scene/`, `src/lib/art/sprites/` | sky + the three static bands (DOM), the whole scrolling world as **one canvas** (`WorldCanvas`, T4 2026-10-19 — a single backing store redrawn in place; art ported 1:1 from the validated DOM components), the **manual flip** (T4b: landscape/portrait by button — no accelerometer, no rotate prompt), the sprite-motion CSS | deciding outcomes |
+| **Scene** | `src/lib/art/canvas/`, `src/lib/art/scene/`, `src/lib/art/sprites/` | sky + the three static bands (DOM), the whole scrolling world as **one canvas** (`WorldCanvas`, T4 2026-10-19 — a single backing store redrawn in place; art ported 1:1 from the validated DOM components), the **manual rotation** (T4b: a quarter-turn rotate button — no accelerometer, no rotate prompt), the sprite-motion CSS | deciding outcomes |
 | **Play** | `src/lib/play/` | the interaction widgets — knock chain, bubbles, candy layer, fan, theatre, scares, cars, NPCs — plus their pure `*-model.ts` maths | owning sim math |
 | **Audio** | `src/lib/audio/` | **three independent engines**, each with its own lazy `AudioContext` and self-driven rAF frame: `sfx.ts` (26-cue WebAudio synth), `ambience.svelte.ts` (per-theme beds + sprinkles + duck), `music.svelte.ts` (the decoded street loop); `voice.ts` decodes clips once and plays them on the synth's bus; `volumes.svelte.ts` is the shared gain seam | throwing on a hostile `AudioContext` |
 | **Persist** | `src/lib/persist/persist.ts` · `settings.ts` | defensive `localStorage`: the run slot `dos.run.v1` and the one settings envelope `dos.settings.v1` | throwing (`read`/`write` degrade to no-save/defaults) |
@@ -124,7 +124,8 @@ Settings first, then the save, then the title, then one gesture, then the engine
    `onMount`); `TitleScreen.svelte` sits over it with `Gioca` / `Impostazioni`.
 4. **Gesture unlock** — the first `pointerdown` (the `Gioca` tap included) runs
    `unlockAudio()`: `startAmbience()`, `startMusic()`, `initSfx()`. No orientation is
-   requested from the platform: the presentation flip is manual (T4b, `flip.svelte.ts`).
+   requested from the platform: the presentation rotation is manual (T4b,
+   `rotation.svelte.ts`).
 5. **Engines** — each audio engine lazily creates and resumes its own `AudioContext` and
    drives its own frame; voice clips decode once and play on the synth's bus (no media
    elements). An autosave `$effect` writes `{ bag, record, tricks, furthestK }` to

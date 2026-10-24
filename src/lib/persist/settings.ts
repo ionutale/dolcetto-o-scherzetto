@@ -45,11 +45,12 @@ const SETTINGS_VERSION = 1;
 export type Lang = 'it' | 'en';
 
 /**
- * The game's presentation flip (T4b, 2026-10-19): the world's native facing
- * (`landscape`) or turned a quarter turn (`portrait`). The player chooses it
- * with a button and it is remembered here — the accelerometer never decides.
+ * The game's presentation rotation (T4b, revised 2026-10-24): how far the
+ * stage is turned, in degrees clockwise. The player's button steps it 90° to
+ * the LEFT on every press (0 → 270 → 180 → 90 → 0); the accelerometer never
+ * decides the presentation.
  */
-export type Flip = 'landscape' | 'portrait';
+export type Rotation = 0 | 90 | 180 | 270;
 
 /** Everything this game remembers about how it should behave. */
 export interface Settings {
@@ -63,11 +64,13 @@ export interface Settings {
 	/** Synth SFX gain, 0..1 — T17's SFX slider (spec §6). */
 	sfxVolume: number;
 	/**
-	 * The manual screen flip (T4b) — OPTIONAL on purpose: a pre-T4b envelope
-	 * without it loads fine and defaults to `landscape` (this module's rule for
-	 * new settings; no envelope bump, no reset).
+	 * The manual screen rotation (T4b) — OPTIONAL on purpose: an envelope
+	 * without it (every build before 2026-10-19) loads fine and defaults to 0
+	 * (this module's rule for new settings; no envelope bump, no reset). The
+	 * first T4b build stored a two-state `flip`; `read()` maps its 'portrait'
+	 * to 90° so an existing choice survives.
 	 */
-	flip?: Flip;
+	rotation?: Rotation;
 }
 
 /**
@@ -82,7 +85,7 @@ export const DEFAULT_SETTINGS: Settings = {
 	sound: true,
 	musicVolume: 1,
 	sfxVolume: 1,
-	flip: 'landscape'
+	rotation: 0
 };
 
 /**
@@ -111,10 +114,15 @@ export function isSettings(value: unknown): value is Settings {
 	if (typeof settings.musicVolume !== 'number' || !Number.isFinite(settings.musicVolume))
 		return false;
 	if (typeof settings.sfxVolume !== 'number' || !Number.isFinite(settings.sfxVolume)) return false;
-	// `flip` is optional (pre-T4b envelopes lack it), but a present value must
-	// be one of the two real presentations.
+	// `rotation` is optional (older envelopes lack it), but a present value must
+	// be one of the four quarter turns. Unknown extra keys (the retired `flip`
+	// of the first T4b build) are ignored, so those envelopes still load.
 	return (
-		settings.flip === undefined || settings.flip === 'landscape' || settings.flip === 'portrait'
+		settings.rotation === undefined ||
+		settings.rotation === 0 ||
+		settings.rotation === 90 ||
+		settings.rotation === 180 ||
+		settings.rotation === 270
 	);
 }
 
@@ -159,13 +167,21 @@ export function createSettings(storage: Storage | null): SettingsStore {
 			// the edit, not the whole payload.
 			const stored = readStored();
 			if (!stored) return { ...DEFAULT_SETTINGS };
+			// T4b, revised 2026-10-24: `rotation` is the live field; the first
+			// T4b build's two-state `flip` maps across ('portrait' was its 90°
+			// clockwise quarter turn), and anything unusable reads as upright.
+			const legacy = (stored as { flip?: unknown }).flip;
+			const rotation: Rotation =
+				stored.rotation === 90 || stored.rotation === 180 || stored.rotation === 270
+					? stored.rotation
+					: legacy === 'portrait'
+						? 90
+						: 0;
 			return {
 				...stored,
 				musicVolume: clampVolume(stored.musicVolume),
 				sfxVolume: clampVolume(stored.sfxVolume),
-				// Pre-T4b envelopes have no flip; anything unusable reads as the
-				// native facing rather than refusing the whole payload.
-				flip: stored.flip === 'portrait' ? 'portrait' : 'landscape'
+				rotation
 			};
 		},
 

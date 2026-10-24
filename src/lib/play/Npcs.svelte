@@ -38,7 +38,14 @@
 	 * for tests and the smoke.
 	 */
 	import { onDestroy, onMount } from 'svelte';
-	import { npcBat, npcCat, npcGhost, npcPumpkin, npcSkeleton, npcWitchling } from '$lib/art/sprites';
+	import {
+		npcBat,
+		npcCat,
+		npcGhost,
+		npcPumpkin,
+		npcSkeleton,
+		npcWitchling
+	} from '$lib/art/sprites';
 	import { showBubble } from '$lib/play/bubble.svelte';
 	import { t } from '$lib/i18n/lines';
 	import { lang, worldX } from '$lib/state/game.svelte';

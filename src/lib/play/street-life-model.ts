@@ -25,13 +25,7 @@ export interface AmbientGate {
 
 /** True when a beat may fire right now. */
 export function ambientMayFire(g: AmbientGate): boolean {
-	return (
-		!g.active &&
-		!g.scareActive &&
-		!g.shopOpen &&
-		g.phase === 'roam' &&
-		g.dir !== 0
-	);
+	return !g.active && !g.scareActive && !g.shopOpen && g.phase === 'roam' && g.dir !== 0;
 }
 
 function clamp01(v: number): number {
@@ -170,7 +164,11 @@ export interface BeatDecision {
  * One scheduler tick for a T37 beat. Due moments that miss the walk-gate are
  * deferred (nextAt unchanged), matching scareTick.
  */
-export function beatTick(ctx: BeatTickCtx, nextGap: (now: number, rng: Rng) => number, rng: Rng): BeatDecision {
+export function beatTick(
+	ctx: BeatTickCtx,
+	nextGap: (now: number, rng: Rng) => number,
+	rng: Rng
+): BeatDecision {
 	if (!ambientMayFire(ctx)) return { nextAt: ctx.nextAt, fire: false };
 	if (ctx.now < ctx.nextAt) return { nextAt: ctx.nextAt, fire: false };
 	return { nextAt: nextGap(ctx.now, rng), fire: true };

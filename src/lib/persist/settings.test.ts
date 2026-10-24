@@ -80,17 +80,33 @@ describe('defaults', () => {
 			sound: true,
 			musicVolume: 1,
 			sfxVolume: 1,
-			flip: 'landscape'
+			rotation: 0
 		});
 	});
 
-	it('a pre-T4b envelope (no flip) loads with the native facing', () => {
+	it('a pre-T4b envelope (no rotation) loads upright', () => {
 		const storage = memoryStorage();
 		storage.setItem(
 			SETTINGS_KEY,
 			JSON.stringify({ version: 1, lang: 'it', sound: true, musicVolume: 1, sfxVolume: 1 })
 		);
-		expect(createSettings(storage).read().flip).toBe('landscape');
+		expect(createSettings(storage).read().rotation).toBe(0);
+	});
+
+	it("maps the first T4b build's `flip` to its quarter turn", () => {
+		const storage = memoryStorage();
+		storage.setItem(
+			SETTINGS_KEY,
+			JSON.stringify({
+				version: 1,
+				lang: 'it',
+				sound: true,
+				musicVolume: 1,
+				sfxVolume: 1,
+				flip: 'portrait'
+			})
+		);
+		expect(createSettings(storage).read().rotation).toBe(90);
 	});
 
 	it('read() answers with the defaults when storage is empty', () => {
@@ -257,10 +273,10 @@ describe('read falls back to defaults on anything unusable', () => {
 		expect(isSettings(settingsWith({ lang: 'en', sound: false }))).toBe(true);
 		expect(isSettings(settingsWith({ musicVolume: 0, sfxVolume: 0.5 }))).toBe(true);
 		expect(isSettings(settingsWith({ musicVolume: 5 }))).toBe(true); // out-of-band: clamped, not refused
-		expect(isSettings(settingsWith({ flip: 'portrait' }))).toBe(true);
-		expect(isSettings({ ...settingsWith(), flip: undefined })).toBe(true); // pre-T4b envelope
+		expect(isSettings(settingsWith({ rotation: 270 }))).toBe(true);
+		expect(isSettings({ ...settingsWith(), rotation: undefined })).toBe(true); // pre-T4b envelope
 		expect(isSettings({ ...settingsWith(), lang: 'fr' })).toBe(false);
-		expect(isSettings({ ...settingsWith(), flip: 'sideways' })).toBe(false);
+		expect(isSettings({ ...settingsWith(), rotation: 45 })).toBe(false);
 		expect(isSettings({ ...settingsWith(), version: 2 })).toBe(false);
 		expect(isSettings({ version: 1, lang: 'it', sound: true })).toBe(false); // no volumes
 		expect(isSettings(null)).toBe(false);

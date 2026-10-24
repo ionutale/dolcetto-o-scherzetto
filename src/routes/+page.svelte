@@ -80,7 +80,7 @@
 	import Stage from '$lib/art/scene/Stage.svelte';
 	import StreetBands from '$lib/art/canvas/StreetBands.svelte';
 	import WorldCanvas from '$lib/art/canvas/WorldCanvas.svelte';
-	import FlipButton from '$lib/ui/FlipButton.svelte';
+	import RotateButton from '$lib/ui/RotateButton.svelte';
 	import Kids from '$lib/play/Kids.svelte';
 	import Ghosts from '$lib/play/Ghosts.svelte';
 	import Npcs from '$lib/play/Npcs.svelte';
@@ -354,7 +354,7 @@
 	/**
 	 * The prototype's `tryLandscapeLock()` is gone (T4b, 2026-10-19): the game
 	 * no longer asks the platform — or the accelerometer — for an orientation.
-	 * The player flips the presentation with the HUD button (`flip.svelte.ts`).
+	 * The player turns the presentation with the HUD button (`rotation.svelte.ts`).
 	 */
 
 	/** Gioca: the tap itself is the audio-unlock gesture. */
@@ -399,13 +399,13 @@
 		<WorldCanvas worldX={worldX()} homes={homes()} activeK={activeK()} {openK} sound={playCue} />
 		<Npcs sound={playCue} {say} />
 		<Kids dir={dir()} />
-		<StreetLife scareActive={scareActive} sound={playCue} />
+		<StreetLife {scareActive} sound={playCue} />
 		<Scares {onScare} sound={playCue} />
 		<CandyLayer sound={playCue} />
 		{#if !scareActive}
 			<WalkControls />
 		{/if}
-		<FlipButton />
+		<RotateButton />
 		<KnockButton sound={playCue} />
 		<Scherzo sound={playCue} />
 		<Theatre bind:this={theatre} />

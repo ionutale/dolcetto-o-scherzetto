@@ -3,7 +3,7 @@
  * T4 canvas-parity harness (2026-10-19): screenshot one build of the game at
  * a fixed seeded save, for side-by-side eyeballing against another build.
  *
- *   node tools/canvas-parity.mjs <url> <out.png> [furthestK]
+ *   node tools/canvas-parity.mjs <url> <out.png> [furthestK] [rotation]
  *
  * Seeds `dos.run.v1` (bag 5416, the kid's live save shape) and a silent
  * settings envelope before the page boots, taps Gioca, waits for the canvas
@@ -11,21 +11,25 @@
  */
 import { chromium } from '@playwright/test';
 
-const [, , url, out, kArg, flipArg] = process.argv;
+const [, , url, out, kArg, rotationArg] = process.argv;
 if (!url || !out) {
-	console.error('usage: node tools/canvas-parity.mjs <url> <out.png> [furthestK] [flip]');
+	console.error('usage: node tools/canvas-parity.mjs <url> <out.png> [furthestK] [rotation]');
 	process.exit(1);
 }
 const furthestK = Number(kArg ?? 350);
-const flip = flipArg === 'portrait' ? 'portrait' : 'landscape';
+const rotationRaw = Number(rotationArg ?? 0);
+const rotation = [0, 90, 180, 270].includes(rotationRaw) ? rotationRaw : 0;
 
 const browser = await chromium.launch();
 const context = await browser.newContext({
-	viewport: flip === 'portrait' ? { width: 420, height: 900 } : { width: 1000, height: 520 },
+	viewport:
+		rotation === 90 || rotation === 270
+			? { width: 420, height: 900 }
+			: { width: 1000, height: 520 },
 	deviceScaleFactor: 2
 });
 await context.addInitScript(
-	([runK, runFlip]) => {
+	([runK, runRotation]) => {
 		try {
 			localStorage.setItem(
 				'dos.run.v1',
@@ -39,14 +43,14 @@ await context.addInitScript(
 					sound: false,
 					musicVolume: 0,
 					sfxVolume: 0,
-					flip: runFlip
+					rotation: runRotation
 				})
 			);
 		} catch {
 			/* hostile storage: screenshot the defaults */
 		}
 	},
-	[furthestK, flip]
+	[furthestK, rotation]
 );
 const page = await context.newPage();
 const errors = [];

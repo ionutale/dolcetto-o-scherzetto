@@ -32,7 +32,7 @@
 	 */
 	import { onMount } from 'svelte';
 	import type { Snippet } from 'svelte';
-	import { flip } from '$lib/ui/flip.svelte';
+	import { rotation } from '$lib/ui/rotation.svelte';
 
 	interface Props {
 		/** Scene layers composed inside the 852×393 frame (T09 adds the street, T10 the kids…). */
@@ -57,11 +57,32 @@
 	let scale = $state(1);
 
 	/**
-	 * T4b — the manual presentation flip. `portrait` turns the whole stage a
-	 * quarter turn (and swaps its footprint in `fit`); the accelerometer is
-	 * never consulted — see `flip.svelte.ts` for the why.
+	 * T4b — the manual presentation rotation (revised 2026-10-24): each press
+	 * of the HUD's rotate button turns the stage a quarter turn to the LEFT
+	 * (0° → 270° → 180° → 90° → 0°); the accelerometer is never consulted —
+	 * see `rotation.svelte.ts` for the why.
 	 */
-	const flipped = $derived(flip() === 'portrait');
+	const turned = $derived(rotation());
+	/** True on the quarter turns: the wrapper reserves 393 × 852 instead. */
+	const rotated = $derived(turned === 90 || turned === 270);
+	/**
+	 * The stage's transform chain, right to left: scale, turn, then slide the
+	 * rotated box back onto the wrapper's origin. Each case was derived from
+	 * the rotation matrix so the 393×852 (or 852×393) footprint lands at (0,0).
+	 */
+	const stageTransform = $derived.by(() => {
+		const s = scale;
+		switch (turned) {
+			case 90:
+				return `translate(${REF_HEIGHT * s}px, 0px) rotate(90deg) scale(${s})`;
+			case 180:
+				return `translate(${REF_WIDTH * s}px, ${REF_HEIGHT * s}px) rotate(180deg) scale(${s})`;
+			case 270:
+				return `translate(0px, ${REF_WIDTH * s}px) rotate(270deg) scale(${s})`;
+			default:
+				return `scale(${s})`;
+		}
+	});
 
 	function fit() {
 		if (!frame) return;
@@ -72,16 +93,16 @@
 		const insetY = (parseFloat(cs.paddingTop) || 0) + (parseFloat(cs.paddingBottom) || 0);
 		const availW = window.innerWidth - CHROME_X - insetX;
 		const availH = Math.max(window.innerHeight - CHROME_Y - insetY, MIN_AVAIL_HEIGHT);
-		// The flipped footprint is 393 × 852 instead of 852 × 393.
-		const footW = flipped ? REF_HEIGHT : REF_WIDTH;
-		const footH = flipped ? REF_WIDTH : REF_HEIGHT;
+		// A quarter turn swaps the footprint: 393 × 852 instead of 852 × 393.
+		const footW = rotated ? REF_HEIGHT : REF_WIDTH;
+		const footH = rotated ? REF_WIDTH : REF_HEIGHT;
 		scale = Math.max(MIN_SCALE, Math.min(availW / footW, availH / footH, MAX_SCALE));
 	}
 
-	// A flip changes the footprint — refit immediately (the resize listeners
+	// A turn changes the footprint — refit immediately (the resize listeners
 	// only cover viewport changes).
 	$effect(() => {
-		flip();
+		rotation();
 		fit();
 	});
 
@@ -100,15 +121,10 @@
 
 <!-- `data-scale` is a read-only handle for the e2e placeholder (T30) and for
      the T08 smoke: it reports the live fit() result without touching the DOM.
-     `data-flip` (T4b) reports the manual presentation flip. -->
-<div
-	class="stage-frame"
-	bind:this={frame}
-	data-scale={scale.toFixed(4)}
-	data-flip={flipped ? 'portrait' : 'landscape'}
->
-	<div class="stage-wrap" class:flipped style="--stage-scale: {scale}">
-		<div class="stage" class:flipped>{@render children?.()}</div>
+     `data-rotation` (T4b) reports the manual quarter-turn rotation, degrees. -->
+<div class="stage-frame" bind:this={frame} data-scale={scale.toFixed(4)} data-rotation={turned}>
+	<div class="stage-wrap" class:rotated style="--stage-scale: {scale}">
+		<div class="stage" style="transform: {stageTransform}">{@render children?.()}</div>
 	</div>
 </div>
 
@@ -133,9 +149,10 @@
 		height: calc(393px * var(--stage-scale));
 	}
 
-	/* T4b: the flipped wrapper reserves the rotated footprint (393 × 852 at
-	 * scale), so the frame's centring and the stage's rotated transform agree. */
-	.stage-wrap.flipped {
+	/* T4b: the quarter-turned wrapper reserves the rotated footprint
+	 * (393 × 852 at scale), so the frame's centring and the stage's rotated
+	 * transform agree. */
+	.stage-wrap.rotated {
 		width: calc(393px * var(--stage-scale));
 		height: calc(852px * var(--stage-scale));
 	}
@@ -148,7 +165,7 @@
 		height: 393px;
 		overflow: hidden;
 		border-radius: var(--r-lg);
-		transform: scale(var(--stage-scale));
+		/* The transform (scale + T4b quarter turn) is inline — see `stageTransform`. */
 		transform-origin: top left;
 		background: var(--night-1);
 		/* The prototype's 8 px cream halo (alpha .035) is dropped: there is no
@@ -160,13 +177,5 @@
 		-webkit-user-select: none;
 		/* The stage is a game surface: no scroll chaining, no double-tap zoom. */
 		touch-action: none;
-	}
-
-	/* T4b: `portrait` turns the stage a quarter turn clockwise and parks the
-	 * rotated box at the wrapper's origin (393 × 852 at scale). The transform
-	 * chain, right to left: scale, rotate, then slide by the stage's height. */
-	.stage.flipped {
-		transform: translate(calc(393px * var(--stage-scale)), 0) rotate(90deg)
-			scale(var(--stage-scale));
 	}
 </style>
