@@ -10,3 +10,4 @@ playwright-report/
 .env*.local
 .vercel
 .env*
+.worktrees/
