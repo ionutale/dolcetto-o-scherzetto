@@ -189,6 +189,10 @@ export type Action =
 	| { type: 'SHOP_OPEN' }
 	| { type: 'SHOP_CLOSE' }
 	| { type: 'BUY'; id: TrickId }
+	/** Boss stake: one candy leaves the bag per round; refused when empty. */
+	| { type: 'SPEND_CANDY' }
+	/** Boss reward: `n` candies join the bag and can lift `record`. */
+	| { type: 'BOSS_REWARD'; n: number }
 	| { type: 'LANG' }
 	| { type: 'SOUND' }
 	| { type: 'RESET'; opts?: InitialOpts };
@@ -486,6 +490,18 @@ export function reduce(s: GameState, a: Action): GameState {
 				tricks: [...s.tricks, a.id],
 				note: 'Comprato: ' + TRICKS[a.id].name.it + '!'
 			};
+		}
+
+		case 'SPEND_CANDY':
+			return s.bag > 0 ? { ...s, bag: s.bag - 1 } : s;
+
+		/* Wallet side of a boss round: floor `n`, refuse a stake that adds nothing. */
+		case 'BOSS_REWARD': {
+			if (!Number.isFinite(a.n) || a.n <= 0) return s;
+			const n = Math.floor(a.n);
+			if (n <= 0) return s;
+			const bag = s.bag + n;
+			return { ...s, bag, record: Math.max(s.record, bag) };
 		}
 
 		case 'LANG':

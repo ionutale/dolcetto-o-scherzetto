@@ -736,6 +736,29 @@ describe('AMBIENT_CANDY (T37 van toss)', () => {
 	});
 });
 
+describe('boss wallet actions', () => {
+	it('SPEND_CANDY subtracts one and never goes negative', () => {
+		const start = { ...initial(), bag: 1 };
+		const spent = reduce(start, { type: 'SPEND_CANDY' });
+		expect(spent.bag).toBe(0);
+		expect(reduce(spent, { type: 'SPEND_CANDY' })).toBe(spent);
+	});
+
+	it('BOSS_REWARD adds the reward and lifts the record', () => {
+		const start = { ...initial(), bag: 1000, record: 1000 };
+		const won = reduce(start, { type: 'BOSS_REWARD', n: 60 });
+		expect(won.bag).toBe(1060);
+		expect(won.record).toBe(1060);
+	});
+
+	it('BOSS_REWARD ignores zero, negative and non-finite n', () => {
+		const start = { ...initial(), bag: 10, record: 10 };
+		expect(reduce(start, { type: 'BOSS_REWARD', n: 0 })).toBe(start);
+		expect(reduce(start, { type: 'BOSS_REWARD', n: -5 })).toBe(start);
+		expect(reduce(start, { type: 'BOSS_REWARD', n: Number.NaN })).toBe(start);
+	});
+});
+
 describe('LANG / SOUND / RESET', () => {
 	it('LANG toggles IT → EN → IT', () => {
 		let s = initial();
