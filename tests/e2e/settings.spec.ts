@@ -21,6 +21,34 @@ import {
  * and could land on any of the six neighbours.
  */
 
+/**
+ * T8 — the boss switch is a **device preference**, not run state: the parent
+ * turns it off once in Impostazioni and every later boot honours it. The
+ * switch's `aria-pressed` state is the visible half; the envelope is the
+ * durable half (`dos.settings.v1`, optional `bosses`).
+ */
+test('settings: the boss switch persists across a reload', async ({ page }) => {
+	await openTitle(page);
+	await menuSettingsButton(page).click({ force: true });
+
+	// On by default (a pre-boss envelope also reads as on).
+	await expect(page.locator('#bossOffBtn')).toHaveAttribute('aria-pressed', 'false');
+	await page.locator('#bossOffBtn').click({ force: true });
+	await expect(page.locator('#bossOffBtn')).toHaveAttribute('aria-pressed', 'true');
+	await expect.poll(async () => (await readSettings(page))?.bosses).toBe(false);
+
+	// A reload re-reads the envelope; the switch comes back off.
+	await page.reload();
+	await expect(page.locator('.menu')).not.toHaveClass(/hide/);
+	await menuSettingsButton(page).click({ force: true });
+	await expect(page.locator('#bossOffBtn')).toHaveAttribute('aria-pressed', 'true');
+	await expect(page.locator('#bossOnBtn')).toHaveAttribute('aria-pressed', 'false');
+
+	// Back on, so the preference is left exactly as the device found it.
+	await page.locator('#bossOnBtn').click({ force: true });
+	await expect.poll(async () => (await readSettings(page))?.bosses).toBe(true);
+});
+
 test('settings: Music/SFX sliders persist, then EN flips the door copy', async ({ page }) => {
 	await seedRun(page, { furthestK: 0 });
 	await openTitle(page);

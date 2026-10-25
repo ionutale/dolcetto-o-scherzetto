@@ -58,6 +58,8 @@ export interface SettingsSnapshot {
 	sfxVolume: number;
 	/** The candy-boss switch — optional since pre-boss envelopes lack it. */
 	bosses?: boolean;
+	/** The manual presentation rotation (T4b), in degrees clockwise. */
+	rotation?: 0 | 90 | 180 | 270;
 }
 
 /* ------------------------------------------------------------------ */
