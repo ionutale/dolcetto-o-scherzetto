@@ -38,10 +38,11 @@ untouched. This keeps the iOS memory work (T4/T39) intact.
 - Then every **500**: 1 500, 2 000, 2 500…
 - `nextBossAt` is the threshold of the boss about to appear.
 - After a win, the next threshold is the smallest multiple of 500 **strictly
-  above the post-reward bag**, with a floor of 1 500. Examples:
-  - win at 1 000 → reward 60 → bag 1 060 → next 1 500;
-  - win at 1 500 → bag 1 560 → next 2 000;
-  - the 5 416 welcome save → bag 5 476 → next 5 500.
+  above the post-reward bag**, with a floor of 1 500. Examples (1 candy per
+  throw, 30 throws, +60 reward):
+  - win at 1 000 → 970 → reward 60 → bag 1 030 → next 1 500;
+  - win at 1 500 → 1 470 → reward 60 → bag 1 530 → next 2 000;
+  - the 5 416 welcome save → 5 386 → reward 60 → bag 5 446 → next 5 500.
 - `bossWins` is the number of bosses beaten; it drives the rotation
   `BOSS_ORDER[bossWins % 3]`.
 - The current 5 416 save has no boss fields. Migration sets
@@ -231,7 +232,7 @@ Rules:
 Unit:
 
 - `boss-model`: due/threshold maths, 500-grid, floor 1 500, rotation by wins,
-  reward/threshold examples (1 060→1 500, 1 560→2 000, 5 476→5 500), guards.
+  reward/threshold examples (1 030→1 500, 1 530→2 000, 5 446→5 500), guards.
 - `loop`: `SPEND_CANDY` never below zero; `BOSS_REWARD` adds and updates the
   record.
 - `persist`: v1 migration, mid-v2 defaults, malformed-field repair, round-trip.
@@ -276,9 +277,9 @@ E2E:
 
 ## 15. Risks and notes
 
-- The 5 416 save gets a welcome boss and then another at 5 500 (84 candies
-  later). That is intentional; the first is a catch-up gift, the second is the
-  normal grid.
+- The 5 416 save gets a welcome boss and then another at 5 500 (54 candies
+  after the win, once the 30 spent and the 60 reward are counted). That is
+  intentional; the first is a catch-up gift, the second is the normal grid.
 - Bosses every 500 are tunable through the exported constants; the player-
   facing cadence can be slowed later in BALANCE without a schema change.
 - The z-order between the boss tap surface, the rotate button and the HUD is
