@@ -31,6 +31,11 @@
  * missing, mistyped or non-finite values still refuse the whole payload, as
  * every other field does. The store itself (the runes-side `volumes` seam the
  * audio tasks consume) lives in `src/lib/audio/volumes.svelte.ts`.
+ *
+ * **Candy boss:** `bosses` is the parent-facing on/off switch for the boss
+ * fights. Added as an *optional* field (the module's rule above), so every
+ * envelope written before the boss existed still loads; a missing value means
+ * on. The runes-side seam lives in `src/lib/play/boss-setting.svelte.ts`.
  */
 
 import { readLocalStorage } from './persist.js';
@@ -71,13 +76,19 @@ export interface Settings {
 	 * to 90° so an existing choice survives.
 	 */
 	rotation?: Rotation;
+	/**
+	 * The candy boss switch — OPTIONAL for the same reason as `rotation`: every
+	 * envelope from before the boss existed loads fine, and missing means on.
+	 */
+	bosses?: boolean;
 }
 
 /**
- * First-run defaults: Italian voice, sound on, both volume sliders at full.
- * The 1.0 here is a *linear gain*, not a peak: the owner-tuned `MUSIC_MAX`
- * (0.143) and the SFX peak ceilings (≤0.18) scale with it in the audio
- * modules (T23/T25/T27), so "full" is as loud as the mix was authored.
+ * First-run defaults: Italian voice, sound on, both volume sliders at full and
+ * the candy boss on. The 1.0 here is a *linear gain*, not a peak: the
+ * owner-tuned `MUSIC_MAX` (0.143) and the SFX peak ceilings (≤0.18) scale with
+ * it in the audio modules (T23/T25/T27), so "full" is as loud as the mix was
+ * authored.
  */
 export const DEFAULT_SETTINGS: Settings = {
 	version: 1,
@@ -85,7 +96,8 @@ export const DEFAULT_SETTINGS: Settings = {
 	sound: true,
 	musicVolume: 1,
 	sfxVolume: 1,
-	rotation: 0
+	rotation: 0,
+	bosses: true
 };
 
 /**
@@ -114,6 +126,9 @@ export function isSettings(value: unknown): value is Settings {
 	if (typeof settings.musicVolume !== 'number' || !Number.isFinite(settings.musicVolume))
 		return false;
 	if (typeof settings.sfxVolume !== 'number' || !Number.isFinite(settings.sfxVolume)) return false;
+	// `bosses` is optional (pre-boss envelopes lack it), but a present value
+	// must be a real boolean — `"yes"` is a hand edit, not a preference.
+	if (settings.bosses !== undefined && typeof settings.bosses !== 'boolean') return false;
 	// `rotation` is optional (older envelopes lack it), but a present value must
 	// be one of the four quarter turns. Unknown extra keys (the retired `flip`
 	// of the first T4b build) are ignored, so those envelopes still load.

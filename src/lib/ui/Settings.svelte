@@ -18,9 +18,13 @@
 	 *      use) and dispatches the sim's `LANG` so the run field agrees.
 	 *   3. The panel copy follows the language (the prototype was IT-only).
 	 *
+	 * The candy boss adds one parent preference below `Schermo`: the on/off
+	 * switch the page's gate reads (`boss-setting.svelte.ts`). It is a
+	 * preference, not run state, so it lives in the same envelope.
+	 *
 	 * The language is a **prop**, owned by `TitleScreen`, so the title's own
 	 * labels flip with it; this card is otherwise presentational and talks to
-	 * the world only through `dispatch` and the volumes store.
+	 * the world only through `dispatch` and the volumes/boss stores.
 	 */
 	import { dispatch } from '$lib/state/game.svelte';
 	import { crashlog } from '$lib/diagnostics/crashlog';
@@ -28,6 +32,7 @@
 	import { settings } from '$lib/persist/settings';
 	import type { Lang } from '$lib/sim/loop';
 	import { setMusic, setSfx, volumes } from '$lib/audio/volumes.svelte';
+	import { bossesEnabled, setBosses } from '$lib/play/boss-setting.svelte';
 	import { openLogs } from './log-panel-state.svelte';
 	import { rotateLeft } from './rotation.svelte';
 
@@ -51,6 +56,9 @@
 					language: 'Lingua',
 					orientation: 'Schermo',
 					rotate: 'Ruota a sinistra',
+					boss: 'Boss',
+					bossOn: 'Sì',
+					bossOff: 'No',
 					back: 'Indietro',
 					logs: '🐞 Registro errori',
 					exportLogs: '📤 Esporta log',
@@ -65,6 +73,9 @@
 					language: 'Language',
 					orientation: 'Screen',
 					rotate: 'Rotate left',
+					boss: 'Boss',
+					bossOn: 'On',
+					bossOff: 'Off',
 					back: 'Back',
 					logs: '🐞 Error log',
 					exportLogs: '📤 Export logs',
@@ -227,6 +238,30 @@
 		class="lang-btn"
 		aria-label={copy.rotate}
 		onclick={rotateLeft}>{copy.rotate}</button
+	>
+</div>
+
+<!-- The candy boss switch (parent preference): an old envelope without
+     `bosses` reads as on, so "Sì" is the default state here too. -->
+<div class="lang-row" role="group" aria-label={copy.boss}>
+	<span class="lang-label">{copy.boss}</span>
+	<button
+		id="bossOnBtn"
+		type="button"
+		class="lang-btn"
+		class:on={bossesEnabled()}
+		aria-pressed={bossesEnabled()}
+		aria-label={copy.bossOn}
+		onclick={() => setBosses(true)}>{copy.bossOn}</button
+	>
+	<button
+		id="bossOffBtn"
+		type="button"
+		class="lang-btn"
+		class:on={!bossesEnabled()}
+		aria-pressed={!bossesEnabled()}
+		aria-label={copy.bossOff}
+		onclick={() => setBosses(false)}>{copy.bossOff}</button
 	>
 </div>
 

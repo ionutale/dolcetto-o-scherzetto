@@ -73,14 +73,15 @@ function settingsWith(overrides: Partial<Settings> = {}): Settings {
 }
 
 describe('defaults', () => {
-	it('is Italian voice with sound on and both sliders at full (spec: IT default)', () => {
+	it('is Italian voice, sound on, both sliders at full and the boss on (spec: IT default)', () => {
 		expect(DEFAULT_SETTINGS).toEqual({
 			version: 1,
 			lang: 'it',
 			sound: true,
 			musicVolume: 1,
 			sfxVolume: 1,
-			rotation: 0
+			rotation: 0,
+			bosses: true
 		});
 	});
 
@@ -107,6 +108,22 @@ describe('defaults', () => {
 			})
 		);
 		expect(createSettings(storage).read().rotation).toBe(90);
+	});
+
+	it('a pre-boss envelope loads with bosses on', () => {
+		const storage = memoryStorage();
+		storage.setItem(
+			SETTINGS_KEY,
+			JSON.stringify({ version: 1, lang: 'it', sound: true, musicVolume: 1, sfxVolume: 1 })
+		);
+		expect(createSettings(storage).read().bosses).toBeUndefined();
+		expect(createSettings(storage).read().bosses ?? true).toBe(true);
+	});
+
+	it('accepts a boolean bosses field and refuses a non-boolean one', () => {
+		expect(isSettings(settingsWith({ bosses: false }))).toBe(true);
+		expect(isSettings(settingsWith({ bosses: true }))).toBe(true);
+		expect(isSettings({ ...settingsWith(), bosses: 'yes' } as unknown)).toBe(false);
 	});
 
 	it('read() answers with the defaults when storage is empty', () => {
