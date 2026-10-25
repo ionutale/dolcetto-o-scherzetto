@@ -4,7 +4,7 @@ Every player-facing string in *Dolcetto o Scherzetto*, in one place. The spoken 
 **not authored here** — `src/lib/i18n/lines.ts` is the single source of truth, and a render
 script proves that what is read on screen is byte-for-byte what is heard (the *copy lock*,
 below). This file is the readable inventory: it quotes `lines.ts`, `bottega-model.ts`,
-`progression.ts` and the UI components, and names where each table comes from.
+`boss-art.ts`, `progression.ts` and the UI components, and names where each table comes from.
 
 ## 1. The copy lock
 
@@ -206,6 +206,30 @@ Settings card labels the same control `Schermo` / `Screen` with `Ruota a sinistr
 `Rotate left`. The knock pill's spoken name is the `knock` label without the glyph
 (`Bussa` / `Knock`).
 
+**The candy boss** (T42) — the three display names live in `BOSS_META` and the fight's four
+chrome strings in `BOSS_COPY` (`src/lib/play/boss-art.ts`; `Boss.svelte` renders them and
+picks the language live). None of it is voiced, and the boss art itself carries no text.
+
+| string | IT | EN |
+|---|---|---|
+| `zucca` name | Grande Zucca | Great Pumpkin |
+| `mostro` name | Mostro Goloso | Sweet-Tooth Monster |
+| `recaramella` name | Re Caramella | Candy King |
+| hint | Tocca per lanciare caramelle | Tap to throw candy |
+| win | Bravissimo! | You did it! |
+| reward | +60 caramelle | +60 candies |
+| throw surface (spoken) | Lancia una caramella | Throw a candy |
+
+The win card shows `win` over `reward`; the same pair is announced once through a polite
+`role="status"` live region. The Settings card adds the parent switch
+(`src/lib/ui/Settings.svelte`):
+
+| string | IT | EN |
+|---|---|---|
+| row label | Boss | Boss |
+| on | Sì | On |
+| off | No | Off |
+
 There is no on-screen text in the scares or the sky ghosts (`src/lib/play/Scares.svelte`,
 `Ghosts.svelte`) — those beats are visual.
 
@@ -219,9 +243,10 @@ Source: `voice/VOICES.md` §3/§6.2; consumed by `src/lib/audio/voice.ts`.
 - **Counts:** 1 shout + 6 keys × 6 archetypes = **37 ids per language → 74 clips total**;
   each language's `manifest.json` carries **37 rows** (`{id, text, bytes, duration, sha256}`,
   `text` byte-equal to `lines.ts`).
-- **Not voiced:** the `knock` button caption, the four neighborhood names, and the shop copy
+- **Not voiced:** the `knock` button caption, the four neighborhood names, the shop copy
   (`Tuo!`/`Compra`/… — `voice/VOICES.md` §8 notes the shop lines would reuse Strega's voice
-  when/if they are rendered).
+  when/if they are rendered), and the candy-boss names/hint/win/reward (T42 — the fight uses
+  the existing `theatre-setup` / `pop` / `theatre-laugh` / `twinkle` cues, never a new clip).
 - **The gate:** `pnpm check:voice` (`tools/check-voice.mjs`) proves, for both languages, a
   non-empty clip and a matching manifest row per id; the two languages ship the same id set.
 

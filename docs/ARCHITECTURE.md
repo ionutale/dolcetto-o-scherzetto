@@ -19,7 +19,7 @@ are baked at build time with the maintainer's local studios, never at runtime
 | **Sim** (pure) | `src/lib/sim/` — `loop.ts` · `economy.ts` · `progression.ts` (+ tests) | the loop reducer/tick, the trick catalogue, the neighborhood curves | touching the DOM, timers or storage |
 | **State** | `src/lib/state/game.svelte.ts` (+ test) | the one reactive `GameState` + the read seams (`worldX`, `phase`, `candies`, `bag`, `furthest`…) and the rAF loop | reimplementing sim rules |
 | **Scene** | `src/lib/art/scene/`, `src/lib/art/sprites/` | sky, parallax, the **recycling window** of ≤ 20 homes, yards, decorations, the sprite motion CSS | deciding outcomes |
-| **Play** | `src/lib/play/` | knock chain, bubbles, candy layer, fan, theatre, scares, cars, NPCs, kids | owning sim math |
+| **Play** | `src/lib/play/` | knock chain, bubbles, candy layer, fan, theatre, scares, cars, NPCs, kids, the candy-boss overlay | owning sim math |
 | **Audio** | `src/lib/audio/` — `sfx.ts` · `ambience.svelte.ts` · `music.svelte.ts` · `voice.ts` · `volumes.svelte.ts` | the 26-cue synth pack, the per-theme beds, the decoded street loop, the voiced lines | throwing on a hostile `AudioContext` |
 | **Persist** | `src/lib/persist/` | the defensive `dos.run.v1` / `dos.settings.v1` mirror | throwing (`read`/`write` degrade to no-save) |
 | **i18n** | `src/lib/i18n/` | UI copy + the IT/EN voice-line inventory | — |
@@ -50,7 +50,7 @@ above it).
 | **Sim** (pure) | `src/lib/sim/loop.ts` · `economy.ts` · `progression.ts` | the pure reducer/tick (`initial`/`reduce`/`tick`), the trick catalogue, the price/burst/roll helpers, the neighborhood curves | touching the DOM, timers or storage |
 | **State** | `src/lib/state/game.svelte.ts` | the one reactive runes store, the read seams (`worldX`/`phase`/`candies`/`bag`/`furthest`…), the clamped rAF loop, and the `bootState()` that seeds the sim from the save | reimplementing sim rules |
 | **Scene** | `src/lib/art/canvas/`, `src/lib/art/scene/`, `src/lib/art/sprites/` | sky + the three static bands (DOM), the whole scrolling world as **one canvas** (`WorldCanvas`, T4 2026-10-19 — a single backing store redrawn in place; art ported 1:1 from the validated DOM components), the **manual rotation** (T4b: a quarter-turn rotate button — no accelerometer, no rotate prompt), the sprite-motion CSS | deciding outcomes |
-| **Play** | `src/lib/play/` | the interaction widgets — knock chain, bubbles, candy layer, fan, theatre, scares, cars, NPCs — plus their pure `*-model.ts` maths | owning sim math |
+| **Play** | `src/lib/play/` | the interaction widgets — knock chain, bubbles, candy layer, fan, theatre, scares, cars, NPCs — plus their pure `*-model.ts` maths. The **candy boss** (T42) is three modules here: `boss-model.ts` (pure cadence/cast/gate), `boss-art.ts` (the three static SVGs + the fight copy) and `Boss.svelte` (the DOM overlay), with the Settings seam in `boss-setting.svelte.ts` | owning sim math |
 | **Audio** | `src/lib/audio/` | **three independent engines**, each with its own lazy `AudioContext` and self-driven rAF frame: `sfx.ts` (26-cue WebAudio synth), `ambience.svelte.ts` (per-theme beds + sprinkles + duck), `music.svelte.ts` (the decoded street loop); `voice.ts` decodes clips once and plays them on the synth's bus; `volumes.svelte.ts` is the shared gain seam | throwing on a hostile `AudioContext` |
 | **Persist** | `src/lib/persist/persist.ts` · `settings.ts` | defensive `localStorage`: the run slot `dos.run.v1` and the one settings envelope `dos.settings.v1` | throwing (`read`/`write` degrade to no-save/defaults) |
 | **Diagnostics** | `src/lib/diagnostics/crashlog.ts` · `share-text.ts` | the black box: the crash/heartbeat log (`dos.log.live.v1` / `dos.log.prev.v1`) and the 3-day crash archive (`dos.log.history.v1`), the crash verdict, the copy/share/export helpers — read by the title banner and the log panel (`LogPanel.svelte`) | throwing (every path degrades to memory-only) |
@@ -73,16 +73,46 @@ defaults / a fresh run):
 
 | Key | Shape | Source |
 |---|---|---|
-| `dos.run.v1` | `{ version: 1, bag, record, tricks: string[], furthestK }` | `src/lib/persist/persist.ts` `RunState` + `isRunState` |
-| `dos.settings.v1` | `{ version: 1, lang: 'it'\|'en', sound, musicVolume: 0..1, sfxVolume: 0..1 }` | `src/lib/persist/settings.ts` `Settings` + `isSettings` |
+| `dos.run.v1` | **v2**: `{ version: 2, bag, record, tricks: string[], furthestK, homes: Record<string, { done, used, kind }>, album: Record<AlbumType, number>, cosmetics: string[], nextBossAt?, bossWins? }` | `src/lib/persist/persist.ts` `RunState` + `isRunState` (`RUN_KEY` keeps its historical name; `RUN_VERSION` is 2) |
+| `dos.settings.v1` | `{ version: 1, lang: 'it'\|'en', sound, musicVolume: 0..1, sfxVolume: 0..1, rotation?: 0\|90\|180\|270, bosses?: boolean }` | `src/lib/persist/settings.ts` `Settings` + `isSettings` |
 | `dos.log.live.v1` | `[{ t, k, d? }]` — the live session's flight log (ring, ≤ 320 entries) | `src/lib/diagnostics/crashlog.ts` |
 | `dos.log.prev.v1` | the same shape — the previous session, archived only when it ended abruptly | `src/lib/diagnostics/crashlog.ts` |
 | `dos.log.history.v1` | `{ at, startedAt, v, entries }[]` — the crash archive (automatic, 3-day retention, ≤ 20 sessions) | `src/lib/diagnostics/crashlog.ts` |
 
 The run is autosaved after every change (a `$effect` in `+page.svelte`) and seeds the boot;
-the settings envelope is a device preference (written by the title's sliders/toggle). A future
+the settings envelope is a device preference (written by the title's sliders/toggles). A future
 setting joins the envelope as an optional field — except the volume pair, which was added as
-required. The hidden parent reset clears **all of them** (`Settings.svelte`).
+required; `rotation` and `bosses` are optional with defaults (0°, on). The hidden parent reset
+clears **all of them** (`Settings.svelte`).
+
+**Migration and repair.** A v1 run is lifted into v2 with an empty `homes`/`album`, no
+cosmetics, and the boss welcome defaults (`nextBossAt: 1000`, `bossWins: 0`). The two boss
+fields are deliberately **not** validated by `isRunState`: `normalizeRun` fills them when a
+mid-v2 save omits them and repairs junk (`nextBossAt` must be an integer ≥ 1 000 on the 500
+grid; `bossWins` a non-negative integer) instead of wiping the run.
+
+### The candy boss (T42)
+
+A **page-level event, not a sim phase** (spec `docs/superpowers/specs/2026-10-25-candy-boss-design.md`,
+recorded as T42 in `ISSUES.md`). `boss-model.ts` is pure — `nextBossAtAbove`/`nextBossAtAfterWin`
+own the threshold grid, `bossFor` the rotation, `bossMayStart` the gate — and `+page.svelte`
+carries the trigger `$effect`: when `bossMayStart` says yes it dispatches `STOP` (freezing the
+world), mounts `<Boss/>` and unhooks the walk/knock/Scherzo/Bottega controls. The overlay owns
+only local fight state (`hp`, `enter → fight → win → leave`, the projectile pool); the wallet
+moves through exactly two reducer cases, `SPEND_CANDY` (one candy per accepted throw, refused at
+an empty bag) and `BOSS_REWARD` (`+60`, lifting `record`). `onWin` applies the reward and
+`recordBossWin(nextBossAtAfterWin(bag()))` in the same synchronous update, so the autosave never
+sees a transient threshold. `boss-setting.svelte.ts` is the reactive seam over the optional
+`bosses` settings field (missing = on); turning it off mid-fight cancels with no reward and
+re-arms at `nextBossAtAbove(bag())`.
+
+**Honest limits.** The autosave writes the live `homes` map, but **boot does not restore it
+into the sim yet** — street memory does not survive a reload (see the boot note in
+`state/game.svelte.ts`). `album`/`cosmetics` are preserved verbatim from the loaded save, not
+updated. The boss adds **no canvas, scrolling or raster-cache work**: the scrolling world keeps
+drawing its frozen frame, and the overlay (z-index 10, inside the stage so the manual rotation
+applies) is removed on exit. Bounded: one boss SVG, ≤ 8 in-flight candies, ≤ 12 shower pieces,
+every timer cleared on destroy.
 
 ### Audio graph
 
@@ -117,8 +147,9 @@ Settings first, then the save, then the title, then one gesture, then the engine
    it at import. Defaults are Italian, sound on, both sliders full.
 2. **Store seed from the save** — `game.svelte.ts` reads `dos.run.v1` once (`persist.read()`)
    and builds the first `GameState`: `bag`, `record` (lifted over the save's bag), the owned
-   `tricks` (catalogue ids only, with the free `boo` guaranteed), and a `worldX` at the
-   furthest doorstep the save's `furthestK` points at. Candies, homes, phase, direction and
+   `tricks` (catalogue ids only, with the free `boo` guaranteed), a `worldX` at the
+   furthest doorstep the save's `furthestK` points at, and the boss progress (`bossNextAt()` /
+   `bossWins()`, welcome defaults 1 000 / 0 when absent). Candies, homes, phase, direction and
    the open door are transient and start fresh (`+page.svelte` boot note).
 3. **Title** — the scene mounts and the sim loop starts (`start()` in `+page.svelte`
    `onMount`); `TitleScreen.svelte` sits over it with `Gioca` / `Impostazioni`.
@@ -128,8 +159,8 @@ Settings first, then the save, then the title, then one gesture, then the engine
    `rotation.svelte.ts`).
 5. **Engines** — each audio engine lazily creates and resumes its own `AudioContext` and
    drives its own frame; voice clips decode once and play on the synth's bus (no media
-   elements). An autosave `$effect` writes `{ bag, record, tricks, furthestK }` to
-   `dos.run.v1` on any change.
+   elements). An autosave `$effect` writes the **v2** payload — `{ bag, record, tricks,
+   furthestK, homes, album, cosmetics, nextBossAt, bossWins }` — to `dos.run.v1` on any change.
 6. **Service worker** — `+layout.svelte` registers `/service-worker.js` client-only, guarded;
    the offline shell and the versioned caches come from `src/service-worker.ts`.
 7. **Black box** — `+layout.svelte` also installs the crashlog (owner request): it reads the
@@ -142,8 +173,8 @@ Settings first, then the save, then the title, then one gesture, then the engine
 
 | Layer | Command | Backer / shape |
 |---|---|---|
-| **Unit** | `pnpm test:unit` | Vitest — **746 tests / 29 files**, covering the pure sim, the play/scene models, the audio modules, the black box, the store and the canvas layers. Count backed by the Budgets table below. |
-| **e2e** | `pnpm test:e2e` | Playwright — **16 tests in 9 specs** (`tests/e2e/*.spec.ts`), run against the **built** app at 852×393: audio unlock, the full loop + reduced motion, Bottega, settings/language, the reopenable menu, save→reload, the canvas-world smoke, the flip, and the black box (crash banner + viewer, error capture, unassisted heartbeat flush, clean close, reachability). See `tests/README.md`. |
+| **Unit** | `pnpm test:unit` | Vitest — **781 tests / 33 files**, covering the pure sim, the play/scene models, the audio modules, the black box, the store, the canvas layers and the candy boss. Count backed by the Budgets table below. |
+| **e2e** | `pnpm test:e2e` | Playwright — **27 tests in 10 specs** (`tests/e2e/*.spec.ts`), run against the **built** app at 852×393: audio unlock, the full loop + reduced motion, Bottega, settings/language, the reopenable menu, save→reload, the canvas-world smoke, the flip, the black box (crash banner + viewer, error capture, unassisted heartbeat flush, clean close, reachability), and the candy boss (welcome/reward/save, the 5 416 save, rotation, off/on, mid-fight cancel, reload, reduced motion, keyboard). See `tests/README.md`. |
 | **Perf / memory** | `node tools/perf-probe.mjs --launch` | the CDP harness behind the Budgets table: audio-node gap, loop replacement, DOM count, heap, page errors. Re-measure recipe in *Budgets → Re-measuring*. |
 | **Voice gate** | `pnpm check:voice` | `tools/check-voice.mjs` — a non-empty clip + a manifest row per id, both languages. |
 

@@ -143,7 +143,44 @@ begins → **3050** clear.
 | Ambience sprinkles | **20 000 … 40 000 ms** between one-shots; only in `roam`/`refuse`, never ducked | `src/lib/audio/ambience.svelte.ts` `AMB_SPRINKLE_MIN_MS`/`AMB_SPRINKLE_MAX_MS`, `sprinkleAllowed` |
 | Decor nodes per window | **≤ 30** (leafy 25, foggy 11, pumpkin 20, starry 20) | `theme-model.ts` `MAX_NODES_PER_WINDOW`, `NODES_PER_WINDOW` |
 
-## 6. Audio levels
+## 6. The candy boss (T42)
+
+Read out of `src/lib/play/boss-model.ts` (the pure cadence/cast/gate), `src/lib/play/Boss.svelte`
+(the overlay's local timings and bounds) and the two wallet cases in
+`src/lib/sim/loop.ts`. The boss is a **page-level event, not a sim phase**: it never touches
+the canvas, the scrolling layers or the raster caches.
+
+| Knob | Value | Source |
+|---|---|---|
+| First threshold | **1 000** candies in the bag | `boss-model.ts` `BOSS_FIRST` |
+| Threshold grid | every **500** after the first (1 000, 1 500, 2 000 …) | `boss-model.ts` `BOSS_STEP` |
+| Next threshold, run in progress | smallest grid point **strictly above** the bag, minimum 1 000 (`(floor(max(0,bag)/500)+1)*500`) | `boss-model.ts` `nextBossAtAbove` |
+| Next threshold, after a win | the same grid, floored at **1 500** (the welcome 1 000 fight can never refire) | `boss-model.ts` `nextBossAtAfterWin` |
+| HP | **30** hits | `boss-model.ts` `BOSS_HP` |
+| Cost per throw | **1** candy (pinned constant; the reducer's `SPEND_CANDY` always spends exactly 1 and refuses at an empty bag) | `boss-model.ts` `BOSS_COST`; `loop.ts` `SPEND_CANDY` |
+| Win reward | **60** candies (`bag += n`, `record = max(record, bag)`; `n` guarded to a finite positive integer) | `boss-model.ts` `BOSS_REWARD`; `loop.ts` `BOSS_REWARD` |
+| Rotation | **3** bosses, `bossWins % 3`: `zucca` → `mostro` → `recaramella`, wrapping in both directions | `boss-model.ts` `BOSS_ORDER`, `bossFor` |
+| Fight input | **tap anywhere** on the stage (the full-stage `#bossTap` button; Space/Enter too) — no cooldown, no fail state, no timer | `Boss.svelte` |
+| Start gate | `phase === 'roam'`, shop closed, no scare, menu closed, no celebration, no fight already active, feature on, and `bag >= nextBossAt` | `boss-model.ts` `bossMayStart` |
+| Fight timings | entry **900** ms → fight → win beat **1 200** ms → exit **700** ms; hit squash **160** ms | `Boss.svelte` `ENTRY_MS`, `WIN_BEAT_MS`, `EXIT_MS`, `HIT_MS` |
+| Cosmetic bounds | **≤ 8** candies in flight at once; **≤ 12** reward-shower pieces; every timer cleared on destroy | `Boss.svelte` `SHOT_CAP`, `SHOWER_PIECES` |
+| Setting | `dos.settings.v1` optional `bosses` — missing means **on**; the Settings row is Boss / Sì–No (IT) · On–Off (EN) | `settings.ts` `Settings.bosses`, `DEFAULT_SETTINGS`; `boss-setting.svelte.ts` |
+| Cancel mid-fight | turning the feature off spends nothing further, pays no reward, and re-arms at `nextBossAtAbove(bag)` | `+page.svelte` boss-cancel effect |
+| Save fields | `nextBossAt` (integer ≥ 1 000, multiple of 500) and `bossWins` (integer ≥ 0), both optional; junk is repaired, never a wipe | `persist.ts` `RunState`, `normalizeBossProgress` |
+
+**The bag arithmetic is exact** (1 per throw × 30, then +60 — always a net **+30**):
+
+| crossing | after 30 throws | after the reward | next threshold |
+|---|---|---|---|
+| 1 000 (the welcome boss) | 970 | **1 030** | 1 500 |
+| 1 500 | 1 470 | **1 530** | 2 000 |
+| 5 416 (the live welcome save) | 5 386 | **5 446** | 5 500 |
+
+Because the post-win bag (1 030 / 1 530) sits above the crossing but below the next grid point,
+a win never re-triggers the boss it just beat. Spending the bag back down at the Bottega simply
+delays the next fight until the threshold is crossed again.
+
+## 7. Audio levels
 
 All gains are linear 0..1 scaled by the player's slider (`src/lib/audio/volumes.svelte.ts`;
 defaults full at 1). The owner-tuned ceilings below sit **under** those sliders.
