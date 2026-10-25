@@ -7,9 +7,12 @@
  * keep their bag/tricks/furthest without a wipe.
  *
  * v2 also carries the candy boss's progress: the next threshold and the win
- * count. Both fields are optional because v2 shipped without them — a save
- * from that short window is filled with the welcome defaults on read, and a
- * malformed value is repaired rather than wiping the run.
+ * count. **No v2 payload shipped before the boss** — the base game autosaved
+ * the v1 literal, so the installed population is v1 and comes in through
+ * `migrateRunV1`. The boss fields stay optional anyway so a v2 payload that
+ * omits them (an older export, a hand-edited copy) is filled with the welcome
+ * defaults on read, and a malformed value is repaired rather than wiping the
+ * run.
  *
  * **Nothing here ever throws.** localStorage is hostile in the wild — Safari
  * private mode throws on every access, a full quota throws on write, and a
@@ -59,8 +62,9 @@ export interface RunState {
 	/**
 	 * Bag threshold for the next boss (1 000, 1 500, 2 000 …).
 	 *
-	 * Optional: v2 briefly shipped without boss progress, so a mid-v2 save may
-	 * omit it. `normalizeRun` fills the welcome default and repairs junk.
+	 * Optional so a v2 payload that omits it (an older export or a hand edit)
+	 * is filled with the welcome default instead of being refused.
+	 * `normalizeRun` also repairs junk.
 	 */
 	nextBossAt?: number;
 	/** Boss fights won this run (drives the rotation). Optional, as above. */
@@ -99,9 +103,9 @@ function isAlbum(v: unknown): v is Record<AlbumType, number> {
  * are refused by `read()` after migration attempt.
  *
  * The boss fields are deliberately **not** checked: `normalizeRun` repairs
- * them, and a missing value is a legal mid-v2 save. Validating them here
- * would turn a hostile threshold into a wiped run — the normaliser's job is
- * to keep the bag and fix the boss.
+ * them, and a missing value is a legal v2 payload without boss progress.
+ * Validating them here would turn a hostile threshold into a wiped run — the
+ * normaliser's job is to keep the bag and fix the boss.
  */
 export function isRunState(value: unknown): value is RunState {
 	if (typeof value !== 'object' || value === null) return false;
@@ -152,8 +156,8 @@ export function migrateRunV1(value: unknown): RunState | null {
  * Parse any stored payload into a v2 run, or null.
  *
  * Accepted v2 payloads are normalised, not just returned: the boss fields are
- * filled (mid-v2 save) or repaired (junk values) so `read()` always hands the
- * sim a playable threshold.
+ * filled (a v2 payload without them) or repaired (junk values) so `read()`
+ * always hands the sim a playable threshold.
  */
 export function normalizeRun(value: unknown): RunState | null {
 	if (isRunState(value)) {

@@ -25,14 +25,28 @@ function memoryStorage(seed: Record<string, string> = {}): Storage {
 
 describe('boss setting', () => {
 	it('defaults on and writes the toggle without clobbering other fields', () => {
-		const storage = memoryStorage();
+		// Non-default values on purpose: a spread that dropped everything but
+		// `bosses` would still pass against a fresh envelope's defaults.
+		const storage = memoryStorage({
+			[SETTINGS_KEY]: JSON.stringify({
+				version: 1,
+				lang: 'en',
+				sound: false,
+				musicVolume: 0.4,
+				sfxVolume: 0.7,
+				rotation: 90
+			})
+		});
 		const store = createSettings(storage);
 		expect(bossEnabled(store)).toBe(true);
 		setBossEnabled(false, store);
 		const saved = JSON.parse(storage.getItem(SETTINGS_KEY) ?? '{}');
 		expect(saved.bosses).toBe(false);
-		expect(saved.lang).toBe('it');
-		expect(saved.musicVolume).toBe(1);
+		expect(saved.lang).toBe('en');
+		expect(saved.sound).toBe(false);
+		expect(saved.musicVolume).toBe(0.4);
+		expect(saved.sfxVolume).toBe(0.7);
+		expect(saved.rotation).toBe(90);
 		expect(bossEnabled(store)).toBe(false);
 	});
 });

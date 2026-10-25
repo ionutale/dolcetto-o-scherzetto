@@ -101,8 +101,9 @@ function isThreshold(raw: unknown): raw is number {
 }
 
 /**
- * Repair a save's boss fields. A missing field (`undefined`) is a mid-v2 save
- * and gets the welcome defaults (1 000 / 0) — never a refusal or a wipe. A
+ * Repair a save's boss fields. A missing field (`undefined`) comes from a v2
+ * payload written without them (an older export, a hand edit) and gets the
+ * welcome defaults (1 000 / 0) — never a refusal or a wipe. A
  * present-but-malformed threshold is re-derived above the current bag, so a
  * hostile value like `0` can't make the boss fire immediately on resume.
  */

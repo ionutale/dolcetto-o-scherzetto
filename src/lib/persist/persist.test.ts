@@ -203,7 +203,7 @@ describe('save migration and boss repair', () => {
 		});
 	});
 
-	it('fills a mid-v2 save missing the boss fields', () => {
+	it('fills a v2 save missing the boss fields', () => {
 		const storage = memoryStorage();
 		const mid = aRun({ bag: 5416 });
 		delete mid.nextBossAt;

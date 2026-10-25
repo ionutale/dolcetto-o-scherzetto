@@ -1,14 +1,20 @@
 import { expect, test, type Page } from '@playwright/test';
 import {
 	bagChip,
+	collectAllCandies,
+	knock,
 	menuSettingsButton,
 	openTitle,
 	play,
+	prank,
+	readBag,
 	readRunV2,
 	readSettings,
+	resolveOutcome,
 	seedRun,
 	seedRunV2,
 	seedSettings,
+	walkToKnock,
 	type RunSnapshotV2,
 	type SettingsSnapshot
 } from './support/game';
@@ -203,6 +209,57 @@ test('a reload after a win does not replay the spent boss', async ({ page }) => 
 });
 
 /**
+ * The most likely real-world exit is not a win: a phone kills the app
+ * mid-fight. The spends are autosaved one `SPEND_CANDY` at a time, the
+ * threshold never moved, and the overlay is local state — so the next boot
+ * must resume below the threshold with no fight, then re-arm at full HP once
+ * the bag crosses 1 000 again (spec §4).
+ */
+test('a mid-fight reload keeps the spends and re-arms at the threshold', async ({ page }) => {
+	const layer = await bootFight(page);
+	await throwCandies(page, 5);
+	await expect(bagChip(page)).toHaveText('995');
+	// The autosave runs on each spend; read it back before the kill.
+	await expect.poll(async () => (await readRunV2(page))?.bag).toBe(995);
+	await expect(layer).toBeVisible();
+
+	await page.reload();
+	await expect(page.locator('.menu')).not.toHaveClass(/hide/);
+	await play(page);
+	// The 900 ms entry beat plus settle: a stale threshold would have replayed
+	// the fight by now.
+	await page.waitForTimeout(1_200);
+	await expect(page.locator('#bossLayer')).toHaveCount(0);
+
+	const saved = await readRunV2(page);
+	expect(saved?.bag).toBe(995);
+	expect(saved?.nextBossAt).toBe(1000);
+	expect(saved?.bossWins).toBe(0);
+
+	// Re-arm on the product path: collect candy until the bag is back over the
+	// saved threshold. A home drops 1–2 candies worth 1–10 each, so the bounded
+	// loop covers a low roll without pinning the sim's random values; a scherzo
+	// home pays a 4–8 candy burst instead.
+	for (let guard = 0; guard < 5 && (await readBag(page)) < 1000; guard++) {
+		await walkToKnock(page);
+		await knock(page);
+		if ((await resolveOutcome(page)) === 'scherzo') await prank(page);
+		await collectAllCandies(page);
+	}
+	expect(await readBag(page)).toBeGreaterThanOrEqual(1000);
+
+	const relayer = page.locator('#bossLayer');
+	await expect(relayer).toBeVisible({ timeout: 5_000 });
+	await expect(relayer).toHaveAttribute('data-boss', 'zucca');
+	await expect(relayer).toHaveAttribute('data-phase', 'fight', { timeout: 5_000 });
+	// A retried fight starts at full HP — the previous 5 hits are not carried.
+	await expect(page.locator('#bossLayer [role="progressbar"]')).toHaveAttribute(
+		'aria-valuenow',
+		'30'
+	);
+});
+
+/**
  * Turning the switch off mid-fight cancels the fight (spec §7): the candies
  * already spent stay spent, no reward is paid, and the threshold moves to the
  * next grid point above the current bag so re-enabling cannot immediately
@@ -216,10 +273,21 @@ test('turning the boss off mid-fight cancels it and moves the threshold past the
 	await throwCandies(page, 3);
 	await expect(bagChip(page)).toHaveText('997');
 
-	await page.locator('#menuBtn').click({ force: true });
+	// The HUD (z 13) and the rotate button (z 11) must stay above the boss
+	// overlay (z 10). Plain clicks pass only when nothing intercepts the point,
+	// so these are real regression guards for spec §6/§15, not forced taps.
+	const rotate = page.locator('#rotateBtn');
+	await expect(rotate).toHaveAttribute('data-rotation', '0');
+	await rotate.click();
+	await expect(rotate).toHaveAttribute('data-rotation', '270');
+	// Back upright for the rest of the flow (0 → 270 → 180 → 90 → 0).
+	for (let i = 0; i < 3; i++) await rotate.click();
+	await expect(rotate).toHaveAttribute('data-rotation', '0');
+
+	await page.locator('#menuBtn').click();
 	await expect(page.locator('.menu')).not.toHaveClass(/hide/);
 	await menuSettingsButton(page).click({ force: true });
-	await page.locator('#bossOffBtn').click({ force: true });
+	await page.locator('#bossOffBtn').click();
 
 	await expect(layer).toHaveCount(0);
 	await expect.poll(async () => (await readSettings(page))?.bosses).toBe(false);
@@ -231,6 +299,7 @@ test('turning the boss off mid-fight cancels it and moves the threshold past the
 	await expect.poll(async () => (await readRunV2(page))?.nextBossAt).toBe(1000);
 	const run = await readRunV2(page);
 	expect(run?.bag).toBe(997);
+	expect(run?.bossWins).toBe(0);
 	expect(run!.nextBossAt!).toBeGreaterThan(run!.bag!);
 
 	// Back on for the rest of the suite (the seed guards make this local, but

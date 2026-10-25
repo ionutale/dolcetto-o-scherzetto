@@ -274,11 +274,12 @@
 	 * on every autosave would wipe a future feature's state. `nextBossAt` /
 	 * `bossWins` mirror the store's boss progress.
 	 *
-	 * Documented gap: the sim cannot take `candies`, `homes`, `phase`, `dir`,
+	 * Documented gap: the sim cannot restore `candies`, `phase`, `dir`,
 	 * `activeK`, `refusedK` or the exact standing `worldX` at boot, so a reload
 	 * resumes at the furthest doorstep the save's `furthestK` points at — see
-	 * the boot note in `state/game.svelte.ts`. `homes` is persisted for the
-	 * street's dim windows in a later task, not restored into the sim.
+	 * the boot note in `state/game.svelte.ts`. `homes` is no longer part of
+	 * that gap: `bootState()` maps the saved entries back to numeric keys and
+	 * seeds them into the sim, so street memory survives a reload.
 	 */
 	$effect(() => {
 		const run: RunState = {

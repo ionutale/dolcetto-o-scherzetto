@@ -49,11 +49,12 @@
  * the in-sim `RESET` is a dev/test gesture and deliberately leaves them alone.
  */
 import { SPACING, initial, reduce, tick } from '../sim/loop';
-import type { Action, Candy, Dir, GameState, Lang, Phase, TrickId } from '../sim/loop';
+import type { Action, Candy, Dir, GameState, HomeState, Lang, Phase, TrickId } from '../sim/loop';
 import { trackFurthest } from '../sim/progression';
 import { TRICK_ORDER } from '../sim/economy';
 import { BOSS_FIRST } from '../play/boss-model';
 import { persist } from '../persist/persist';
+import type { RunState } from '../persist/persist';
 import { settings } from '../persist/settings';
 
 /** Longest frame the sim digests — the prototype's `Math.min(.05, dt)`. */
@@ -89,19 +90,41 @@ function restoreTricks(ids: string[]): TrickId[] {
 }
 
 /**
+ * The saved street memory, keyed back to the numbers `initial({ homes })`
+ * wants (JSON only has string keys). `persist.read()` has already validated
+ * every entry, so this is purely the key-shape bridge; the deep copy inside
+ * `initial` keeps the save object unaliased.
+ */
+function restoreHomes(savedHomes: RunState['homes']): Record<number, HomeState> {
+	const restored: Record<number, HomeState> = {};
+	for (const [key, home] of Object.entries(savedHomes)) {
+		const k = Number(key);
+		// House indices can be negative (the street continues left of the start,
+		// and the save may hold a home completed there), so only the key shape is
+		// checked — never a non-negative range.
+		if (Number.isInteger(k)) {
+			restored[k] = { done: home.done, used: home.used, kind: home.kind };
+		}
+	}
+	return restored;
+}
+
+/**
  * The boot run (T18b). The save seeds everything the pure sim can take —
- * `bag`, `tricks` and a `worldX` at the furthest doorstep — plus `record`,
- * lifted to the larger of the save's record and its bag (`initial` seeds
- * `record` from `bag`; a save may hold a higher one). What the sim *cannot*
- * take at boot is documented in `+page.svelte`: candies, phase, dir and the
- * refused/active house are transient and start fresh. `homes` is exposed live
- * for dim windows but is not persisted across reload.
+ * `bag`, `tricks`, the done/used street memory (`homes`, keyed numerically
+ * again) and a `worldX` at the furthest doorstep — plus `record`, lifted to
+ * the larger of the save's record and its bag (`initial` seeds `record` from
+ * `bag`; a save may hold a higher one). What the sim *cannot* take at boot is
+ * documented in `+page.svelte`: candies, phase, dir and the refused/active
+ * house are transient and start fresh. Done homes survive a reload through
+ * this seed.
  */
 function bootState(): GameState {
 	const base = initial({
 		lang: settings.read().lang,
 		bag: saved?.bag ?? 0,
 		tricks: saved ? restoreTricks(saved.tricks) : undefined,
+		homes: saved ? restoreHomes(saved.homes) : undefined,
 		worldX: saved ? savedFurthestK * SPACING : undefined
 	});
 	if (!saved) return base;
@@ -124,8 +147,8 @@ let furthestK = $state(savedFurthestK);
  * the number of fights won this run. Not sim state — the pure loop never sees
  * the boss — so they are seeded from the save here, exactly like `furthestK`,
  * and mirrored back by the page's autosave. `persist.read()` normalises both
- * (`BOSS_FIRST` / `0` for a v1 or mid-v2 save), so the fallbacks below only
- * cover a `null` save.
+ * (`BOSS_FIRST` / `0` for a v1 run or a v2 payload without them), so the
+ * fallbacks below only cover a `null` save.
  */
 let bossNext = $state(saved?.nextBossAt ?? BOSS_FIRST);
 let bossWinsCount = $state(saved?.bossWins ?? 0);
@@ -158,8 +181,9 @@ export function activeK(): number {
 }
 
 /**
- * Completed / known homes by house index — session-transient (not persisted).
- * Feeds the street canvas so done doors dim their windows.
+ * Completed / known homes by house index — restored from the save at boot and
+ * kept live from then on. Feeds the street canvas so done doors dim their
+ * windows.
  */
 export function homes(): GameState['homes'] {
 	return state.homes;

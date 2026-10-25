@@ -8,8 +8,10 @@ import {
 	play,
 	prank,
 	readBag,
+	readRunV2,
 	resolveOutcome,
-	seedRun
+	seedRun,
+	seedRunV2
 } from './support/game';
 
 /**
@@ -41,4 +43,32 @@ test('the collected bag survives a reload', async ({ page }) => {
 	// the visible proof, and it is rendered behind the menu.
 	await expect(page.locator('.menu')).not.toHaveClass(/hide/);
 	await expect(bagChip(page)).toHaveText(String(bag));
+});
+
+/**
+ * Street memory (T42 fix): a done home is written by the autosave *and* seeded
+ * back into the sim on boot. `bootState()` maps the save's string keys to the
+ * numeric `HomeState` keys `initial({ homes })` takes; without that seed the
+ * boot autosave would immediately overwrite the map with `{}`.
+ */
+test('a saved done home survives the boot autosave and a reload', async ({ page }) => {
+	const HOME = { done: true, used: false, kind: 'treat' } as const;
+	// Two keys on purpose: a normal house and one left of the start (negative
+	// indices are real homes), both of which the string→number bridge keeps.
+	const LEFT = { done: true, used: true, kind: 'scherzo' } as const;
+	await seedRunV2(page, {
+		bag: 0,
+		record: 0,
+		furthestK: 0,
+		homes: { '3': HOME, '-2': LEFT }
+	});
+	await openTitle(page);
+	await play(page);
+
+	// The boot autosave has run by now; the seeded homes are still in the slot.
+	await expect.poll(async () => (await readRunV2(page))?.homes).toEqual({ '3': HOME, '-2': LEFT });
+
+	await page.reload();
+	await expect(page.locator('.menu')).not.toHaveClass(/hide/);
+	await expect.poll(async () => (await readRunV2(page))?.homes).toEqual({ '3': HOME, '-2': LEFT });
 });

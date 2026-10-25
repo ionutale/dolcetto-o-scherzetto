@@ -44,7 +44,7 @@ export interface RunSnapshotV2 {
 	homes: Record<string, SavedHomeSnapshot>;
 	album: Record<string, number>;
 	cosmetics: string[];
-	/** Boss progress — optional in the mid-v2 window, always written now. */
+	/** Boss progress — optional (a v2 payload without it still loads), always written now. */
 	nextBossAt?: number;
 	bossWins?: number;
 }

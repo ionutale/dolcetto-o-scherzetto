@@ -28,6 +28,13 @@
 	 * for this feature is "no new canvas work": this is all DOM/SVG above the
 	 * stage, and the world is frozen by the page's `STOP`.
 	 *
+	 * **The face change (spec §4–§5).** The win is not only a body spin: the
+	 * art's class hooks animate, so the boss actually reacts — every accepted
+	 * hit closes the eyes for the 160 ms squash, and the win opens the grin,
+	 * spins the crown and waves both arms. The rules are scoped `:global()`
+	 * because the SVG arrives through `{@html}`. Reduced motion drops every
+	 * hook along with the loops, leaving the static face untouched.
+	 *
 	 * **Reduced motion** (spec §10). The `rm` flag is read once in `onMount`
 	 * and only gates the JS-driven cosmetic beat (the candy flight is skipped
 	 * entirely); the entry/idle/win loops are left to the stylesheet's
@@ -37,6 +44,7 @@
 	import { onDestroy, onMount, tick } from 'svelte';
 	import { candySvg } from '$lib/art/sprites/candy';
 	import { lang } from '$lib/state/game.svelte';
+	import { CANDY_TYPES } from '$lib/sim/loop';
 	import type { CandyType } from '$lib/sim/loop';
 	import { BOSS_COPY, BOSS_META, bossArt } from './boss-art';
 	import { BOSS_HP } from './boss-model';
@@ -78,8 +86,6 @@
 	const SHOT_CAP = 8;
 	/** Reward-shower pieces (spec §11 bounds: ≤ 12). */
 	const SHOWER_PIECES = 12;
-
-	const CANDY_TYPES: CandyType[] = ['lolli', 'gummy', 'choco', 'toffee', 'corn', 'star'];
 
 	let hp = $state(BOSS_HP);
 	let phase = $state<BossPhase>('enter');
@@ -432,6 +438,41 @@
 		animation: boss-squash 160ms ease-out;
 	}
 
+	/* ---- the face hooks (spec §4-§5) -------------------------------------
+	   The SVG arrives through `{@html}`, so its classes are global while the
+	   phase/`bonking` selectors stay scoped. A hit closes the eyes; the win
+	   opens the grin, spins the crown and waves both arms. */
+	.boss-art.bonking :global(.boss-eye) {
+		transform-box: fill-box;
+		transform-origin: 50% 50%;
+		animation: boss-eye-hit 160ms ease-out;
+	}
+
+	[data-phase='win'] .boss-art :global(.boss-mouth) {
+		transform-box: fill-box;
+		/* Top-centre: the grin grows downward, so it reads as a laugh. */
+		transform-origin: 50% 0%;
+		animation: boss-mouth-laugh 420ms ease-in-out 2;
+	}
+
+	/* `rotate` (not `transform`) so the art's own static crown tilt, written as
+	   a `transform` attribute, is composed with the spin instead of overridden. */
+	[data-phase='win'] .boss-art :global(.boss-crown) {
+		transform-box: fill-box;
+		transform-origin: 50% 50%;
+		rotate: 0deg;
+		animation: boss-crown-spin 900ms cubic-bezier(0.3, 0.9, 0.4, 1) both;
+	}
+
+	/* Each arm already carries an inline `transform-origin` at its shoulder. */
+	[data-phase='win'] .boss-art :global(.boss-arm-l) {
+		animation: boss-arm-wave-l 900ms ease-in-out both;
+	}
+
+	[data-phase='win'] .boss-art :global(.boss-arm-r) {
+		animation: boss-arm-wave-r 900ms ease-in-out both;
+	}
+
 	/* The fight's one line of instruction, bottom-centre. */
 	.hint {
 		position: absolute;
@@ -567,6 +608,70 @@
 		}
 	}
 
+	@keyframes boss-eye-hit {
+		0%,
+		100% {
+			transform: scaleY(1);
+		}
+		45% {
+			transform: scaleY(0.12);
+		}
+	}
+
+	@keyframes boss-mouth-laugh {
+		0%,
+		100% {
+			transform: scale(1);
+		}
+		35% {
+			transform: scale(1.14, 1.32);
+		}
+		70% {
+			transform: scale(1.04, 1.08);
+		}
+	}
+
+	@keyframes boss-crown-spin {
+		from {
+			rotate: 0deg;
+		}
+		to {
+			rotate: 360deg;
+		}
+	}
+
+	@keyframes boss-arm-wave-l {
+		0%,
+		100% {
+			transform: rotate(0);
+		}
+		25% {
+			transform: rotate(-24deg);
+		}
+		55% {
+			transform: rotate(8deg);
+		}
+		80% {
+			transform: rotate(-12deg);
+		}
+	}
+
+	@keyframes boss-arm-wave-r {
+		0%,
+		100% {
+			transform: rotate(0);
+		}
+		25% {
+			transform: rotate(24deg);
+		}
+		55% {
+			transform: rotate(-8deg);
+		}
+		80% {
+			transform: rotate(12deg);
+		}
+	}
+
 	@keyframes boss-happy {
 		0% {
 			transform: rotate(0) scale(1);
@@ -664,6 +769,15 @@
 
 		.boss-art.bonking {
 			animation: boss-hit-reduced 160ms ease-out;
+		}
+
+		/* The face hooks are pure celebration: reduced motion drops them all. */
+		.boss-art.bonking :global(.boss-eye),
+		[data-phase='win'] .boss-art :global(.boss-mouth),
+		[data-phase='win'] .boss-art :global(.boss-crown),
+		[data-phase='win'] .boss-art :global(.boss-arm-l),
+		[data-phase='win'] .boss-art :global(.boss-arm-r) {
+			animation: none;
 		}
 
 		.hint {

@@ -86,10 +86,12 @@ required; `rotation` and `bosses` are optional with defaults (0°, on). The hidd
 clears **all of them** (`Settings.svelte`).
 
 **Migration and repair.** A v1 run is lifted into v2 with an empty `homes`/`album`, no
-cosmetics, and the boss welcome defaults (`nextBossAt: 1000`, `bossWins: 0`). The two boss
-fields are deliberately **not** validated by `isRunState`: `normalizeRun` fills them when a
-mid-v2 save omits them and repairs junk (`nextBossAt` must be an integer ≥ 1 000 on the 500
-grid; `bossWins` a non-negative integer) instead of wiping the run.
+cosmetics, and the boss welcome defaults (`nextBossAt: 1000`, `bossWins: 0`). **No v2 run shipped
+before the boss** — the base page autosaved the v1 literal, so installed devices come through
+`migrateRunV1`. The boss fields are optional anyway, so a v2 payload that omits them (an older
+export, a hand edit) is filled with the welcome defaults rather than refused. Neither field is
+validated by `isRunState`: `normalizeRun` repairs junk (`nextBossAt` must be an integer ≥ 1 000 on
+the 500 grid; `bossWins` a non-negative integer) instead of wiping the run.
 
 ### The candy boss (T42)
 
@@ -106,13 +108,16 @@ sees a transient threshold. `boss-setting.svelte.ts` is the reactive seam over t
 `bosses` settings field (missing = on); turning it off mid-fight cancels with no reward and
 re-arms at `nextBossAtAbove(bag())`.
 
-**Honest limits.** The autosave writes the live `homes` map (the `homes:` mapping in
-`+page.svelte`'s `$effect`), but **boot does not restore it into the sim yet** — `bootState()`
-in `state/game.svelte.ts` cannot take the map, so street memory does not survive a reload. `album`/`cosmetics` are preserved verbatim from the loaded save, not
-updated. The boss adds **no canvas, scrolling or raster-cache work**: the scrolling world keeps
-drawing its frozen frame, and the overlay (z-index 10, inside the stage so the manual rotation
-applies) is removed on exit. Bounded: one boss SVG, ≤ 8 in-flight candies, ≤ 12 shower pieces,
-every timer cleared on destroy.
+**Street memory.** The autosave writes the live `homes` map (the `homes:` mapping in
+`+page.svelte`'s `$effect`) and `bootState()` restores it into the sim: `restoreHomes` maps the
+JSON string keys back to the numeric `HomeState` keys `initial({ homes })` takes (that helper
+deep-copies the map), so done/used doors survive a reload. `album`/`cosmetics` are preserved
+verbatim from the loaded save, not updated.
+
+**No canvas work.** The boss adds **no canvas, scrolling or raster-cache work**: the scrolling
+world keeps drawing its frozen frame, and the overlay (z-index 10, inside the stage so the manual
+rotation applies) is removed on exit. Bounded: one boss SVG, ≤ 8 in-flight candies, ≤ 12 shower
+pieces, every timer cleared on destroy.
 
 ### Audio graph
 
@@ -147,10 +152,11 @@ Settings first, then the save, then the title, then one gesture, then the engine
    it at import. Defaults are Italian, sound on, both sliders full.
 2. **Store seed from the save** — `game.svelte.ts` reads `dos.run.v1` once (`persist.read()`)
    and builds the first `GameState`: `bag`, `record` (lifted over the save's bag), the owned
-   `tricks` (catalogue ids only, with the free `boo` guaranteed), a `worldX` at the
-   furthest doorstep the save's `furthestK` points at, and the boss progress (`bossNextAt()` /
-   `bossWins()`, welcome defaults 1 000 / 0 when absent). Candies, homes, phase, direction and
-   the open door are transient and start fresh (`+page.svelte` boot note).
+   `tricks` (catalogue ids only, with the free `boo` guaranteed), the done/used `homes` map
+   (JSON string keys mapped back to numbers), a `worldX` at the furthest doorstep the save's
+   `furthestK` points at, and the boss progress (`bossNextAt()` / `bossWins()`, welcome defaults
+   1 000 / 0 when absent). Candies, phase, direction and the open door are transient and start
+   fresh (`+page.svelte` boot note).
 3. **Title** — the scene mounts and the sim loop starts (`start()` in `+page.svelte`
    `onMount`); `TitleScreen.svelte` sits over it with `Gioca` / `Impostazioni`.
 4. **Gesture unlock** — the first `pointerdown` (the `Gioca` tap included) runs
@@ -174,7 +180,7 @@ Settings first, then the save, then the title, then one gesture, then the engine
 | Layer | Command | Backer / shape |
 |---|---|---|
 | **Unit** | `pnpm test:unit` | Vitest — **781 tests / 33 files**, covering the pure sim, the play/scene models, the audio modules, the black box, the store, the canvas layers and the candy boss. Count measured 2026-10-25 on this tree with `pnpm test:unit`; the Budgets table keeps the dated baseline for the historical rows. |
-| **e2e** | `pnpm test:e2e` | Playwright — **27 tests in 10 specs** (`tests/e2e/*.spec.ts`), run against the **built** app at 852×393: audio unlock, the full loop + reduced motion, Bottega, settings/language, the reopenable menu, save→reload, the canvas-world smoke, the flip, the black box (crash banner + viewer, error capture, unassisted heartbeat flush, clean close, reachability), and the candy boss (welcome/reward/save, the 5 416 save, rotation, off/on, mid-fight cancel, reload, reduced motion, keyboard). See `tests/README.md`. |
+| **e2e** | `pnpm test:e2e` | Playwright — **29 tests in 10 specs** (`tests/e2e/*.spec.ts`), run against the **built** app at 852×393: audio unlock, the full loop + reduced motion, Bottega, settings/language, the reopenable menu, save→reload (including a done home surviving boot), the canvas-world smoke, the flip, the black box (crash banner + viewer, error capture, unassisted heartbeat flush, clean close, reachability), and the candy boss (welcome/reward/save, the 5 416 save, rotation, off/on, mid-fight cancel with plain HUD/rotate clicks, mid-fight reload + re-arm, reload after a win, reduced motion, keyboard). See `tests/README.md`. |
 | **Perf / memory** | `node tools/perf-probe.mjs --launch` | the CDP harness behind the Budgets table: audio-node gap, loop replacement, DOM count, heap, page errors. Re-measure recipe in *Budgets → Re-measuring*. |
 | **Voice gate** | `pnpm check:voice` | `tools/check-voice.mjs` — a non-empty clip + a manifest row per id, both languages. |
 
@@ -229,9 +235,11 @@ commands; those `Measured` cells carry the newer date.
 (335.8 kB) and the all-assets total (618.1 kB) crossed their 300 / 600 kB lines
 after the T31 baseline — street life (T37), the canvas world (T39), the manual
 rotation (T40) and the candy boss (T42) all landed since. The route chunk is
-still legal at 197.0 kB but has only ~3 kB of headroom. A follow-up has to
-either trim the bundle or raise these budgets deliberately; this docs pass only
-records the measurement.
+still legal at 197.0 kB but has only ~3 kB of headroom. **Final review
+(2026-10-25): accepted for merge; deploy is gated on the owner's explicit ack.
+Follow-up: defer the boss art module behind a dynamic import (or otherwise
+trim) to restore the route-chunk headroom.** This note records the measurement
+and the decision — the deploy has not happened.
 
 ### The long-session run (the T31 acceptance)
 
