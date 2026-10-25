@@ -236,10 +236,10 @@ commands; those `Measured` cells carry the newer date.
 after the T31 baseline — street life (T37), the canvas world (T39), the manual
 rotation (T40) and the candy boss (T42) all landed since. The route chunk is
 still legal at 197.0 kB but has only ~3 kB of headroom. **Final review
-(2026-10-25): accepted for merge; deploy is gated on the owner's explicit ack.
-Follow-up: defer the boss art module behind a dynamic import (or otherwise
-trim) to restore the route-chunk headroom.** This note records the measurement
-and the decision — the deploy has not happened.
+(2026-10-25): accepted for merge; deployed the same day after the owner's
+explicit ack (build 7035832). Follow-up: defer the boss art module behind a
+dynamic import (or otherwise trim) to restore the route-chunk headroom.** This
+note records the measurement and the decision; the live build is 7035832.
 
 ### The long-session run (the T31 acceptance)
 
