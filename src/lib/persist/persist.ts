@@ -6,12 +6,19 @@
  * unlockable cosmetics. A v1 payload is migrated on read so older devices
  * keep their bag/tricks/furthest without a wipe.
  *
+ * v2 also carries the candy boss's progress: the next threshold and the win
+ * count. Both fields are optional because v2 shipped without them — a save
+ * from that short window is filled with the welcome defaults on read, and a
+ * malformed value is repaired rather than wiping the run.
+ *
  * **Nothing here ever throws.** localStorage is hostile in the wild — Safari
  * private mode throws on every access, a full quota throws on write, and a
  * half-written or hand-edited value throws on parse. Every one of those paths
  * degrades to "no save": `read()` returns `null` and `write()`/`clear()` stay
  * silent.
  */
+
+import { BOSS_FIRST, normalizeBossProgress } from '$lib/play/boss-model';
 
 /** The one key the run owns in localStorage. */
 export const RUN_KEY = 'dos.run.v1';
@@ -49,6 +56,15 @@ export interface RunState {
 	album: Record<AlbumType, number>;
 	/** Owned cosmetics (`cape`, …). */
 	cosmetics: string[];
+	/**
+	 * Bag threshold for the next boss (1 000, 1 500, 2 000 …).
+	 *
+	 * Optional: v2 briefly shipped without boss progress, so a mid-v2 save may
+	 * omit it. `normalizeRun` fills the welcome default and repairs junk.
+	 */
+	nextBossAt?: number;
+	/** Boss fights won this run (drives the rotation). Optional, as above. */
+	bossWins?: number;
 }
 
 /** Empty album — every type at 0. */
@@ -81,6 +97,11 @@ function isAlbum(v: unknown): v is Record<AlbumType, number> {
 /**
  * True for a v2 run the sim can boot. Foreign versions (except migratable v1)
  * are refused by `read()` after migration attempt.
+ *
+ * The boss fields are deliberately **not** checked: `normalizeRun` repairs
+ * them, and a missing value is a legal mid-v2 save. Validating them here
+ * would turn a hostile threshold into a wiped run — the normaliser's job is
+ * to keep the bag and fix the boss.
  */
 export function isRunState(value: unknown): value is RunState {
 	if (typeof value !== 'object' || value === null) return false;
@@ -120,13 +141,24 @@ export function migrateRunV1(value: unknown): RunState | null {
 		furthestK: s.furthestK,
 		homes: {},
 		album: emptyAlbum(),
-		cosmetics: []
+		cosmetics: [],
+		// A v1 run never met the boss: welcome cadence, no wins.
+		nextBossAt: BOSS_FIRST,
+		bossWins: 0
 	};
 }
 
-/** Parse any stored payload into a v2 run, or null. */
+/**
+ * Parse any stored payload into a v2 run, or null.
+ *
+ * Accepted v2 payloads are normalised, not just returned: the boss fields are
+ * filled (mid-v2 save) or repaired (junk values) so `read()` always hands the
+ * sim a playable threshold.
+ */
 export function normalizeRun(value: unknown): RunState | null {
-	if (isRunState(value)) return value;
+	if (isRunState(value)) {
+		return { ...value, ...normalizeBossProgress(value.bag, value.nextBossAt, value.bossWins) };
+	}
 	return migrateRunV1(value);
 }
 

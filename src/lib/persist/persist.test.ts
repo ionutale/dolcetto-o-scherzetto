@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest';
 import type { RunState } from './persist';
-import { RUN_KEY, createPersist, isRunState } from './persist';
+import { RUN_KEY, createPersist, emptyAlbum, isRunState } from './persist';
 
 /**
  * The mirror never throws — that is the whole contract. Every hostile storage
@@ -66,11 +66,16 @@ function poison(storage: Storage, raw: string): void {
 /** A complete, valid run — every field the mirror validates. */
 function aRun(overrides: Partial<RunState> = {}): RunState {
 	return {
-		version: 1,
+		version: 2,
 		bag: 42,
 		record: 120,
 		tricks: ['boo', 'ragnetto'],
 		furthestK: 3,
+		homes: {},
+		album: emptyAlbum(),
+		cosmetics: [],
+		nextBossAt: 1500,
+		bossWins: 0,
 		...overrides
 	};
 }
@@ -127,9 +132,9 @@ describe('read refuses anything it cannot run', () => {
 		}
 	});
 
-	it('returns null for another schema version', () => {
+	it('returns null for a foreign schema version', () => {
 		const storage = memoryStorage();
-		poison(storage, JSON.stringify({ ...aRun(), version: 2 }));
+		poison(storage, JSON.stringify({ ...aRun(), version: 3 }));
 
 		expect(createPersist(storage).read()).toBeNull();
 	});
@@ -139,13 +144,13 @@ describe('read refuses anything it cannot run', () => {
 		const mirror = createPersist(storage);
 		for (const state of [
 			{}, // no fields at all
-			{ version: 1 }, // only the version
-			{ version: 1, bag: 1, record: 2, furthestK: 3 }, // tricks missing
-			{ version: 1, bag: 'many', record: 2, tricks: [], furthestK: 3 },
-			{ version: 1, bag: 1, record: 2, tricks: 'boo', furthestK: 3 }, // not an array
-			{ version: 1, bag: 1, record: 2, tricks: [42], furthestK: 3 }, // not strings
-			{ version: 1, bag: 1, record: 2, tricks: [], furthestK: 'three' },
-			{ version: '1', bag: 1, record: 2, tricks: [], furthestK: 3 } // version as text
+			{ version: 2 }, // only the version
+			{ version: 2, bag: 1, record: 2, furthestK: 3 }, // tricks missing
+			{ version: 2, bag: 'many', record: 2, tricks: [], furthestK: 3 },
+			{ version: 2, bag: 1, record: 2, tricks: 'boo', furthestK: 3 }, // not an array
+			{ version: 2, bag: 1, record: 2, tricks: [42], furthestK: 3 }, // not strings
+			{ version: 2, bag: 1, record: 2, tricks: [], furthestK: 'three' },
+			{ version: '2', bag: 1, record: 2, tricks: [], furthestK: 3 } // version as text
 		]) {
 			poison(storage, JSON.stringify(state));
 			expect(mirror.read()).toBeNull();
@@ -153,7 +158,7 @@ describe('read refuses anything it cannot run', () => {
 
 		// A hand-edited `1e999` parses to Infinity (JSON.stringify would turn it
 		// into null, so it has to go in as raw text).
-		poison(storage, '{"version":1,"bag":1e999,"record":2,"tricks":[],"furthestK":3}');
+		poison(storage, '{"version":2,"bag":1e999,"record":2,"tricks":[],"furthestK":3}');
 		expect(mirror.read()).toBeNull();
 	});
 
@@ -172,11 +177,52 @@ describe('read refuses anything it cannot run', () => {
 	it('accepts exactly the states it writes', () => {
 		expect(isRunState(aRun())).toBe(true);
 		expect(isRunState(aRun({ tricks: [] }))).toBe(true);
-		expect(isRunState({ ...aRun(), version: 2 })).toBe(false);
+		expect(isRunState({ ...aRun(), version: 3 })).toBe(false);
+		expect(isRunState({ ...aRun(), version: 1 })).toBe(false);
 		expect(isRunState({ ...aRun(), bag: Number.NaN })).toBe(false);
 		expect(isRunState({ ...aRun(), tricks: [null] })).toBe(false);
+		// Boss fields are the normaliser's job — never a refusal reason.
+		expect(isRunState({ ...aRun(), bossWins: -2 })).toBe(true);
+		expect(isRunState({ ...aRun(), nextBossAt: 1234 })).toBe(true);
 		expect(isRunState(null)).toBe(false);
-		expect(isRunState('{"version":1}')).toBe(false);
+		expect(isRunState('{"version":2}')).toBe(false);
+	});
+});
+
+describe('save migration and boss repair', () => {
+	it('migrates v1 with the welcome boss defaults', () => {
+		const storage = memoryStorage();
+		poison(
+			storage,
+			JSON.stringify({ version: 1, bag: 5, record: 9, tricks: ['boo'], furthestK: 2 })
+		);
+		expect(createPersist(storage).read()).toMatchObject({
+			version: 2,
+			nextBossAt: 1000,
+			bossWins: 0
+		});
+	});
+
+	it('fills a mid-v2 save missing the boss fields', () => {
+		const storage = memoryStorage();
+		const mid = aRun({ bag: 5416 });
+		delete mid.nextBossAt;
+		delete mid.bossWins;
+		poison(storage, JSON.stringify(mid));
+		expect(createPersist(storage).read()).toMatchObject({
+			nextBossAt: 1000,
+			bossWins: 0
+		});
+	});
+
+	it('repairs malformed present boss fields instead of wiping', () => {
+		const storage = memoryStorage();
+		poison(storage, JSON.stringify({ ...aRun({ bag: 5416 }), nextBossAt: 1234, bossWins: -2 }));
+		expect(createPersist(storage).read()).toMatchObject({
+			bag: 5416,
+			nextBossAt: 5500,
+			bossWins: 0
+		});
 	});
 });
 
