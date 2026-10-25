@@ -18,13 +18,35 @@ import { expect, type Locator, type Page } from '@playwright/test';
 export const RUN_KEY = 'dos.run.v1';
 export const SETTINGS_KEY = 'dos.settings.v1';
 
-/** The run slot's shape (`src/lib/persist/persist.ts` — v1). */
+/** The run slot's v1 shape (`src/lib/persist/persist.ts` — kept for migration tests). */
 export interface RunSnapshot {
 	version: 1;
 	bag: number;
 	record: number;
 	tricks: string[];
 	furthestK: number;
+}
+
+/** One completed home in the v2 save (numeric index becomes a string key in JSON). */
+export interface SavedHomeSnapshot {
+	done: boolean;
+	used: boolean;
+	kind: 'treat' | 'scherzo';
+}
+
+/** The run slot's v2 shape (`src/lib/persist/persist.ts`). */
+export interface RunSnapshotV2 {
+	version: 2;
+	bag: number;
+	record: number;
+	tricks: string[];
+	furthestK: number;
+	homes: Record<string, SavedHomeSnapshot>;
+	album: Record<string, number>;
+	cosmetics: string[];
+	/** Boss progress — optional in the mid-v2 window, always written now. */
+	nextBossAt?: number;
+	bossWins?: number;
 }
 
 /** The settings envelope's shape (`src/lib/persist/settings.ts` — v1). */
@@ -34,6 +56,8 @@ export interface SettingsSnapshot {
 	sound: boolean;
 	musicVolume: number;
 	sfxVolume: number;
+	/** The candy-boss switch — optional since pre-boss envelopes lack it. */
+	bosses?: boolean;
 }
 
 /* ------------------------------------------------------------------ */
@@ -68,6 +92,39 @@ export async function seedRun(page: Page, run: Partial<RunSnapshot> = {}): Promi
 	);
 }
 
+/**
+ * Writes the run slot (v2) before the app boots. Same first-boot guard as
+ * `seedRun`, but under its own key so a v1 migration seed and a v2 seed in the
+ * same context never suppress each other.
+ */
+export async function seedRunV2(page: Page, run: Partial<RunSnapshotV2> = {}): Promise<void> {
+	const payload: RunSnapshotV2 = {
+		version: 2,
+		bag: 0,
+		record: 0,
+		tricks: ['boo'],
+		furthestK: 0,
+		homes: {},
+		album: { lolli: 0, gummy: 0, choco: 0, toffee: 0, corn: 0, star: 0 },
+		cosmetics: [],
+		nextBossAt: 1000,
+		bossWins: 0,
+		...run
+	};
+	await page.addInitScript(
+		([key, value, guard]) => {
+			try {
+				if (window.localStorage.getItem(guard) !== null) return;
+				window.localStorage.setItem(guard, '1');
+				window.localStorage.setItem(key, value);
+			} catch {
+				/* about:blank and a hostile storage have no localStorage */
+			}
+		},
+		[RUN_KEY, JSON.stringify(payload), `${RUN_KEY}.v2seeded`] as const
+	);
+}
+
 /** Writes the settings envelope before the app boots. */
 export async function seedSettings(
 	page: Page,
@@ -95,7 +152,15 @@ export async function seedSettings(
 	);
 }
 
-export async function readRun(page: Page): Promise<RunSnapshot | null> {
+export async function readRun(page: Page): Promise<RunSnapshot | RunSnapshotV2 | null> {
+	return page.evaluate((key) => {
+		const raw = window.localStorage.getItem(key);
+		return raw === null ? null : JSON.parse(raw);
+	}, RUN_KEY);
+}
+
+/** Reads the run slot back as a v2 payload (raw JSON, no normalisation). */
+export async function readRunV2(page: Page): Promise<RunSnapshotV2 | null> {
 	return page.evaluate((key) => {
 		const raw = window.localStorage.getItem(key);
 		return raw === null ? null : JSON.parse(raw);

@@ -38,11 +38,21 @@
  * `record()` — the wallet's high-water mark, for the autosave; and the boot
  * that seeds the sim from `persist.read()` (`bag`, `tricks`, `record`, and a
  * `worldX` at the furthest doorstep). The autosave itself lives on the page.
+ *
+ * **Candy boss (T5).** `bossNextAt()` / `bossWins()` are the run's boss
+ * progress: which bag threshold opens the next fight and how many fights this
+ * run has won. They are **run progress, not sim state** — the pure sim in
+ * `loop.ts` never sees a boss (the fight is a DOM overlay above the paused
+ * world, Task 7), so they live here beside `furthestK`/`record`, are seeded
+ * from the same save and are written back by the page's autosave. A real fresh
+ * run is the parent reset, which reloads the module and re-reads the save;
+ * the in-sim `RESET` is a dev/test gesture and deliberately leaves them alone.
  */
 import { SPACING, initial, reduce, tick } from '../sim/loop';
 import type { Action, Candy, Dir, GameState, Lang, Phase, TrickId } from '../sim/loop';
 import { trackFurthest } from '../sim/progression';
 import { TRICK_ORDER } from '../sim/economy';
+import { BOSS_FIRST } from '../play/boss-model';
 import { persist } from '../persist/persist';
 import { settings } from '../persist/settings';
 
@@ -109,6 +119,17 @@ let state = $state<GameState>(bootState());
  */
 let furthestK = $state(savedFurthestK);
 
+/**
+ * Candy boss progress (T5): the bag threshold that opens the next fight and
+ * the number of fights won this run. Not sim state — the pure loop never sees
+ * the boss — so they are seeded from the save here, exactly like `furthestK`,
+ * and mirrored back by the page's autosave. `persist.read()` normalises both
+ * (`BOSS_FIRST` / `0` for a v1 or mid-v2 save), so the fallbacks below only
+ * cover a `null` save.
+ */
+let bossNext = $state(saved?.nextBossAt ?? BOSS_FIRST);
+let bossWinsCount = $state(saved?.bossWins ?? 0);
+
 /** Single-loop latch: a second `start()` schedules nothing, `stop()` is safe. */
 let running = false;
 /** Handle of the frame currently scheduled (null while stopped). */
@@ -171,6 +192,41 @@ export function furthest(): number {
 /** The best bag ever held (spec §8) — the autosave's record field (T18b). */
 export function record(): number {
 	return state.record;
+}
+
+/**
+ * The candy bag threshold that opens the next boss (T5), seeded from the save
+ * and advanced by `recordBossWin`/`skipBoss`. Reactive run progress, not sim
+ * state: Task 7's trigger watches it and the autosave mirrors it.
+ */
+export function bossNextAt(): number {
+	return bossNext;
+}
+
+/**
+ * Boss fights won this run (T5) — picks the rotating cast (`bossFor`) and is
+ * mirrored by the autosave. Reactive run progress, not sim state.
+ */
+export function bossWins(): number {
+	return bossWinsCount;
+}
+
+/**
+ * Records a won fight: the next threshold and the win count move together, in
+ * one synchronous update, so a save can never hold a post-win threshold with a
+ * pre-win rotation (which would replay the same boss).
+ */
+export function recordBossWin(nextAt: number): void {
+	bossNext = nextAt;
+	bossWinsCount += 1;
+}
+
+/**
+ * Records a skipped fight: only the threshold moves, so the rotation is not
+ * advanced by a fight the player never actually won.
+ */
+export function skipBoss(nextAt: number): void {
+	bossNext = nextAt;
 }
 
 /**

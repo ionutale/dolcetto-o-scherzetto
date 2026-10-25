@@ -60,8 +60,9 @@
 	 * renders the beat (the neighborhood's name + a sparkle sweep) and its
 	 * `onStinger` is a no-op until T23/T25/T27 own the audio.
 	 *
-	 * **T18b — persistence.** The second `$effect` autosaves
-	 * `{ bag, record, tricks, furthestK }` to `dos.run.v1` on any change; the
+	 * **T18b — persistence.** The second `$effect` autosaves the v2 run
+	 * (`bag`, `record`, `tricks`, `furthestK`, live `homes`, the preserved
+	 * album/cosmetics, and the boss progress) to `dos.run.v1` on any change; the
 	 * store's boot seeds that same state back (see `state/game.svelte.ts`). The
 	 * parent reset in Impostazioni still clears the key and reloads.
 	 *
@@ -116,6 +117,8 @@
 	import {
 		activeK,
 		bag,
+		bossNextAt,
+		bossWins,
 		dir,
 		dispatch,
 		furthest,
@@ -130,9 +133,20 @@
 		worldX
 	} from '$lib/state/game.svelte';
 	import { logEvent } from '$lib/diagnostics/crashlog';
-	import { persist } from '$lib/persist/persist';
+	import { emptyAlbum, persist } from '$lib/persist/persist';
 	import type { RunState } from '$lib/persist/persist';
 	import type { Phase } from '$lib/sim/loop';
+
+	/**
+	 * The save as it was when this page booted, read once — the store seeds the
+	 * sim from the same payload, so the page and the sim agree on what was
+	 * restored. The album and the cosmetics have no UI yet (out of scope), so
+	 * the autosave below carries them through untouched instead of inventing
+	 * live values; a fresh run starts from an empty album and no cosmetics.
+	 */
+	const savedRun = persist.read();
+	const savedAlbum = savedRun?.album ?? emptyAlbum();
+	const savedCosmetics = savedRun?.cosmetics ?? [];
 
 	/** The knock chain's view of the store — one adapter for the page's life. */
 	const flow = createFlowStore();
@@ -222,23 +236,39 @@
 	};
 
 	/**
-	 * T18b — autosave. Any change to the wallet, the record, the owned tricks or
-	 * the furthest house writes the one run slot (`dos.run.v1`); `persist.write`
-	 * never throws, so a hostile or full storage only costs the save, never the
-	 * run. It also runs once at boot, re-persisting the restored state.
+	 * T18b — autosave, now schema v2 (T5). Any change to the wallet, the record,
+	 * the owned tricks, the furthest house or the boss progress writes the one
+	 * run slot (`dos.run.v1`); `persist.write` never throws, so a hostile or
+	 * full storage only costs the save, never the run. It also runs once at
+	 * boot, re-persisting the restored state.
+	 *
+	 * Shapes: `homes()` is a live, reactive map of house index → `{ done, used,
+	 * kind }`, so it is copied into `SavedHome` objects (never a proxy) and
+	 * keyed by string in JSON. `album`/`cosmetics` come from the snapshot above
+	 * and are preserved verbatim — their UI is out of scope, and dropping them
+	 * on every autosave would wipe a future feature's state. `nextBossAt` /
+	 * `bossWins` mirror the store's boss progress.
 	 *
 	 * Documented gap: the sim cannot take `candies`, `homes`, `phase`, `dir`,
 	 * `activeK`, `refusedK` or the exact standing `worldX` at boot, so a reload
 	 * resumes at the furthest doorstep the save's `furthestK` points at — see
-	 * the boot note in `state/game.svelte.ts`.
+	 * the boot note in `state/game.svelte.ts`. `homes` is persisted for the
+	 * street's dim windows in a later task, not restored into the sim.
 	 */
 	$effect(() => {
 		const run: RunState = {
-			version: 1,
+			version: 2,
 			bag: bag(),
 			record: record(),
 			tricks: [...tricks()],
-			furthestK: furthest()
+			furthestK: furthest(),
+			homes: Object.fromEntries(
+				Object.entries(homes()).map(([k, h]) => [k, { done: h.done, used: h.used, kind: h.kind }])
+			),
+			album: savedAlbum,
+			cosmetics: savedCosmetics,
+			nextBossAt: bossNextAt(),
+			bossWins: bossWins()
 		};
 		persist.write(run);
 	});
