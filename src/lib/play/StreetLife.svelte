@@ -4,6 +4,7 @@
 	 * DOM overlays above the canvas world; schedules live in street-life-model.ts.
 	 */
 	import { onDestroy, onMount } from 'svelte';
+	import { npcCat, npcPumpkin, npcWitchling } from '$lib/art/sprites';
 	import { dir, dispatch, phase, shopOpen } from '$lib/state/game.svelte';
 	import {
 		STROLLER_FROM_X,
@@ -45,9 +46,17 @@
 
 	let firecrackerOn = $state(false);
 	let firecrackerXs = $state<number[]>([]);
-	let firecrackerSparks = $state(false);
+	/** The crossing direction currently on screen (flips the kid + props). */
+	let firecrackerFace = $state<CrossingDir>(1);
 	/** The next crossing's direction — alternates so both are seen. */
 	let firecrackerDir: CrossingDir = 1;
+
+	/**
+	 * The three costumes the firecracker kids wear — the same validated kid
+	 * sprites the NPC pool walks with, so they read as neighbourhood children
+	 * rather than abstract capsules (owner feedback, 2026-10-25).
+	 */
+	const KID_SPRITES = [npcPumpkin(), npcWitchling(), npcCat()];
 
 	let strollerOn = $state(false);
 	let strollerPx = $state(STROLLER_FROM_X);
@@ -80,9 +89,9 @@
 		firecrackerOn = true;
 		const direction = firecrackerDir;
 		firecrackerDir = nextCrossingDir(firecrackerDir);
+		firecrackerFace = direction;
 		const n = firecrackerCount(Math.random);
 		firecrackerXs = Array.from({ length: n }, (_, i) => firecrackerX(-i * 90, direction));
-		firecrackerSparks = true;
 		sound('pop');
 		onFirecracker();
 		const started = now();
@@ -96,7 +105,6 @@
 			}
 			if (firecrackerDone(elapsed)) {
 				firecrackerOn = false;
-				firecrackerSparks = false;
 				firecrackerXs = [];
 				fireRaf = 0;
 				return;
@@ -203,8 +211,21 @@
 <div class="street-life" aria-hidden="true">
 	{#if firecrackerOn}
 		{#each firecrackerXs as x, i (i)}
-			<div class="firekid" class:spark={firecrackerSparks} style={`transform: translateX(${x}px)`}>
-				<span class="body"></span>
+			<div
+				class="firekid walking"
+				style={`transform: translateX(${x}px) scaleX(${firecrackerFace})`}
+			>
+				<span class="body">
+					<!-- trusted static SVG from the validated sprite pack -->
+					<!-- eslint-disable-next-line svelte/no-at-html-tags -->
+					{@html KID_SPRITES[i % KID_SPRITES.length]}
+				</span>
+				<span class="held"></span>
+				<i class="toss t1"></i>
+				<i class="toss t2"></i>
+				<i class="pop p1"></i>
+				<i class="pop p2"></i>
+				<i class="shadow"></i>
 			</div>
 		{/each}
 	{/if}
@@ -247,44 +268,176 @@
 		position: absolute;
 		bottom: 72px;
 		left: 0;
-		width: 28px;
-		height: 36px;
-		display: flex;
-		align-items: center;
-		justify-content: center;
+		width: 45px;
+		height: 58px;
 		will-change: transform;
+		filter: drop-shadow(0 4px 6px var(--shadow-night));
 	}
 
+	/* The validated kid sprite at 0.8 scale (56×72 → 45×58). The pack's
+	   `.walking` hooks animate the legs/arms/body because the wrapper carries
+	   the class — the same contract Npcs.svelte uses. */
 	.firekid .body {
-		width: 18px;
-		height: 28px;
-		border-radius: 9px 9px 6px 6px;
-		background: linear-gradient(180deg, var(--amber), var(--amber-deep));
-		box-shadow: 0 0 10px color-mix(in srgb, var(--amber) 70%, transparent);
-		position: relative;
+		display: block;
+		width: 45px;
 	}
 
-	.firekid .body::before {
+	.firekid :global(svg.sprite) {
+		display: block;
+		width: 45px;
+		height: auto;
+	}
+
+	/* The lit firecracker in the forward hand: cream band, red stick, spark. */
+	.held {
+		position: absolute;
+		left: 35px;
+		top: 28px;
+		width: 5px;
+		height: 14px;
+		border-radius: 2.5px;
+		background: linear-gradient(180deg, var(--cream) 0 3px, #e25b4a 3px 10px, #c04436 10px);
+		box-shadow: 0 0 7px color-mix(in srgb, var(--amber) 55%, transparent);
+		transform: rotate(18deg);
+		transform-origin: 50% 85%;
+	}
+
+	.held::before {
 		content: '';
 		position: absolute;
-		left: 3px;
-		top: -6px;
-		width: 12px;
-		height: 12px;
+		left: 2px;
+		top: -5px;
+		width: 6px;
+		height: 7px;
+		border-top: 1.5px solid #e8dcc6;
+		border-right: 1.5px solid #e8dcc6;
+		border-radius: 0 4px 0 0;
+		transform: rotate(-10deg);
+	}
+
+	.held::after {
+		content: '';
+		position: absolute;
+		right: -3px;
+		top: -9px;
+		width: 6px;
+		height: 6px;
 		border-radius: 50%;
-		background: var(--cream);
+		background: var(--amber);
+		box-shadow:
+			0 0 6px 2px color-mix(in srgb, var(--amber) 85%, transparent),
+			0 0 14px 4px color-mix(in srgb, var(--amber) 35%, transparent);
+		animation: fuseFlicker 0.32s ease-in-out infinite alternate;
 	}
 
-	.firekid.spark .body {
-		animation: sparkpop 0.35s ease infinite alternate;
+	/* Two tossed crackers per 1.2 s: they arc forward and drop out of frame. */
+	.toss {
+		position: absolute;
+		left: 37px;
+		top: 30px;
+		width: 4px;
+		height: 11px;
+		border-radius: 2px;
+		background: linear-gradient(180deg, var(--cream) 0 2px, #e25b4a 2px 8px, #c04436 8px);
+		opacity: 0;
+		animation: kidToss 1.2s cubic-bezier(0.25, 0.7, 0.45, 1) infinite;
 	}
 
-	@keyframes sparkpop {
+	.toss::after {
+		content: '';
+		position: absolute;
+		left: 0;
+		top: -4px;
+		width: 4px;
+		height: 4px;
+		border-radius: 50%;
+		background: var(--amber);
+		box-shadow: 0 0 5px 1px var(--amber);
+	}
+
+	.toss.t2 {
+		animation-delay: 0.6s;
+	}
+
+	/* The landing burst: a four-point amber sparkle where the cracker lands. */
+	.pop {
+		position: absolute;
+		left: 37px;
+		top: 30px;
+		width: 20px;
+		height: 20px;
+		background: var(--amber);
+		clip-path: polygon(50% 0, 61% 39%, 100% 50%, 61% 61%, 50% 100%, 39% 61%, 0 50%, 39% 39%);
+		filter: drop-shadow(0 0 5px var(--amber));
+		opacity: 0;
+		animation: kidPop 1.2s ease-out infinite;
+	}
+
+	.pop.p2 {
+		animation-delay: 0.6s;
+	}
+
+	.firekid .shadow {
+		position: absolute;
+		bottom: -2px;
+		left: 8px;
+		width: 29px;
+		height: 6px;
+		border-radius: 50%;
+		background: var(--shadow-night);
+		filter: blur(2px);
+	}
+
+	@keyframes fuseFlicker {
 		from {
-			transform: scale(1) rotate(-8deg);
+			transform: scale(0.75);
+			opacity: 0.8;
 		}
 		to {
-			transform: scale(1.15) rotate(8deg);
+			transform: scale(1.25);
+			opacity: 1;
+		}
+	}
+
+	@keyframes kidToss {
+		0% {
+			transform: translate(0, 0) rotate(20deg) scale(0.9);
+			opacity: 0;
+		}
+		8% {
+			opacity: 1;
+		}
+		58% {
+			transform: translate(38px, -16px) rotate(200deg) scale(1);
+			opacity: 1;
+		}
+		92% {
+			transform: translate(70px, 4px) rotate(340deg) scale(1);
+			opacity: 1;
+		}
+		100% {
+			transform: translate(76px, 8px) rotate(360deg) scale(1);
+			opacity: 0;
+		}
+	}
+
+	@keyframes kidPop {
+		0%,
+		54% {
+			transform: translate(70px, 2px) scale(0);
+			opacity: 0;
+		}
+		62% {
+			transform: translate(70px, 2px) scale(0.5);
+			opacity: 1;
+		}
+		76% {
+			transform: translate(72px, 3px) scale(1.3);
+			opacity: 0.95;
+		}
+		100% {
+			transform: translate(74px, 5px) scale(0.1);
+			opacity: 0;
 		}
 	}
 
@@ -414,10 +567,17 @@
 	}
 
 	@media (prefers-reduced-motion: reduce) {
-		.firekid.spark .body,
+		.held::after,
+		.toss,
+		.pop,
 		.stroller.wave .baby {
 			animation: none;
 			transform: none;
+		}
+
+		.toss,
+		.pop {
+			opacity: 0;
 		}
 	}
 </style>

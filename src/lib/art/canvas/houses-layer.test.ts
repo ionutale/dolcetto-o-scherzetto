@@ -9,10 +9,13 @@ import {
 	houseArtIndices,
 	houseWindow,
 	knockShakeOffset,
+	NEIGHBOR_TARGET_H,
+	neighborFit,
 	neighborSvg,
 	tweenValue,
 	type TweenState
 } from './houses-layer';
+import { svgSize } from './raster';
 
 /**
  * Pinning suite for the houses layer's pure lanes (T4, 2026-10-19): the
@@ -217,5 +220,20 @@ describe('art string helpers', () => {
 		for (let k = 0; k < 6; k++) {
 			expect(neighborSvg(k), `neighbour ${k}`).toContain('xmlns="http://www.w3.org/2000/svg"');
 		}
+	});
+
+	it('fits every neighbour archetype inside the 56×80 doorway at 68 px tall', () => {
+		// Owner ask (2026-10-25): the natural 88–92 px sprites were a bit too
+		// big. Each reveal is now 68 px tall, bottom-anchored in the opening.
+		for (let k = 0; k < 6; k++) {
+			const size = svgSize(neighborSvg(k) ?? '');
+			expect(size, `neighbour ${k} size`).not.toBeNull();
+			if (!size) continue;
+			const fit = neighborFit(size.w, size.h);
+			expect(fit.h, `neighbour ${k} height`).toBeCloseTo(NEIGHBOR_TARGET_H, 6);
+			expect(fit.w, `neighbour ${k} width`).toBeLessThanOrEqual(56);
+			expect(fit.scale).toBeLessThanOrEqual(1);
+		}
+		expect(neighborFit(40, 40).scale).toBe(1); // small art is never blown up
 	});
 });

@@ -76,6 +76,19 @@ const NEIGHBOR_LEFT = DOOR_LEFT - 8;
 const NEIGHBOR_BOTTOM = -4;
 const NEIGHBOR_W = 72;
 
+/**
+ * The reveal's target height (owner, 2026-10-25: the natural 88–92 px sprites
+ * overfilled the 80 px doorway and poked above its lintel). Bottom-anchored and
+ * centred; every archetype ends up narrower than the 56 px opening.
+ */
+export const NEIGHBOR_TARGET_H = 68;
+
+/** Fit a neighbour sprite into the doorway: downscale only, never upscale. */
+export function neighborFit(w: number, h: number): { w: number; h: number; scale: number } {
+	const scale = Math.min(1, NEIGHBOR_TARGET_H / h);
+	return { w: w * scale, h: h * scale, scale };
+}
+
 /** The door swing's foreshortening: `rotateY(-68deg)` ≈ `cos(68°)` ≈ 0.375. */
 const DOOR_SCALE_X = 0.375;
 
@@ -618,17 +631,20 @@ function drawNeighbor(
 		EASE_NEIGHBOR
 	);
 	const sy = 0.05 + 0.95 * tweenValue(st, env.tMs, EASE_NEIGHBOR);
-	const x = slotLeft + NEIGHBOR_LEFT + (NEIGHBOR_W - size.w) / 2;
-	const y = GROUND_Y - NEIGHBOR_BOTTOM - size.h;
+	// Owner ask (2026-10-25): the natural 88–92 px sprites were a bit too big
+	// for the 80 px doorway. Fit them to 68 px, bottom-anchored and centred.
+	const fit = neighborFit(size.w, size.h);
+	const x = slotLeft + NEIGHBOR_LEFT + (NEIGHBOR_W - fit.w) / 2;
+	const y = GROUND_Y - NEIGHBOR_BOTTOM - fit.h;
 	// Key by ARCHETYPE, not by k: the six neighbours cycle forever, so a
 	// per-house key would decode the same art again for every house walked and
 	// grow the raster cache unboundedly — the exact memory class this
 	// migration exists to end.
 	const r = rasterOf(`neighbor:${archOf(k)}`, svg);
 	ctx.save();
-	ctx.translate(x + size.w / 2, y + size.h);
+	ctx.translate(x + fit.w / 2, y + fit.h);
 	ctx.scale(1, sy);
-	blit(ctx, r, -size.w / 2, -size.h);
+	blit(ctx, r, -fit.w / 2, -fit.h);
 	ctx.restore();
 }
 
