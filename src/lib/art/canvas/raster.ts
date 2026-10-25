@@ -52,6 +52,8 @@ export function svgSize(svg: string): { w: number; h: number } | null {
 
 const svgCache = new Map<string, Raster>();
 const svgLoading = new Set<string>();
+/** Keys whose SVG the browser refused to decode — never retried per frame. */
+const svgFailed = new Set<string>();
 
 /**
  * The cached device-pixel raster of one `<svg>` string, or `null` while the
@@ -61,7 +63,10 @@ export function rasterOf(key: string, svg: string, fallbackW = 24, fallbackH = 2
 	const hit = svgCache.get(key);
 	if (hit) return hit;
 	if (typeof document === 'undefined' || typeof Image === 'undefined') return null;
-	if (svgLoading.has(key)) return null;
+	// A malformed string (no `xmlns`, say) fails once and stays failed: the
+	// shell redraws every frame, and re-kicking the decode each time would
+	// allocate an Image per frame for the life of the scene.
+	if (svgLoading.has(key) || svgFailed.has(key)) return null;
 	svgLoading.add(key);
 	const { w, h } = svgSize(svg) ?? { w: fallbackW, h: fallbackH };
 	const s = scale();
@@ -82,7 +87,10 @@ export function rasterOf(key: string, svg: string, fallbackW = 24, fallbackH = 2
 		}
 		svgLoading.delete(key);
 	};
-	img.onerror = () => svgLoading.delete(key);
+	img.onerror = () => {
+		svgLoading.delete(key);
+		svgFailed.add(key);
+	};
 	try {
 		img.src = 'data:image/svg+xml;charset=utf-8,' + encodeURIComponent(svg);
 	} catch {
@@ -145,5 +153,6 @@ export function blit(ctx: CanvasRenderingContext2D, r: Raster | null, x: number,
 export function clearRasters(): void {
 	svgCache.clear();
 	svgLoading.clear();
+	svgFailed.clear();
 	shapeCache.clear();
 }

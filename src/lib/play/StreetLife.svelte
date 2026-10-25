@@ -6,7 +6,6 @@
 	import { onDestroy, onMount } from 'svelte';
 	import { dir, dispatch, phase, shopOpen } from '$lib/state/game.svelte';
 	import {
-		FIRECRACKER_FROM_X,
 		STROLLER_FROM_X,
 		VAN_FROM_X,
 		VAN_TOSS_SX,
@@ -18,6 +17,7 @@
 		firstFirecrackerAt,
 		firstStrollerAt,
 		firstVanAt,
+		nextCrossingDir,
 		nextFirecrackerAt,
 		nextStrollerAt,
 		nextVanAt,
@@ -29,6 +29,7 @@
 		vanShouldToss,
 		vanX
 	} from './street-life-model';
+	import type { CrossingDir } from './street-life-model';
 
 	interface Props {
 		/** True while a scare cameo owns the street (blocks T37). */
@@ -45,6 +46,8 @@
 	let firecrackerOn = $state(false);
 	let firecrackerXs = $state<number[]>([]);
 	let firecrackerSparks = $state(false);
+	/** The next crossing's direction — alternates so both are seen. */
+	let firecrackerDir: CrossingDir = 1;
 
 	let strollerOn = $state(false);
 	let strollerPx = $state(STROLLER_FROM_X);
@@ -75,8 +78,10 @@
 	function runFirecracker(): void {
 		if (firecrackerOn) return;
 		firecrackerOn = true;
+		const direction = firecrackerDir;
+		firecrackerDir = nextCrossingDir(firecrackerDir);
 		const n = firecrackerCount(Math.random);
-		firecrackerXs = Array.from({ length: n }, () => FIRECRACKER_FROM_X);
+		firecrackerXs = Array.from({ length: n }, (_, i) => firecrackerX(-i * 90, direction));
 		firecrackerSparks = true;
 		sound('pop');
 		onFirecracker();
@@ -84,7 +89,7 @@
 		let sparkAt = started + 400;
 		const step = (): void => {
 			const elapsed = now() - started;
-			firecrackerXs = firecrackerXs.map((_, i) => firecrackerX(elapsed - i * 90));
+			firecrackerXs = firecrackerXs.map((_, i) => firecrackerX(elapsed - i * 90, direction));
 			if (now() >= sparkAt && !firecrackerDone(elapsed)) {
 				sound('twinkle');
 				sparkAt = now() + 350 + Math.random() * 200;

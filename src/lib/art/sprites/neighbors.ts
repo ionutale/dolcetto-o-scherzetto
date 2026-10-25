@@ -20,7 +20,9 @@
  *    - Each entry is a `<div style="width:Npx">` around one `<svg>` — no ids,
  *      no defs, no external refs (ART-STYLE §3/§4) — so it can be spliced
  *      into any doorway with `{@html}` (the markup is static and trusted,
- *      the same licence `houses.ts` gets).
+ *      the same licence `houses.ts` gets). The `<svg>` must carry `xmlns`:
+ *      the canvas world extracts it and decodes it as a standalone image,
+ *      which rejects an SVG without a namespace.
  *    - The trio's widths (66 / 70 / 74) are the prototype's; the three T24b
  *      sprites keep the same band (72 / 70 / 74). `HouseSlot`'s reveal slot is
  *      72 px wide and flex-centres whatever it is given.
@@ -48,7 +50,7 @@ export const NEIGHBOR_ARCHES = ['ghost', 'nonna', 'strega', 'wolf', 'vlad', 'sca
 
 /** `{@html}` markup per archetype — the prototype's `SVG` map, verbatim. */
 export const NEIGHBORS: Record<NeighborArch, string> = {
-	ghost: `<div style="width:66px"><svg width="66" height="88" viewBox="0 0 66 88">
+	ghost: `<div style="width:66px"><svg xmlns="http://www.w3.org/2000/svg" width="66" height="88" viewBox="0 0 66 88">
     <path d="M10 84 Q10 30 33 16 Q56 30 56 84 Q49 78 44 84 Q38 90 33 84 Q28 90 22 84 Q17 78 10 84 Z" fill="#f6f0ff"/>
     <path d="M33 16 Q30 40 32 84 L33 84 L34 84 Q36 40 33 16 Z" fill="#e9def7" opacity=".7"/>
     <ellipse cx="24" cy="42" rx="7.5" ry="6.2" fill="#3a2f4e"/><ellipse cx="42" cy="42" rx="7.5" ry="6.2" fill="#3a2f4e"/>
@@ -56,7 +58,7 @@ export const NEIGHBORS: Record<NeighborArch, string> = {
     <circle cx="19" cy="54" r="3.4" fill="#e7c6e0" opacity=".9"/><circle cx="47" cy="54" r="3.4" fill="#e7c6e0" opacity=".9"/>
     <path d="M29 58 Q33 62 37 58" stroke="#3a2f4e" stroke-width="1.8" fill="none" stroke-linecap="round"/>
   </svg></div>`,
-	nonna: `<div style="width:70px"><svg width="70" height="88" viewBox="0 0 70 88">
+	nonna: `<div style="width:70px"><svg xmlns="http://www.w3.org/2000/svg" width="70" height="88" viewBox="0 0 70 88">
     <path d="M8 86 Q8 54 35 50 Q62 54 62 86 Z" fill="#c98ab5"/>
     <circle cx="35" cy="36" r="17" fill="#ffd9b8"/>
     <path d="M14 34 Q12 8 35 8 Q58 8 56 34 Q52 22 35 21 Q18 22 14 34 Z" fill="#bcaee8"/>
@@ -68,7 +70,7 @@ export const NEIGHBORS: Record<NeighborArch, string> = {
     <circle cx="22" cy="44" r="3" fill="#ffb8a8" opacity=".85"/><circle cx="48" cy="44" r="3" fill="#ffb8a8" opacity=".85"/>
     <path d="M30 46.5 Q35 50.5 40 46.5" stroke="#3a2f4e" stroke-width="1.7" fill="none" stroke-linecap="round"/>
   </svg></div>`,
-	strega: `<div style="width:74px"><svg width="74" height="92" viewBox="0 0 74 92">
+	strega: `<div style="width:74px"><svg xmlns="http://www.w3.org/2000/svg" width="74" height="92" viewBox="0 0 74 92">
     <path d="M8 90 Q8 52 37 48 Q66 52 66 90 Z" fill="#5d4a86"/>
     <circle cx="37" cy="36" r="16.5" fill="#cfe8d2"/>
     <path d="M14 30 Q30 18 60 30 Q58 24 50 20 Q34 12 20 22 Q16 26 14 30 Z" fill="#7a5cff"/>
@@ -82,7 +84,7 @@ export const NEIGHBORS: Record<NeighborArch, string> = {
     <path d="M55 60 l1.6 3.4 3.4 1.6 -3.4 1.6 -1.6 3.4 -1.6 -3.4 -3.4 -1.6 3.4 -1.6 Z" fill="#ffd166"/>
   </svg></div>`,
 	// T24b — Lupo Gentile: gentle grey-lavender werewolf, friendly-puppy energy.
-	wolf: `<div style="width:72px"><svg width="72" height="92" viewBox="0 0 72 92">
+	wolf: `<div style="width:72px"><svg xmlns="http://www.w3.org/2000/svg" width="72" height="92" viewBox="0 0 72 92">
     <path d="M15 90 Q15 60 36 52 Q57 60 57 90 Q48 86 36 90 Q24 86 15 90 Z" fill="#9a8fc0"/>
     <path d="M36 52 Q25 60 24 90 L15 90 Q15 60 36 52 Z" fill="#7b71a2" opacity=".4"/>
     <ellipse cx="36" cy="74" rx="15" ry="12.6" fill="#cbbfdd"/>
@@ -109,7 +111,7 @@ export const NEIGHBORS: Record<NeighborArch, string> = {
     <ellipse cx="48.4" cy="40" rx="3.1" ry="2.1" fill="#ffb8a8" opacity=".55"/>
   </svg></div>`,
 	// T24b — Conte Vlad: polite plum-cape vampire, pale, dressed for the evening.
-	vlad: `<div style="width:70px"><svg width="70" height="90" viewBox="0 0 70 90">
+	vlad: `<div style="width:70px"><svg xmlns="http://www.w3.org/2000/svg" width="70" height="90" viewBox="0 0 70 90">
     <path d="M35 24 C17 28 7 47 5 89 L65 89 C63 47 53 28 35 24 Z" fill="#6d3a5e"/>
     <path d="M35 24 C48 28 58 47 60 89 L65 89 C63 47 53 28 35 24 Z" fill="#5a2f4f" opacity=".55"/>
     <path d="M35 24 C22 28 12 47 10 89 L5 89 C7 47 17 28 35 24 Z" fill="#7b4468" opacity=".4"/>
@@ -135,7 +137,7 @@ export const NEIGHBORS: Record<NeighborArch, string> = {
     <ellipse cx="46" cy="36" rx="2.4" ry="1.6" fill="#e7c6e0" opacity=".85"/>
   </svg></div>`,
 	// T24b — Spaventapasseri: goofy straw-brain scarecrow, stitched grin, crooked hat.
-	scarecrow: `<div style="width:74px"><svg width="74" height="92" viewBox="0 0 74 92">
+	scarecrow: `<div style="width:74px"><svg xmlns="http://www.w3.org/2000/svg" width="74" height="92" viewBox="0 0 74 92">
     <rect x="35.2" y="33" width="3.6" height="57" rx="1.8" fill="#5b4a71"/>
     <rect x="6" y="51" width="62" height="3.4" rx="1.7" fill="#5b4a71"/>
     <path d="M8 50 C3.4 47.6 0.8 48.6 0.8 51.4 C3.6 52 6.2 52.8 9.6 53.8 Z" fill="#e8a93a"/>

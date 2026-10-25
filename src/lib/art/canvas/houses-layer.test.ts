@@ -207,4 +207,15 @@ describe('art string helpers', () => {
 		expect(svg?.endsWith('</svg>')).toBe(true);
 		expect(svg).toContain('width="66"');
 	});
+
+	it('root-cause guard: every neighbour svg carries xmlns for the canvas decoder', () => {
+		// T4b bug (2026-10-25): the pack predates the canvas and was written for
+		// inline `{@html}`, where xmlns is optional. `rasterOf` decodes the
+		// extracted string as a standalone data-URL image, which an SVG without
+		// a namespace fails to parse — so the doorway stayed dark (and the
+		// failed decode was retried every frame). All six must stay decodable.
+		for (let k = 0; k < 6; k++) {
+			expect(neighborSvg(k), `neighbour ${k}`).toContain('xmlns="http://www.w3.org/2000/svg"');
+		}
+	});
 });

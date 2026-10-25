@@ -3,6 +3,7 @@ import {
 	FIRECRACKER_DUR_MS,
 	FIRECRACKER_FIRST_MS,
 	FIRECRACKER_MIN_MS,
+	FIRECRACKER_TO_X,
 	STROLLER_FIRST_MS,
 	STROLLER_MIN_MS,
 	VAN_FIRST_MS,
@@ -16,6 +17,7 @@ import {
 	firstFirecrackerAt,
 	firstStrollerAt,
 	firstVanAt,
+	nextCrossingDir,
 	nextFirecrackerAt,
 	nextStrollerAt,
 	nextVanAt,
@@ -87,7 +89,11 @@ describe('ambientMayFire', () => {
 
 describe('cadences', () => {
 	it('pins first waits and floors', () => {
-		expect(FIRECRACKER_FIRST_MS).toBe(50_000);
+		// T4b fix (2026-10-25): 50 s of nonstop walking meant a normal
+		// stop-at-every-door player never saw a beat. The first firecracker
+		// now lands 8 s in; the repeat gap is 35–60 s.
+		expect(FIRECRACKER_FIRST_MS).toBe(8_000);
+		expect(FIRECRACKER_MIN_MS).toBe(35_000);
 		expect(STROLLER_FIRST_MS).toBe(55_000);
 		expect(VAN_FIRST_MS).toBe(70_000);
 		expect(firstFirecrackerAt(0)).toBe(FIRECRACKER_FIRST_MS);
@@ -143,6 +149,13 @@ describe('crossings', () => {
 		expect(firecrackerDone(FIRECRACKER_DUR_MS)).toBe(true);
 		expect(firecrackerCount(() => 0)).toBe(2);
 		expect(firecrackerCount(() => 0.99)).toBe(3);
+	});
+
+	it('crosses right→left too, and alternates directions', () => {
+		expect(firecrackerX(0, -1)).toBe(FIRECRACKER_TO_X);
+		expect(firecrackerX(FIRECRACKER_DUR_MS, -1)).toBeLessThan(0);
+		expect(nextCrossingDir(1)).toBe(-1);
+		expect(nextCrossingDir(-1)).toBe(1);
 	});
 
 	it('waves the stroller near the duo', () => {

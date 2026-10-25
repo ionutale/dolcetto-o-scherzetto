@@ -134,7 +134,7 @@ begins → **3050** clear.
 | NPC shout | first after **24 000 ms**, then **26 000 … 46 000 ms**; on-screen kids only | `npc-model.ts` `SHOUT_FIRST_MS`, `SHOUT_MIN_MS`/`SHOUT_SPAN_MS` |
 | Parked cars | **4** per 5-block window (one in five blocks skipped) | `src/lib/play/car-model.ts` `CAR_SKIP_MOD`, `carSlots` |
 | Rare passer | first after **30 000 ms**, then **70 000 … 100 000 ms**; crossing **4.2 s** | `car-model.ts` `PASSER_FIRST_MS`, `PASSER_GAP_MIN_MS`/`PASSER_GAP_SPAN_MS`, `PASSER_DUR_MS` |
-| Firecracker kids (T37) | first **50 000 ms**, then **80 000 … 120 000 ms**; dash **2.5 s** | `street-life-model.ts` |
+| Firecracker kids (T37) | first **8 000 ms**, then **35 000 … 60 000 ms**; dash **2.5 s**; alternates **left→right / right→left** | `street-life-model.ts` |
 | Monster stroller (T37) | first **55 000 ms**, then **90 000 … 140 000 ms**; roll **5 s** | `street-life-model.ts` |
 | Mystery van (T37) | first **70 000 ms**, then **100 000 … 160 000 ms**; toss 1 candy at mid | `street-life-model.ts` + `AMBIENT_CANDY` |
 | Sky ghosts | **3** drifting behind the rooflines | `src/lib/play/ghost-model.ts` `GHOST_COUNT` |

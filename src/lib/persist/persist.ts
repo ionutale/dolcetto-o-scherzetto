@@ -86,9 +86,14 @@ export function isRunState(value: unknown): value is RunState {
 	if (typeof value !== 'object' || value === null) return false;
 	const state = value as Partial<RunState>;
 	if (state.version !== RUN_VERSION) return false;
-	if (!isFiniteNumber(state.bag) || !isFiniteNumber(state.record) || !isFiniteNumber(state.furthestK))
+	if (
+		!isFiniteNumber(state.bag) ||
+		!isFiniteNumber(state.record) ||
+		!isFiniteNumber(state.furthestK)
+	)
 		return false;
-	if (!Array.isArray(state.tricks) || !state.tricks.every((t) => typeof t === 'string')) return false;
+	if (!Array.isArray(state.tricks) || !state.tricks.every((t) => typeof t === 'string'))
+		return false;
 	if (!Array.isArray(state.cosmetics) || !state.cosmetics.every((c) => typeof c === 'string'))
 		return false;
 	if (!isAlbum(state.album)) return false;

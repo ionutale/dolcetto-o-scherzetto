@@ -36,9 +36,9 @@ function clamp01(v: number): number {
 /* Firecracker kids — short midground dash + spark pops                */
 /* ------------------------------------------------------------------ */
 
-export const FIRECRACKER_FIRST_MS = 50_000;
-export const FIRECRACKER_MIN_MS = 80_000;
-export const FIRECRACKER_SPAN_MS = 40_000;
+export const FIRECRACKER_FIRST_MS = 8_000;
+export const FIRECRACKER_MIN_MS = 35_000;
+export const FIRECRACKER_SPAN_MS = 25_000;
 /** Crossing length, ms — a quick dash. */
 export const FIRECRACKER_DUR_MS = 2500;
 export const FIRECRACKER_FROM_X = -80;
@@ -46,6 +46,14 @@ export const FIRECRACKER_TO_X = 940;
 /** How many kids dash (2 or 3). */
 export const FIRECRACKER_COUNT_MIN = 2;
 export const FIRECRACKER_COUNT_SPAN = 2; // exclusive upper add → 2..3
+
+/** A firecracker crossing's direction: 1 = left→right, −1 = right→left. */
+export type CrossingDir = 1 | -1;
+
+/** Alternate the crossing so consecutive beats use both directions. */
+export function nextCrossingDir(previous: CrossingDir): CrossingDir {
+	return previous === 1 ? -1 : 1;
+}
 
 export function firstFirecrackerAt(now: number): number {
 	return now + FIRECRACKER_FIRST_MS;
@@ -59,9 +67,11 @@ export function firecrackerCount(rng: Rng): number {
 	return FIRECRACKER_COUNT_MIN + Math.floor(clamp01(rng()) * FIRECRACKER_COUNT_SPAN);
 }
 
-export function firecrackerX(elapsedMs: number): number {
+export function firecrackerX(elapsedMs: number, direction: CrossingDir = 1): number {
 	const t = clamp01(elapsedMs / FIRECRACKER_DUR_MS);
-	return FIRECRACKER_FROM_X + (FIRECRACKER_TO_X - FIRECRACKER_FROM_X) * t;
+	return direction === 1
+		? FIRECRACKER_FROM_X + (FIRECRACKER_TO_X - FIRECRACKER_FROM_X) * t
+		: FIRECRACKER_TO_X + (FIRECRACKER_FROM_X - FIRECRACKER_TO_X) * t;
 }
 
 export function firecrackerDone(elapsedMs: number): boolean {
