@@ -32,8 +32,14 @@
 		 * default, so the HUD never crashes without the SFX layer.
 		 */
 		sound?: (cue: string) => void;
+		/**
+		 * A candy-boss fight is up (T7). The player still needs the bag, home and
+		 * rotate controls, but the Bottega must not be reachable mid-fight — the
+		 * sim is frozen on `roam`, so the pill would open over the fight.
+		 */
+		bossActive?: boolean;
 	}
-	let { sound = () => {} }: Props = $props();
+	let { sound = () => {}, bossActive = false }: Props = $props();
 
 	/** `bagpulse` duration (prototype `#bagChip.pulse`). */
 	const BAG_PULSE_MS = 350;
@@ -128,14 +134,16 @@
 		<button type="button" id="menuBtn" class="pill" aria-label="Menu" title="Menu" onclick={toMenu}
 			>🏠</button
 		>
-		<button
-			type="button"
-			id="bottegaBtn"
-			class="pill"
-			class:invite={shopInvite}
-			aria-label={BOTTEGA_LABEL[lang()]}
-			onclick={openShop}>🏪 Bottega</button
-		>
+		{#if !bossActive}
+			<button
+				type="button"
+				id="bottegaBtn"
+				class="pill"
+				class:invite={shopInvite}
+				aria-label={BOTTEGA_LABEL[lang()]}
+				onclick={openShop}>🏪 Bottega</button
+			>
+		{/if}
 	</div>
 </div>
 

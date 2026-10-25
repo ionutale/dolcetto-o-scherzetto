@@ -74,6 +74,19 @@
 	 * `ambienceLock`. (The prototype kept the buttons mounted but inert; here
 	 * they unmount, which is the same guarantee with no stale hold to leak —
 	 * Review Focus #2.)
+	 *
+	 * **T7 — the candy boss.** A page-level event, not a sim phase: the trigger
+	 * effect asks `bossMayStart` (quiet `roam`, no shop/scare/menu/celebration,
+	 * no fight already up) and, when the stored threshold is due, dispatches
+	 * `STOP` and mounts `<Boss/>` above the frozen world. The overlay owns the
+	 * fight's hp/phases; the page owns the wallet: `onThrow` dispatches
+	 * `SPEND_CANDY` and answers whether it was allowed, `onWin` dispatches
+	 * `BOSS_REWARD` (+60) and records the next threshold in the same update, so
+	 * the autosave never sees a half-applied win. `onExit` clears the fight and
+	 * the controls return. The boss is the one event that also unmounts the
+	 * ambient layers (`StreetLife`, `Scares`, `Celebration`, `Bubbles`) and hides
+	 * the Bottega pill: nothing may mount a beat or steal a tap over the fight,
+	 * while the canvas, the neighbours, the bag, home and rotate stay live.
 	 */
 	import { onDestroy, onMount, untrack } from 'svelte';
 	import MotionStyles from '$lib/art/sprites/MotionStyles.svelte';
@@ -94,6 +107,16 @@
 	import Celebration from '$lib/play/Celebration.svelte';
 	import Scares from '$lib/play/Scares.svelte';
 	import StreetLife from '$lib/play/StreetLife.svelte';
+	import Boss from '$lib/play/Boss.svelte';
+	import {
+		BOSS_REWARD,
+		bossFor,
+		bossMayStart,
+		nextBossAtAbove,
+		nextBossAtAfterWin
+	} from '$lib/play/boss-model';
+	import type { BossId } from '$lib/play/boss-model';
+	import { bossesEnabled } from '$lib/play/boss-setting.svelte';
 	import { duckAmbience, startAmbience } from '$lib/audio/ambience.svelte';
 	import { duckMusic, startMusic, stopMusic } from '$lib/audio/music.svelte';
 	import { initSfx, playCue, setSfxVolume } from '$lib/audio/sfx';
@@ -125,7 +148,9 @@
 		homes,
 		phase,
 		record,
+		recordBossWin,
 		shopOpen,
+		skipBoss,
 		start,
 		stop,
 		trickPlayed,
@@ -271,6 +296,104 @@
 			bossWins: bossWins()
 		};
 		persist.write(run);
+	});
+
+	/* ------------------------------------------------------------------ */
+	/* T7 — the candy boss: the page's half of the fight                    */
+	/* ------------------------------------------------------------------ */
+
+	/** The live fight, or `null`; the overlay owns hp and the phases. */
+	let boss = $state<{ id: BossId } | null>(null);
+	/** No controls/ambient beats while a fight is up (the HUD + template read this). */
+	const bossActive = $derived(boss !== null);
+	/**
+	 * The reward and the next threshold are applied **once** per fight. The
+	 * `Boss` component also latches its own win, so this is the second belt —
+	 * a stray callback can never pay twice or advance the rotation twice.
+	 */
+	let bossAwarded = false;
+
+	/**
+	 * Start one fight: freeze the world (`STOP`), reset the once-per-fight
+	 * latch and pick the rotation's next body. Guarded against re-entry: the
+	 * trigger effect re-runs while the overlay is up (the bag changes on every
+	 * throw) and must never replace a live fight.
+	 */
+	function startBoss(): void {
+		if (boss) return;
+		dispatch({ type: 'STOP' });
+		bossAwarded = false;
+		boss = { id: bossFor(bossWins()) };
+		logEvent('boss', { id: boss.id, bag: bag() });
+	}
+
+	/**
+	 * The whole start gate in one pure call: enabled, due (`bag >= nextBossAt`),
+	 * a quiet `roam`, no shop/scare/menu/celebration and no fight already up.
+	 * Reading each seam here is what makes the effect re-run the moment the
+	 * last interrupting beat ends.
+	 */
+	$effect(() => {
+		const due = bossMayStart({
+			enabled: bossesEnabled(),
+			bag: bag(),
+			nextBossAt: bossNextAt(),
+			phase: phase(),
+			shopOpen: shopOpen(),
+			scareActive,
+			menuOpen: menuState.open,
+			celebrating: beat !== null,
+			active: boss !== null
+		});
+		if (due) startBoss();
+	});
+
+	/**
+	 * One accepted throw's wallet half. The component already checked the local
+	 * `bag` prop, but that can lag a frame behind a fast series of taps — the
+	 * store is the authority, and its answer is what lets a hit count.
+	 */
+	function onBossThrow(): boolean {
+		if (bag() <= 0) return false;
+		dispatch({ type: 'SPEND_CANDY' });
+		return true;
+	}
+
+	/**
+	 * The 30th hit: reward and threshold **in the same update**. `dispatch` is
+	 * synchronous, so `bag()` here is already post-reward — that is the number
+	 * `nextBossAtAfterWin` needs (its 1 500 floor is what stops the welcome
+	 * 1 000 fight from immediately re-firing). The shower is the component's.
+	 */
+	function onBossWin(): void {
+		if (bossAwarded) return;
+		bossAwarded = true;
+		dispatch({ type: 'BOSS_REWARD', n: BOSS_REWARD });
+		recordBossWin(nextBossAtAfterWin(bag()));
+		playCue('twinkle');
+		logEvent('boss-win', { bag: bag(), wins: bossWins() });
+	}
+
+	/** The exit beat ended: hand the stage back (controls re-mount). */
+	function onBossExit(): void {
+		boss = null;
+		logEvent('boss-exit', { bag: bag() });
+	}
+
+	/**
+	 * Turning the feature off mid-fight cancels it: the candies already spent
+	 * stay spent, no reward is paid, and the threshold moves to the next grid
+	 * point above the current bag — re-enabling must not immediately re-trigger
+	 * a fight the player just opted out of (spec §7). Disabling while idle is a
+	 * no-op here; the stored threshold simply stays and the gate stays shut.
+	 */
+	$effect(() => {
+		const enabled = bossesEnabled();
+		if (!boss || enabled) return;
+		const next = nextBossAtAbove(bag());
+		boss = null;
+		skipBoss(next);
+		logEvent('boss-cancel', { next, bag: bag() });
 	});
 
 	/**
@@ -429,19 +552,35 @@
 		<WorldCanvas worldX={worldX()} homes={homes()} activeK={activeK()} {openK} sound={playCue} />
 		<Npcs sound={playCue} {say} />
 		<Kids dir={dir()} />
-		<StreetLife {scareActive} sound={playCue} />
-		<Scares {onScare} sound={playCue} />
+		{#if !bossActive}
+			<StreetLife {scareActive} sound={playCue} />
+			<Scares {onScare} sound={playCue} />
+		{/if}
 		<CandyLayer sound={playCue} />
-		{#if !scareActive}
+		{#if !scareActive && !bossActive}
 			<WalkControls />
 		{/if}
 		<RotateButton />
-		<KnockButton sound={playCue} />
-		<Scherzo sound={playCue} />
+		{#if !bossActive}
+			<KnockButton sound={playCue} />
+			<Scherzo sound={playCue} />
+		{/if}
 		<Theatre bind:this={theatre} />
-		<Bubbles />
-		<Celebration {beat} onStinger={celebrationStinger} />
-		<Hud sound={playCue} />
+		{#if !bossActive}
+			<Bubbles />
+			<Celebration {beat} onStinger={celebrationStinger} />
+		{/if}
+		{#if boss}
+			<Boss
+				id={boss.id}
+				bag={bag()}
+				onThrow={onBossThrow}
+				onWin={onBossWin}
+				onExit={onBossExit}
+				sound={playCue}
+			/>
+		{/if}
+		<Hud sound={playCue} {bossActive} />
 	</Stage>
 </div>
 
