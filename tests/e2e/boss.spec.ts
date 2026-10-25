@@ -30,3 +30,28 @@ test('the 1000-candy boss appears, takes 30 throws and banks the reward', async 
 	await expect.poll(async () => (await readRunV2(page))?.nextBossAt).toBe(1500);
 	await expect.poll(async () => (await readRunV2(page))?.bossWins).toBe(1);
 });
+
+/**
+ * T7 follow-up — the keyboard path must work at the moment the fight opens.
+ * The overlay takes the stage away from Gioca and from the walk buttons, so
+ * without an explicit focus move, Space/Enter would land on `<body>` and do
+ * nothing until the player Tabbed to the invisible tap surface.
+ */
+test('the 1000-candy boss takes a keyboard throw without a Tab', async ({ page }) => {
+	await seedSettings(page, { sound: false, musicVolume: 0, sfxVolume: 0 });
+	await seedRunV2(page, { bag: 1000, record: 1000, nextBossAt: 1000, bossWins: 0 });
+	await openTitle(page);
+	await play(page);
+
+	await expect(page.locator('#bossLayer')).toHaveAttribute('data-phase', 'fight', {
+		timeout: 5_000
+	});
+	const tap = page.locator('#bossTap');
+	const meter = page.locator('#bossLayer [role="progressbar"]');
+	await expect(tap).toBeFocused();
+	await expect(meter).toHaveAttribute('aria-valuenow', '30');
+
+	await page.keyboard.press('Space');
+	await expect(meter).toHaveAttribute('aria-valuenow', '29');
+	await expect(bagChip(page)).toHaveText('999');
+});

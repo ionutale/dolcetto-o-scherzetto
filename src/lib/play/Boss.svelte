@@ -93,6 +93,8 @@
 	let hitSeq = 0;
 	/** `prefers-reduced-motion`, read once on mount (JS-driven beats only). */
 	let rm = false;
+	/** The full-stage throw button — focused on mount so Space/Enter work at once. */
+	let tapEl = $state<HTMLButtonElement | null>(null);
 
 	/** One cosmetic candy in the air. */
 	interface Shot {
@@ -139,6 +141,11 @@
 			/* no matchMedia: play the full beat */
 		}
 		sound('theatre-setup');
+		// The overlay owns the stage the moment it mounts: Gioca goes inert and
+		// the walk buttons unmount, so focus would otherwise sit on `<body>` and
+		// Space/Enter would be dead until the player Tabbed to this (invisible)
+		// surface. `preventScroll` keeps iOS from nudging the scaled stage.
+		if (tapEl?.isConnected) tapEl.focus({ preventScroll: true });
 		later(ENTRY_MS, () => {
 			phase = 'fight';
 		});
@@ -225,7 +232,13 @@
 	<div class="veil" aria-hidden="true"></div>
 
 	<!-- The whole stage throws: a real button, keyboard-activatable by default. -->
-	<button type="button" id="bossTap" class="tap" aria-label={copy.throwLabel} onclick={throwCandy}
+	<button
+		type="button"
+		id="bossTap"
+		class="tap"
+		bind:this={tapEl}
+		aria-label={copy.throwLabel}
+		onclick={throwCandy}
 	></button>
 
 	<div class="plate">
