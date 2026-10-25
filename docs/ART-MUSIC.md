@@ -70,7 +70,7 @@ wired into `src/lib/audio/ambience.svelte.ts`, which probes
 
 Loudness target for the beds: **−24 LUFS** (⚠ the task's asset spec; not independently
 re-measured in this pass). Mix: the bed sits under music at `AMB_MAX 0.5`, ducked −6 dB during
-shows and scares (`BALANCE.md` §6). The engine's synth placeholder remains the fallback for a
+shows and scares (`BALANCE.md` §7). The engine's synth placeholder remains the fallback for a
 missing loop.
 
 ## 5. Music — the street loop

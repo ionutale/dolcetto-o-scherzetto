@@ -106,9 +106,9 @@ sees a transient threshold. `boss-setting.svelte.ts` is the reactive seam over t
 `bosses` settings field (missing = on); turning it off mid-fight cancels with no reward and
 re-arms at `nextBossAtAbove(bag())`.
 
-**Honest limits.** The autosave writes the live `homes` map, but **boot does not restore it
-into the sim yet** — street memory does not survive a reload (see the boot note in
-`state/game.svelte.ts`). `album`/`cosmetics` are preserved verbatim from the loaded save, not
+**Honest limits.** The autosave writes the live `homes` map (the `homes:` mapping in
+`+page.svelte`'s `$effect`), but **boot does not restore it into the sim yet** — `bootState()`
+in `state/game.svelte.ts` cannot take the map, so street memory does not survive a reload. `album`/`cosmetics` are preserved verbatim from the loaded save, not
 updated. The boss adds **no canvas, scrolling or raster-cache work**: the scrolling world keeps
 drawing its frozen frame, and the overlay (z-index 10, inside the stage so the manual rotation
 applies) is removed on exit. Bounded: one boss SVG, ≤ 8 in-flight candies, ≤ 12 shower pieces,
@@ -173,7 +173,7 @@ Settings first, then the save, then the title, then one gesture, then the engine
 
 | Layer | Command | Backer / shape |
 |---|---|---|
-| **Unit** | `pnpm test:unit` | Vitest — **781 tests / 33 files**, covering the pure sim, the play/scene models, the audio modules, the black box, the store, the canvas layers and the candy boss. Count backed by the Budgets table below. |
+| **Unit** | `pnpm test:unit` | Vitest — **781 tests / 33 files**, covering the pure sim, the play/scene models, the audio modules, the black box, the store, the canvas layers and the candy boss. Count measured 2026-10-25 on this tree with `pnpm test:unit`; the Budgets table keeps the dated baseline for the historical rows. |
 | **e2e** | `pnpm test:e2e` | Playwright — **27 tests in 10 specs** (`tests/e2e/*.spec.ts`), run against the **built** app at 852×393: audio unlock, the full loop + reduced motion, Bottega, settings/language, the reopenable menu, save→reload, the canvas-world smoke, the flip, the black box (crash banner + viewer, error capture, unassisted heartbeat flush, clean close, reachability), and the candy boss (welcome/reward/save, the 5 416 save, rotation, off/on, mid-fight cancel, reload, reduced motion, keyboard). See `tests/README.md`. |
 | **Perf / memory** | `node tools/perf-probe.mjs --launch` | the CDP harness behind the Budgets table: audio-node gap, loop replacement, DOM count, heap, page errors. Re-measure recipe in *Budgets → Re-measuring*. |
 | **Voice gate** | `pnpm check:voice` | `tools/check-voice.mjs` — a non-empty clip + a manifest row per id, both languages. |
@@ -206,22 +206,32 @@ carry the full context/options/consequences).
 
 Measured **2026-10-17** on this machine (Chrome 155.0.8059.82, Node 26.1.0,
 macOS) by **T31**. Every row names the command that backs it — a budget without
-a backer is a guess, so none of these are.
+a backer is a guess, so none of these are. The **unit-suite and build rows were
+re-measured 2026-10-25** for the candy-boss docs pass (T42) with the same
+commands; those `Measured` cells carry the newer date.
 
 | Budget | Ceiling | Measured | Backer |
 |---|---|---|---|
-| Unit suite green | 100 % · ≤ 5 s | **651 tests / 23 files · 0.73 s** (wall ~2 s) | `pnpm test:unit` |
-| Type/component check | clean | **clean** (0 errors) | `pnpm check` |
-| Route chunk (`+page.svelte`) | ≤ 200 kB | **184.2 kB** (gzip **55.9 kB**) | `pnpm build` |
-| Client JS total | ≤ 300 kB | **270.2 kB** (gzip ≈ **89 kB**) incl. SW | `pnpm build` |
-| Client CSS total | ≤ 100 kB | **81.8 kB** (gzip **33.5 kB**) | `pnpm build` |
-| All client assets (pre-gzip) | ≤ 600 kB | **552.6 kB** (JS 270.2 · CSS 81.8 · fonts 191.5 · SW 9.1) | `pnpm build` |
+| Unit suite green | 100 % · ≤ 5 s | **781 tests / 33 files · 1.25–2.61 s** (two runs; wall ~2–3 s) — 2026-10-25 | `pnpm test:unit` |
+| Type/component check | clean | **clean** (0 errors) — 2026-10-25 | `pnpm check` |
+| Route chunk (`+page.svelte`) | ≤ 200 kB | **197.0 kB** (gzip **61.0 kB**) — 2026-10-25; **within ~3 kB of the ceiling** | `pnpm build` |
+| Client JS total | ≤ 300 kB | **335.8 kB** (gzip ≈ **112 kB**) incl SW — 2026-10-25 · ⚠ **over ceiling** | `pnpm build` |
+| Client CSS total | ≤ 100 kB | **90.8 kB** (gzip **34.8 kB**) — 2026-10-25 | `pnpm build` |
+| All client assets (pre-gzip) | ≤ 600 kB | **618.1 kB** (JS 335.8 incl SW · CSS 90.8 · fonts 191.5) — 2026-10-25 · ⚠ **over ceiling** | `pnpm build` |
 | **DOM nodes during play** | **≤ 2000** | **1567 – 1748** (boot 1679 · end 1666) | `tools/perf-probe.mjs` |
 | **Audio live-node gap** | **≤ 60** (alarm) | boot **12** · steady **≈ 11** after the meter fix — the old "12→46 drift" was non-node `createBuffer` counts (2026-10-18) | `tools/perf-probe.mjs` |
 | **Page memory (Mac Safari)** | iOS budget unknown — watch | idle **~225 MB** · play peak **~355–400 MB** (owner reading, 2026-10-18) — the suspected iOS kill axis; front collects within ~10–15 s of idling | Activity Monitor (owner) |
 | Ambience loop replacement | one live loop | **17 started / 15 stopped** → 1 ambience + 1 music live | `tools/perf-probe.mjs` |
 | Heap after a 30-min session | ≤ 50 MB · no monotonic rise | **14.5 → 21.2 MB** (peak 40.0) | `tools/perf-probe.mjs` |
 | Sim session (long run) | ≥ 30 sim-min · 0 page errors | **34.4 sim-min · 0 errors** (52 homes, 258.9 s wall) | `tools/perf-probe.mjs` |
+
+**Two build ceilings are exceeded, recorded not patched.** The client JS total
+(335.8 kB) and the all-assets total (618.1 kB) crossed their 300 / 600 kB lines
+after the T31 baseline — street life (T37), the canvas world (T39), the manual
+rotation (T40) and the candy boss (T42) all landed since. The route chunk is
+still legal at 197.0 kB but has only ~3 kB of headroom. A follow-up has to
+either trim the bundle or raise these budgets deliberately; this docs pass only
+records the measurement.
 
 ### The long-session run (the T31 acceptance)
 

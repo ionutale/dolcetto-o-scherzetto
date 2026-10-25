@@ -157,16 +157,16 @@ the canvas, the scrolling layers or the raster caches.
 | Next threshold, run in progress | smallest grid point **strictly above** the bag, minimum 1 000 (`(floor(max(0,bag)/500)+1)*500`) | `boss-model.ts` `nextBossAtAbove` |
 | Next threshold, after a win | the same grid, floored at **1 500** (the welcome 1 000 fight can never refire) | `boss-model.ts` `nextBossAtAfterWin` |
 | HP | **30** hits | `boss-model.ts` `BOSS_HP` |
-| Cost per throw | **1** candy (pinned constant; the reducer's `SPEND_CANDY` always spends exactly 1 and refuses at an empty bag) | `boss-model.ts` `BOSS_COST`; `loop.ts` `SPEND_CANDY` |
-| Win reward | **60** candies (`bag += n`, `record = max(record, bag)`; `n` guarded to a finite positive integer) | `boss-model.ts` `BOSS_REWARD`; `loop.ts` `BOSS_REWARD` |
-| Rotation | **3** bosses, `bossWins % 3`: `zucca` → `mostro` → `recaramella`, wrapping in both directions | `boss-model.ts` `BOSS_ORDER`, `bossFor` |
+| Cost per throw | **1** candy. `SPEND_CANDY` hard-codes the single-candy spend (and refuses at an empty bag); `BOSS_COST` is the declared, test-pinned constant but is **not read at runtime**, so retuning the cost means editing the reducer too | `loop.ts` `SPEND_CANDY`; `boss-model.ts` `BOSS_COST` (pinned by `boss-model.test.ts`) |
+| Win reward | **60** candies (`bag += n`, `record = max(record, bag)`; `n` guarded to a finite positive integer). The page reads the constant and passes it to the dispatch, so retuning `BOSS_REWARD` is enough | `boss-model.ts` `BOSS_REWARD`; `loop.ts` `BOSS_REWARD`; `+page.svelte` `onBossWin` |
+| Rotation | **3** bosses, picked by `BOSS_ORDER[bossFor(bossWins)]`; `bossFor` applies a positive modulo to the win count — `zucca` → `mostro` → `recaramella`, then wraps | `boss-model.ts` `BOSS_ORDER`, `bossFor` |
 | Fight input | **tap anywhere** on the stage (the full-stage `#bossTap` button; Space/Enter too) — no cooldown, no fail state, no timer | `Boss.svelte` |
-| Start gate | `phase === 'roam'`, shop closed, no scare, menu closed, no celebration, no fight already active, feature on, and `bag >= nextBossAt` | `boss-model.ts` `bossMayStart` |
+| Start gate | `phase === 'roam'`, shop closed, no scare, menu closed, no celebration, no fight already active, feature on, stored `nextBossAt >= BOSS_FIRST` (a corrupt threshold below 1 000 keeps the gate shut), and `bag >= nextBossAt` | `boss-model.ts` `bossDue`, `bossMayStart` |
 | Fight timings | entry **900** ms → fight → win beat **1 200** ms → exit **700** ms; hit squash **160** ms | `Boss.svelte` `ENTRY_MS`, `WIN_BEAT_MS`, `EXIT_MS`, `HIT_MS` |
 | Cosmetic bounds | **≤ 8** candies in flight at once; **≤ 12** reward-shower pieces; every timer cleared on destroy | `Boss.svelte` `SHOT_CAP`, `SHOWER_PIECES` |
 | Setting | `dos.settings.v1` optional `bosses` — missing means **on**; the Settings row is Boss / Sì–No (IT) · On–Off (EN) | `settings.ts` `Settings.bosses`, `DEFAULT_SETTINGS`; `boss-setting.svelte.ts` |
 | Cancel mid-fight | turning the feature off spends nothing further, pays no reward, and re-arms at `nextBossAtAbove(bag)` | `+page.svelte` boss-cancel effect |
-| Save fields | `nextBossAt` (integer ≥ 1 000, multiple of 500) and `bossWins` (integer ≥ 0), both optional; junk is repaired, never a wipe | `persist.ts` `RunState`, `normalizeBossProgress` |
+| Save fields | `nextBossAt` (integer ≥ 1 000, multiple of 500) and `bossWins` (integer ≥ 0), both optional; junk is repaired, never a wipe | `boss-model.ts` `normalizeBossProgress`, called by `persist.ts` `normalizeRun`; `persist.ts` `RunState` |
 
 **The bag arithmetic is exact** (1 per throw × 30, then +60 — always a net **+30**):
 

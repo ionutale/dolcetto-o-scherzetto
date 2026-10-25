@@ -218,7 +218,7 @@ picks the language live). None of it is voiced, and the boss art itself carries 
 | hint | Tocca per lanciare caramelle | Tap to throw candy |
 | win | Bravissimo! | You did it! |
 | reward | +60 caramelle | +60 candies |
-| throw surface (spoken) | Lancia una caramella | Throw a candy |
+| throw button label (screen reader) | Lancia una caramella | Throw a candy |
 
 The win card shows `win` over `reward`; the same pair is announced once through a polite
 `role="status"` live region. The Settings card adds the parent switch
@@ -245,8 +245,9 @@ Source: `voice/VOICES.md` §3/§6.2; consumed by `src/lib/audio/voice.ts`.
   `text` byte-equal to `lines.ts`).
 - **Not voiced:** the `knock` button caption, the four neighborhood names, the shop copy
   (`Tuo!`/`Compra`/… — `voice/VOICES.md` §8 notes the shop lines would reuse Strega's voice
-  when/if they are rendered), and the candy-boss names/hint/win/reward (T42 — the fight uses
-  the existing `theatre-setup` / `pop` / `theatre-laugh` / `twinkle` cues, never a new clip).
+  when/if they are rendered), and the candy-boss names/hint/win/reward plus its throw label
+  (T42 — the fight uses the existing `theatre-setup` / `pop` / `theatre-laugh` / `twinkle` cues,
+  never a new clip).
 - **The gate:** `pnpm check:voice` (`tools/check-voice.mjs`) proves, for both languages, a
   non-empty clip and a matching manifest row per id; the two languages ship the same id set.
 
