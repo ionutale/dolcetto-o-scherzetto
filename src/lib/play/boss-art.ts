@@ -21,8 +21,9 @@
  * `boss-crown` (the win spin), `boss-arm-l` / `boss-arm-r` (the happy wave).
  * The arms keep an inline `transform-origin` at the shoulder, like the sprite
  * pack's `.arm` elements, so a CSS rotation swings from the body and not from
- * the middle of the limb. `Mostro` has no crown — its horns are the headgear,
- * and `boss-crown` is simply absent there.
+ * the middle of the limb. `Mostro` has no literal crown: its horns are the
+ * headgear and carry the same `boss-crown` hook, so the win spin exists on
+ * every boss and task-7's CSS needs no per-boss branch.
  *
  * ## The cast
  *
@@ -325,9 +326,11 @@ function mostro(): string {
 			'" opacity=".8"/>'
 	);
 
-	/* horns first: their bases hide under the fur tufts */
+	/* horns first, wrapping the head like a spiky crown: their bases hide under
+	   the fur tufts. `boss-crown` on the group keeps the win-spin hook total. */
 	parts.push(
-		'<path d="M96 94 C87 74 89 48 100 36 C107 53 111 73 113 92 Z" fill="' +
+		'<g class="boss-crown">' +
+			'<path d="M96 94 C87 74 89 48 100 36 C107 53 111 73 113 92 Z" fill="' +
 			P.skin +
 			'"/>' +
 			'<path d="M100 36 C107 53 111 73 113 92 L105 92 C103 72 100 53 96 42 Z" fill="' +
@@ -338,7 +341,8 @@ function mostro(): string {
 			'"/>' +
 			'<path d="M160 36 C153 53 149 73 147 92 L155 92 C157 72 160 53 164 42 Z" fill="' +
 			P.skinDeep +
-			'" opacity=".55"/>'
+			'" opacity=".55"/>' +
+			'</g>'
 	);
 
 	/* body + fur tufts: separate same-fill shapes merge into one fluffy edge */
