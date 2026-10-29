@@ -212,6 +212,13 @@ Its copy follows the language and its one pill is `Gioca così` / `Play this way
 persists `Manuale`. The knock pill's spoken name is the `knock` label without the glyph
 (`Bussa` / `Knock`).
 
+**Silent-switch tip** (T44): `src/lib/ui/SilentHint.svelte` says `Non senti? Togli il
+silenzioso o usa le cuffie.` / `No sound? Turn off silent mode or use headphones.` with a
+`Chiudi` / `Close` button. iOS exposes no mute signal, so the tip is not a detection: it is
+shown once, only on iOS builds without `navigator.audioSession` (iOS 16 and older), and
+remembered as `audioHintSeen` in `dos.settings.v1`. iOS 17+ ignores the switch instead
+(`audioSession.type = 'playback'` set on the first gesture).
+
 **The candy boss** (T42) — the three display names live in `BOSS_META` and the fight's four
 chrome strings in `BOSS_COPY` (`src/lib/play/boss-art.ts`; `Boss.svelte` renders them and
 picks the language live). None of it is voiced, and the boss art itself carries no text.

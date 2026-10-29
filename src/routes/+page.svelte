@@ -97,6 +97,8 @@
 	import WorldCanvas from '$lib/art/canvas/WorldCanvas.svelte';
 	import RotateButton from '$lib/ui/RotateButton.svelte';
 	import RotatePrompt from '$lib/ui/RotatePrompt.svelte';
+	import SilentHint from '$lib/ui/SilentHint.svelte';
+	import { maybeShowSilentHint } from '$lib/ui/silent-hint.svelte';
 	import Kids from '$lib/play/Kids.svelte';
 	import Ghosts from '$lib/play/Ghosts.svelte';
 	import Npcs from '$lib/play/Npcs.svelte';
@@ -501,6 +503,17 @@
 	function unlockAudio(): void {
 		if (audioUnlocked) return;
 		audioUnlocked = true;
+		// T44 (2026-10-29): iOS 17+ routes Web Audio as media playback, so the
+		// ringer/silent switch no longer mutes the game. Set before any graph
+		// exists; older iOS has no Audio Session API and stays on 'auto' — the
+		// SilentHint tip covers those builds (the switch itself cannot be read).
+		try {
+			const audioSession = (navigator as Navigator & { audioSession?: { type: string } })
+				.audioSession;
+			if (audioSession) audioSession.type = 'playback';
+		} catch {
+			/* no API, or a browser that refuses the assignment: leave 'auto' */
+		}
 		startAmbience(); // T23: create/resume the AudioContext + give the bed a graph
 		startMusic(); // T25: decode + loop the owner's street track (own AudioContext)
 		initSfx(); // T27: resume the SFX context + build the master gate
@@ -518,6 +531,9 @@
 	/** Gioca: the tap itself is the audio-unlock gesture. */
 	function play(): void {
 		unlockAudio();
+		// T44: the silent-switch tip, once, only on iOS builds that cannot
+		// route playback around the switch. It never blocks play.
+		maybeShowSilentHint();
 		logEvent('play', { bag: bag(), k: furthest() });
 	}
 
@@ -595,6 +611,7 @@
      stage and the boss (z 10) and below the title menu (z 200), so
      Impostazioni stays reachable. -->
 <RotatePrompt />
+<SilentHint />
 
 <TitleScreen onPlay={play} />
 

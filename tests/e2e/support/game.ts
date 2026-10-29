@@ -62,6 +62,8 @@ export interface SettingsSnapshot {
 	rotation?: 0 | 90 | 180 | 270;
 	/** The T43 rotation mode: auto (CSS portrait prompt) or manual. */
 	rotationMode?: 'auto' | 'manual';
+	/** T44: the one-time iOS silent-switch tip has been shown. */
+	audioHintSeen?: boolean;
 }
 
 /* ------------------------------------------------------------------ */

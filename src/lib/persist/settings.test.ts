@@ -82,6 +82,7 @@ describe('defaults', () => {
 			sfxVolume: 1,
 			rotation: 0,
 			rotationMode: 'auto',
+			audioHintSeen: false,
 			bosses: true
 		});
 	});
@@ -112,6 +113,16 @@ describe('defaults', () => {
 		const read = createSettings(storage).read();
 		expect(read.rotationMode).toBe('auto');
 		expect(read.rotation).toBe(270);
+	});
+
+	it('a pre-T44 envelope (no audioHintSeen) reads as not seen', () => {
+		const storage = memoryStorage();
+		storage.setItem(
+			SETTINGS_KEY,
+			JSON.stringify({ version: 1, lang: 'it', sound: true, musicVolume: 1, sfxVolume: 1 })
+		);
+
+		expect(createSettings(storage).read().audioHintSeen).toBe(false);
 	});
 
 	it("maps the first T4b build's `flip` to its quarter turn", () => {
@@ -195,6 +206,14 @@ describe('round-trip', () => {
 		store.write({ ...store.read(), rotationMode: 'auto' });
 		expect(store.read().rotationMode).toBe('auto');
 		expect(store.read().rotation).toBe(180);
+	});
+
+	it('remembers that the silent-switch tip was shown (T44)', () => {
+		const store = createSettings(memoryStorage());
+
+		expect(store.read().audioHintSeen).toBe(false);
+		store.write({ ...store.read(), audioHintSeen: true });
+		expect(store.read().audioHintSeen).toBe(true);
 	});
 
 	it('writes under the one versioned key', () => {
@@ -327,6 +346,9 @@ describe('read falls back to defaults on anything unusable', () => {
 		expect(isSettings(settingsWith({ rotationMode: 'manual' }))).toBe(true);
 		expect(isSettings({ ...settingsWith(), rotationMode: undefined })).toBe(true); // pre-T43 envelope
 		expect(isSettings({ ...settingsWith(), rotationMode: 'off' } as unknown)).toBe(false);
+		expect(isSettings(settingsWith({ audioHintSeen: true }))).toBe(true);
+		expect(isSettings({ ...settingsWith(), audioHintSeen: undefined })).toBe(true); // pre-T44 envelope
+		expect(isSettings({ ...settingsWith(), audioHintSeen: 'yes' } as unknown)).toBe(false);
 		expect(isSettings({ ...settingsWith(), lang: 'fr' })).toBe(false);
 		expect(isSettings({ ...settingsWith(), rotation: 45 })).toBe(false);
 		expect(isSettings({ ...settingsWith(), version: 2 })).toBe(false);

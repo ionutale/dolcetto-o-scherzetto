@@ -44,6 +44,11 @@
  * intact. The angle drives the stage in both modes; the mode only decides
  * whether the "Gira il telefono" overlay may appear. The runes-side seam is
  * `src/lib/ui/rotation.svelte.ts`.
+ *
+ * **T44 (silent switch, 2026-10-29):** `audioHintSeen` remembers that the
+ * one-time "non senti? togli il silenzioso" tip has been shown. Optional, so
+ * every pre-T44 envelope reads as `false`. The tip only exists for iOS builds
+ * without `navigator.audioSession` (see `src/lib/ui/silent-hint.svelte.ts`).
  */
 
 import { readLocalStorage } from './persist.js';
@@ -104,6 +109,12 @@ export interface Settings {
 	 */
 	rotationMode?: RotationMode;
 	/**
+	 * The one-time iOS silent-switch tip (T44) — OPTIONAL like the rest:
+	 * a pre-T44 envelope reads as `false`. `true` means the tip has already
+	 * been shown and dismissed, so it never comes back.
+	 */
+	audioHintSeen?: boolean;
+	/**
 	 * The candy boss switch — OPTIONAL for the same reason as `rotation`: every
 	 * envelope from before the boss existed loads fine, and missing means on.
 	 */
@@ -126,6 +137,7 @@ export const DEFAULT_SETTINGS: Settings = {
 	sfxVolume: 1,
 	rotation: 0,
 	rotationMode: 'auto',
+	audioHintSeen: false,
 	bosses: true
 };
 
@@ -172,11 +184,15 @@ export function isSettings(value: unknown): value is Settings {
 	// `rotationMode` is optional (pre-T43 envelopes lack it) and reads as
 	// `'auto'`; a present value must be one of the two modes — `"off"` is a
 	// hand edit, not a preference, and refuses the payload like `bosses`.
-	return (
-		settings.rotationMode === undefined ||
-		settings.rotationMode === 'auto' ||
-		settings.rotationMode === 'manual'
-	);
+	if (
+		settings.rotationMode !== undefined &&
+		settings.rotationMode !== 'auto' &&
+		settings.rotationMode !== 'manual'
+	)
+		return false;
+	// `audioHintSeen` is optional (pre-T44 envelopes lack it) and reads as
+	// `false`; a present value must be a real boolean.
+	return settings.audioHintSeen === undefined || typeof settings.audioHintSeen === 'boolean';
 }
 
 export interface SettingsStore {
@@ -237,7 +253,9 @@ export function createSettings(storage: Storage | null): SettingsStore {
 				rotation,
 				// T43: the mode is optional, so a pre-T43 envelope gains the
 				// new default without losing the angle it already stored.
-				rotationMode: stored.rotationMode === 'manual' ? 'manual' : 'auto'
+				rotationMode: stored.rotationMode === 'manual' ? 'manual' : 'auto',
+				// T44: the one-time iOS tip is shown at most once per device.
+				audioHintSeen: stored.audioHintSeen === true
 			};
 		},
 
