@@ -73,7 +73,7 @@ function settingsWith(overrides: Partial<Settings> = {}): Settings {
 }
 
 describe('defaults', () => {
-	it('is Italian voice, sound on, both sliders at full and the boss on (spec: IT default)', () => {
+	it('is Italian voice, sound on, both sliders at full, the boss on and the auto rotation mode (spec: IT default)', () => {
 		expect(DEFAULT_SETTINGS).toEqual({
 			version: 1,
 			lang: 'it',
@@ -81,6 +81,7 @@ describe('defaults', () => {
 			musicVolume: 1,
 			sfxVolume: 1,
 			rotation: 0,
+			rotationMode: 'auto',
 			bosses: true
 		});
 	});
@@ -92,6 +93,25 @@ describe('defaults', () => {
 			JSON.stringify({ version: 1, lang: 'it', sound: true, musicVolume: 1, sfxVolume: 1 })
 		);
 		expect(createSettings(storage).read().rotation).toBe(0);
+	});
+
+	it('a pre-T43 envelope (no rotationMode) reads automatic and keeps its angle', () => {
+		const storage = memoryStorage();
+		storage.setItem(
+			SETTINGS_KEY,
+			JSON.stringify({
+				version: 1,
+				lang: 'it',
+				sound: true,
+				musicVolume: 1,
+				sfxVolume: 1,
+				rotation: 270
+			})
+		);
+
+		const read = createSettings(storage).read();
+		expect(read.rotationMode).toBe('auto');
+		expect(read.rotation).toBe(270);
 	});
 
 	it("maps the first T4b build's `flip` to its quarter turn", () => {
@@ -164,6 +184,17 @@ describe('round-trip', () => {
 
 		expect(store.read().musicVolume).toBe(0.35);
 		expect(store.read().sfxVolume).toBe(0.8);
+	});
+
+	it('remembers the rotation mode (T43), both ways, without touching the angle', () => {
+		const store = createSettings(memoryStorage());
+
+		store.write(settingsWith({ rotation: 180, rotationMode: 'manual' }));
+		expect(store.read()).toEqual(settingsWith({ rotation: 180, rotationMode: 'manual' }));
+
+		store.write({ ...store.read(), rotationMode: 'auto' });
+		expect(store.read().rotationMode).toBe('auto');
+		expect(store.read().rotation).toBe(180);
 	});
 
 	it('writes under the one versioned key', () => {
@@ -265,6 +296,7 @@ describe('read falls back to defaults on anything unusable', () => {
 			{ version: 1, lang: 'fr', sound: true }, // a language we do not ship
 			{ version: 1, lang: 'it', sound: 'yes' }, // sound as text
 			{ version: 1, lang: 'it', sound: 1 },
+			{ ...DEFAULT_SETTINGS, rotationMode: 'off' }, // a third mode we do not ship
 			{ version: '1', lang: 'it', sound: true } // version as text
 		]) {
 			poison(storage, JSON.stringify(state));
@@ -292,6 +324,9 @@ describe('read falls back to defaults on anything unusable', () => {
 		expect(isSettings(settingsWith({ musicVolume: 5 }))).toBe(true); // out-of-band: clamped, not refused
 		expect(isSettings(settingsWith({ rotation: 270 }))).toBe(true);
 		expect(isSettings({ ...settingsWith(), rotation: undefined })).toBe(true); // pre-T4b envelope
+		expect(isSettings(settingsWith({ rotationMode: 'manual' }))).toBe(true);
+		expect(isSettings({ ...settingsWith(), rotationMode: undefined })).toBe(true); // pre-T43 envelope
+		expect(isSettings({ ...settingsWith(), rotationMode: 'off' } as unknown)).toBe(false);
 		expect(isSettings({ ...settingsWith(), lang: 'fr' })).toBe(false);
 		expect(isSettings({ ...settingsWith(), rotation: 45 })).toBe(false);
 		expect(isSettings({ ...settingsWith(), version: 2 })).toBe(false);

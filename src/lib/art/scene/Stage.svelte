@@ -57,10 +57,11 @@
 	let scale = $state(1);
 
 	/**
-	 * T4b — the manual presentation rotation (revised 2026-10-24): each press
-	 * of the HUD's rotate button turns the stage a quarter turn to the LEFT
-	 * (0° → 270° → 180° → 90° → 0°); the accelerometer is never consulted —
-	 * see `rotation.svelte.ts` for the why.
+	 * T4b — the presentation rotation (revised 2026-10-24, T43 2026-10-29): each
+	 * press of the HUD's rotate button turns the stage a quarter turn to the
+	 * LEFT (0° → 270° → 180° → 90° → 0°). No sensor is ever consulted; a
+	 * portrait viewport in `rotationMode: 'auto'` additionally shows the CSS
+	 * prompt — see `rotation.svelte.ts` / ADR-0007.
 	 */
 	const turned = $derived(rotation());
 	/** True on the quarter turns: the wrapper reserves 393 × 852 instead. */

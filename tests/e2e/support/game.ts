@@ -60,6 +60,8 @@ export interface SettingsSnapshot {
 	bosses?: boolean;
 	/** The manual presentation rotation (T4b), in degrees clockwise. */
 	rotation?: 0 | 90 | 180 | 270;
+	/** The T43 rotation mode: auto (CSS portrait prompt) or manual. */
+	rotationMode?: 'auto' | 'manual';
 }
 
 /* ------------------------------------------------------------------ */

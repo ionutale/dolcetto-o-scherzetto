@@ -22,6 +22,10 @@
 	 * switch the page's gate reads (`boss-setting.svelte.ts`). It is a
 	 * preference, not run state, so it lives in the same envelope.
 	 *
+	 * T43 (2026-10-29) adds the `Schermo` mode row — `Automatica` (the CSS
+	 * portrait prompt, default) / `Manuale` (no prompt) — and shows the live
+	 * angle on the `Rotazione` row so the "default position" is visible.
+	 *
 	 * The language is a **prop**, owned by `TitleScreen`, so the title's own
 	 * labels flip with it; this card is otherwise presentational and talks to
 	 * the world only through `dispatch` and the volumes/boss stores.
@@ -34,7 +38,7 @@
 	import { setMusic, setSfx, volumes } from '$lib/audio/volumes.svelte';
 	import { bossesEnabled, setBosses } from '$lib/play/boss-setting.svelte';
 	import { openLogs } from './log-panel-state.svelte';
-	import { rotateLeft } from './rotation.svelte';
+	import { rotateLeft, rotation, rotationMode, setRotationMode } from './rotation.svelte';
 
 	interface Props {
 		/** The live language, owned by the title so its labels follow. */
@@ -55,6 +59,9 @@
 					sfx: '🔊 Effetti',
 					language: 'Lingua',
 					orientation: 'Schermo',
+					rotationAuto: 'Automatica',
+					rotationManual: 'Manuale',
+					rotation: 'Rotazione',
 					rotate: 'Ruota a sinistra',
 					boss: 'Boss',
 					bossOn: 'Sì',
@@ -72,6 +79,9 @@
 					sfx: '🔊 Sound effects',
 					language: 'Language',
 					orientation: 'Screen',
+					rotationAuto: 'Automatic',
+					rotationManual: 'Manual',
+					rotation: 'Rotation',
 					rotate: 'Rotate left',
 					boss: 'Boss',
 					bossOn: 'On',
@@ -227,17 +237,43 @@
 	>
 </div>
 
-<!-- T4b — the manual presentation rotation (no accelerometer): the same control
-     the HUD's rotate button drives, labelled for the parent. Every tap turns
-     the stage a quarter turn to the left. -->
+<!-- T43 — how a portrait viewport is handled. `Automatica` is the default:
+     the pure-CSS "Gira il telefono" prompt may appear (no sensor — ADR-0007).
+     `Manuale` suppresses it for a phone that cannot be turned (rotation lock). -->
 <div class="lang-row" role="group" aria-label={copy.orientation}>
 	<span class="lang-label">{copy.orientation}</span>
+	<button
+		id="rotationAutoBtn"
+		type="button"
+		class="lang-btn"
+		class:on={rotationMode() === 'auto'}
+		aria-pressed={rotationMode() === 'auto'}
+		aria-label={copy.rotationAuto}
+		onclick={() => setRotationMode('auto')}>{copy.rotationAuto}</button
+	>
+	<button
+		id="rotationManualBtn"
+		type="button"
+		class="lang-btn"
+		class:on={rotationMode() === 'manual'}
+		aria-pressed={rotationMode() === 'manual'}
+		aria-label={copy.rotationManual}
+		onclick={() => setRotationMode('manual')}>{copy.rotationManual}</button
+	>
+</div>
+
+<!-- T4b — the manual presentation rotation: the same control the HUD's rotate
+     button drives, labelled for the parent and showing the live angle so the
+     "default position" is visible. Every tap turns the stage a quarter turn to
+     the left; it works in both T43 modes. -->
+<div class="lang-row" role="group" aria-label={copy.rotation}>
+	<span class="lang-label">{copy.rotation}</span>
 	<button
 		id="rotateSettingBtn"
 		type="button"
 		class="lang-btn"
 		aria-label={copy.rotate}
-		onclick={rotateLeft}>{copy.rotate}</button
+		onclick={rotateLeft}>{copy.rotate} · {rotation()}°</button
 	>
 </div>
 

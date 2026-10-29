@@ -49,7 +49,7 @@ above it).
 |---|---|---|---|
 | **Sim** (pure) | `src/lib/sim/loop.ts` · `economy.ts` · `progression.ts` | the pure reducer/tick (`initial`/`reduce`/`tick`), the trick catalogue, the price/burst/roll helpers, the neighborhood curves | touching the DOM, timers or storage |
 | **State** | `src/lib/state/game.svelte.ts` | the one reactive runes store, the read seams (`worldX`/`phase`/`candies`/`bag`/`furthest`…), the clamped rAF loop, and the `bootState()` that seeds the sim from the save | reimplementing sim rules |
-| **Scene** | `src/lib/art/canvas/`, `src/lib/art/scene/`, `src/lib/art/sprites/` | sky + the three static bands (DOM), the whole scrolling world as **one canvas** (`WorldCanvas`, T4 2026-10-19 — a single backing store redrawn in place; art ported 1:1 from the validated DOM components), the **manual rotation** (T4b: a quarter-turn rotate button — no accelerometer, no rotate prompt), the sprite-motion CSS | deciding outcomes |
+| **Scene** | `src/lib/art/canvas/`, `src/lib/art/scene/`, `src/lib/art/sprites/` | sky + the three static bands (DOM), the whole scrolling world as **one canvas** (`WorldCanvas`, T4 2026-10-19 — a single backing store redrawn in place; art ported 1:1 from the validated DOM components), the **rotation** (T4b's quarter-turn button + T43's `rotationMode`: the default pure-CSS portrait prompt, or manual-only — no sensor in either), the sprite-motion CSS | deciding outcomes |
 | **Play** | `src/lib/play/` | the interaction widgets — knock chain, bubbles, candy layer, fan, theatre, scares, cars, NPCs — plus their pure `*-model.ts` maths. The **candy boss** (T42) is three modules here: `boss-model.ts` (pure cadence/cast/gate), `boss-art.ts` (the three static SVGs + the fight copy) and `Boss.svelte` (the DOM overlay), with the Settings seam in `boss-setting.svelte.ts` | owning sim math |
 | **Audio** | `src/lib/audio/` | **three independent engines**, each with its own lazy `AudioContext` and self-driven rAF frame: `sfx.ts` (26-cue WebAudio synth), `ambience.svelte.ts` (per-theme beds + sprinkles + duck), `music.svelte.ts` (the decoded street loop); `voice.ts` decodes clips once and plays them on the synth's bus; `volumes.svelte.ts` is the shared gain seam | throwing on a hostile `AudioContext` |
 | **Persist** | `src/lib/persist/persist.ts` · `settings.ts` | defensive `localStorage`: the run slot `dos.run.v1` and the one settings envelope `dos.settings.v1` | throwing (`read`/`write` degrade to no-save/defaults) |
@@ -199,12 +199,15 @@ carry the full context/options/consequences).
 - **[ADR-0003](adr/0003-random-candy-values-one-shot-homes.md) — Random candy values, one-shot homes, capped re-gift.** Values are a uniform
   1–10 rolled at drop (types are cosmetic); a home is one-shot and re-gifts at most once ever.
 - **[ADR-0004](adr/0004-landscape-iphone16-fluid-stage.md) — Landscape-first, iPhone 16 reference stage.** The design reference is
-  852×393 pt, height-scaled with fluid width; the presentation flip is manual (T4b) — no
-  rotate prompt, no accelerometer dependency.
+  852×393 pt, height-scaled with fluid width; presentation rotation is the player's choice
+  (T4b manual quarter turns, T43 `rotationMode` with the CSS portrait prompt on by default).
 - **[ADR-0005](adr/0005-bilingual-voice-it-en.md) — Bilingual voice, Italian default + English toggle.** `voice/lines.ts` is the
   single copy source; both languages are rendered and shipped before a line ships.
 - **[ADR-0006](adr/0006-local-only-save-no-backend.md) — Local-only save, no backend.** One `localStorage` slot, autosaved, defensive,
   hidden parent reset; no accounts, sync or servers.
+- **[ADR-0007](adr/0007-rotation-auto-prompt-manual-override.md) — Rotation mode: automatic CSS prompt by default, manual override.**
+  `rotationMode` in the settings envelope; the portrait prompt is a media query, not a
+  sensor, and its "Gioca così" pill persists the manual opt-out.
 
 ---
 

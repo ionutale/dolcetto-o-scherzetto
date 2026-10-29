@@ -36,6 +36,14 @@
  * fights. Added as an *optional* field (the module's rule above), so every
  * envelope written before the boss existed still loads; a missing value means
  * on. The runes-side seam lives in `src/lib/play/boss-setting.svelte.ts`.
+ *
+ * **T43 (rotation mode, 2026-10-29):** `rotationMode` brings back the CSS
+ * portrait prompt as the *default* while keeping T4b's manual rotation as the
+ * opt-out. Also optional, so an envelope written before T43 loads fine and
+ * reads as `'auto'` (no envelope bump, no reset) with its `rotation` angle
+ * intact. The angle drives the stage in both modes; the mode only decides
+ * whether the "Gira il telefono" overlay may appear. The runes-side seam is
+ * `src/lib/ui/rotation.svelte.ts`.
  */
 
 import { readLocalStorage } from './persist.js';
@@ -52,10 +60,22 @@ export type Lang = 'it' | 'en';
 /**
  * The game's presentation rotation (T4b, revised 2026-10-24): how far the
  * stage is turned, in degrees clockwise. The player's button steps it 90° to
- * the LEFT on every press (0 → 270 → 180 → 90 → 0); the accelerometer never
- * decides the presentation.
+ * the LEFT on every press (0 → 270 → 180 → 90 → 0). The angle drives the
+ * stage in **both** rotation modes (T43).
  */
 export type Rotation = 0 | 90 | 180 | 270;
+
+/**
+ * How the presentation reacts to a portrait viewport (T43, 2026-10-29).
+ *
+ * - `'auto'` — the default: the pure-CSS "Gira il telefono" prompt appears
+ *   whenever `@media (orientation: portrait)` matches.
+ * - `'manual'` — no prompt; the player turns the stage with the rotate button.
+ *
+ * The persisted `rotation` angle applies either way, so the mode only decides
+ * whether the overlay may appear.
+ */
+export type RotationMode = 'auto' | 'manual';
 
 /** Everything this game remembers about how it should behave. */
 export interface Settings {
@@ -77,6 +97,13 @@ export interface Settings {
 	 */
 	rotation?: Rotation;
 	/**
+	 * How a portrait viewport is handled (T43) — OPTIONAL like `rotation`:
+	 * every envelope from before T43 loads fine and reads as `'auto'`, the
+	 * owner's new default. `'manual'` suppresses the portrait prompt; the
+	 * `rotation` angle still drives the stage in both modes.
+	 */
+	rotationMode?: RotationMode;
+	/**
 	 * The candy boss switch — OPTIONAL for the same reason as `rotation`: every
 	 * envelope from before the boss existed loads fine, and missing means on.
 	 */
@@ -84,8 +111,9 @@ export interface Settings {
 }
 
 /**
- * First-run defaults: Italian voice, sound on, both volume sliders at full and
- * the candy boss on. The 1.0 here is a *linear gain*, not a peak: the
+ * First-run defaults: Italian voice, sound on, both volume sliders at full,
+ * the candy boss on and the automatic (CSS portrait prompt) rotation mode.
+ * The 1.0 here is a *linear gain*, not a peak: the
  * owner-tuned `MUSIC_MAX` (0.143) and the SFX peak ceilings (≤0.18) scale with
  * it in the audio modules (T23/T25/T27), so "full" is as loud as the mix was
  * authored.
@@ -97,6 +125,7 @@ export const DEFAULT_SETTINGS: Settings = {
 	musicVolume: 1,
 	sfxVolume: 1,
 	rotation: 0,
+	rotationMode: 'auto',
 	bosses: true
 };
 
@@ -132,12 +161,21 @@ export function isSettings(value: unknown): value is Settings {
 	// `rotation` is optional (older envelopes lack it), but a present value must
 	// be one of the four quarter turns. Unknown extra keys (the retired `flip`
 	// of the first T4b build) are ignored, so those envelopes still load.
+	if (
+		settings.rotation !== undefined &&
+		settings.rotation !== 0 &&
+		settings.rotation !== 90 &&
+		settings.rotation !== 180 &&
+		settings.rotation !== 270
+	)
+		return false;
+	// `rotationMode` is optional (pre-T43 envelopes lack it) and reads as
+	// `'auto'`; a present value must be one of the two modes — `"off"` is a
+	// hand edit, not a preference, and refuses the payload like `bosses`.
 	return (
-		settings.rotation === undefined ||
-		settings.rotation === 0 ||
-		settings.rotation === 90 ||
-		settings.rotation === 180 ||
-		settings.rotation === 270
+		settings.rotationMode === undefined ||
+		settings.rotationMode === 'auto' ||
+		settings.rotationMode === 'manual'
 	);
 }
 
@@ -196,7 +234,10 @@ export function createSettings(storage: Storage | null): SettingsStore {
 				...stored,
 				musicVolume: clampVolume(stored.musicVolume),
 				sfxVolume: clampVolume(stored.sfxVolume),
-				rotation
+				rotation,
+				// T43: the mode is optional, so a pre-T43 envelope gains the
+				// new default without losing the angle it already stored.
+				rotationMode: stored.rotationMode === 'manual' ? 'manual' : 'auto'
 			};
 		},
 

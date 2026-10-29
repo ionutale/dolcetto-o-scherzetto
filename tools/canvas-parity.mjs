@@ -43,7 +43,10 @@ await context.addInitScript(
 					sound: false,
 					musicVolume: 0,
 					sfxVolume: 0,
-					rotation: runRotation
+					rotation: runRotation,
+					// T43: a portrait parity run must not be covered by the
+					// "Gira il telefono" prompt.
+					rotationMode: 'manual'
 				})
 			);
 		} catch {

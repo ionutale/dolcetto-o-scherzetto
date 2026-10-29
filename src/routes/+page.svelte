@@ -7,7 +7,7 @@
 	 * candy layer, the hold-to-walk controls, the knock cloud, the speech
 	 * bubble, the bag chip, the Scherzo button + trick fan and the trick
 	 * theatre, all inside the 852×393 stage frame, with the portrait rotate
-	 * prompt on top.
+	 * prompt (T43, default-on via `rotationMode`) above it.
 	 *
 	 * The page owns **no game logic**: it reads the store's derived getters
 	 * (`worldX` / `phase` / `activeK` / `dir`) into the scene props, renders
@@ -48,10 +48,11 @@
 	 * unlock is the prototype's once-`pointerdown` listener
 	 * (`scene-prototype.html` ~874): any first interaction — the Gioca tap
 	 * included — flips the latch, and T23/T25 create/resume their
-	 * `AudioContext`s there (the SFX engine joins in T27). The landscape lock
-	 * is the prototype's
-	 * `tryLandscapeLock()` (~1790): a guarded `screen.orientation.lock` that
-	 * iOS refuses and the rotate prompt covers (spec §13).
+	 * `AudioContext`s there (the SFX engine joins in T27). The prototype's
+	 * `tryLandscapeLock()` (~1790) is gone: nothing asks the platform for an
+	 * orientation. T43 puts the portrait prompt back above the stage as the
+	 * default (`rotationMode === 'auto'`), with the Settings card's `Schermo`
+	 * row as the manual opt-out.
 	 *
 	 * **T18 — the celebration** (spec §4.2/§9). A `$effect` watches the store's
 	 * `furthest()` seam and asks `decideCelebration()` whether a 10-home
@@ -95,6 +96,7 @@
 	import StreetBands from '$lib/art/canvas/StreetBands.svelte';
 	import WorldCanvas from '$lib/art/canvas/WorldCanvas.svelte';
 	import RotateButton from '$lib/ui/RotateButton.svelte';
+	import RotatePrompt from '$lib/ui/RotatePrompt.svelte';
 	import Kids from '$lib/play/Kids.svelte';
 	import Ghosts from '$lib/play/Ghosts.svelte';
 	import Npcs from '$lib/play/Npcs.svelte';
@@ -507,8 +509,10 @@
 
 	/**
 	 * The prototype's `tryLandscapeLock()` is gone (T4b, 2026-10-19): the game
-	 * no longer asks the platform — or the accelerometer — for an orientation.
-	 * The player turns the presentation with the HUD button (`rotation.svelte.ts`).
+	 * no longer asks the platform for an orientation, and there is no motion
+	 * sensor anywhere in it. T43 (2026-10-29) restores the pure-CSS portrait
+	 * prompt as the default mode; the player turns the presentation with the
+	 * HUD button (`rotation.svelte.ts`) in manual mode.
 	 */
 
 	/** Gioca: the tap itself is the audio-unlock gesture. */
@@ -584,6 +588,13 @@
 		<Hud sound={playCue} {bossActive} />
 	</Stage>
 </div>
+
+<!-- T43: the portrait prompt lives at page level, not inside <Stage> —
+     `.stage` carries a transform, and a transformed ancestor would turn its
+     `position: fixed` into a local containing block. z 100 puts it above the
+     stage and the boss (z 10) and below the title menu (z 200), so
+     Impostazioni stays reachable. -->
+<RotatePrompt />
 
 <TitleScreen onPlay={play} />
 

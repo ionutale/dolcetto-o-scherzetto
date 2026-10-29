@@ -2,11 +2,15 @@
 	/**
 	 * The rotate button (T4b, revised 2026-10-24) — the manual screen rotation.
 	 *
-	 * Replaces the old "Gira il telefono" prompt and the landscape lock: the
-	 * player — not the accelerometer — decides the presentation. **Every tap
+	 * The manual half of the presentation rotation (T4b), still the only control
+	 * that moves the angle: the player — not a sensor — decides how the stage
+	 * sits. **Every tap
 	 * turns the world a quarter turn to the left** (0° → 270° → 180° → 90° →
 	 * 0°), so any hold can be made readable in a few taps; the angle is
-	 * remembered in the settings envelope (`rotation.svelte.ts`).
+	 * remembered in the settings envelope (`rotation.svelte.ts`). Since T43 it
+	 * works in both rotation modes — `'auto'` may also show the CSS portrait
+	 * prompt (`RotatePrompt.svelte`), and the button keeps driving the angle
+	 * under it.
 	 *
 	 * It sits in the top-left corner under the bag chip — a corner the player
 	 * never taps while walking or knocking (owner feedback: the bottom-centre

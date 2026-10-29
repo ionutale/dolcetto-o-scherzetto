@@ -200,10 +200,16 @@ both languages; spoken names are `Usa uno scherzo` / `Use a trick`; the fan grou
 destra` (IT), `Walk left` / `Walk right` (EN).
 
 **Rotate button** (`src/lib/ui/RotateButton.svelte`, T4b): `Gira il gioco a sinistra` /
-`Turn the game left` — the manual screen rotation (there is no rotate prompt any more; the
-accelerometer decides nothing). Every tap turns the stage a quarter turn to the left. The
-Settings card labels the same control `Schermo` / `Screen` with `Ruota a sinistra` /
-`Rotate left`. The knock pill's spoken name is the `knock` label without the glyph
+`Turn the game left` — the manual screen rotation. Every tap turns the stage a quarter turn
+to the left. The Settings card labels the same control `Rotazione` / `Rotation` with
+`Ruota a sinistra` / `Rotate left` plus the live angle (`Ruota a sinistra · 90°`).
+
+**Rotation mode** (T43, ADR-0007): the Settings `Schermo` / `Screen` row is a pair,
+`Automatica` / `Automatic` and `Manuale` / `Manual`, persisted as `rotationMode` in
+`dos.settings.v1` and defaulting to automatic. Automatic shows the pure-CSS portrait prompt
+(`src/lib/ui/RotatePrompt.svelte`) — there is still no sensor; the prompt is a media query.
+Its copy follows the language and its one pill is `Gioca così` / `Play this way`, which
+persists `Manuale`. The knock pill's spoken name is the `knock` label without the glyph
 (`Bussa` / `Knock`).
 
 **The candy boss** (T42) — the three display names live in `BOSS_META` and the fight's four
