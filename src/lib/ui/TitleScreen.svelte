@@ -27,17 +27,26 @@
 	 *      reopens it — the overlay returns with the same fade, reset to the
 	 *      home card.
 	 *
+	 * **T45 (2026-10-30) — install guide.** The home card gains a pill under
+	 * Impostazioni (`📲 Installa sul telefono` / `📲 Install on phone`) that opens
+	 * `InstallGuide.svelte`: a full-screen overlay inside this `.menu` layer
+	 * (z 300) with Safari's Share → Add to Home Screen steps for iOS 18 and
+	 * iOS 27. The pill is hidden when `isInstalled()` says the game already runs
+	 * from the Home Screen (`install-target.ts`).
+	 *
 	 * **Play does not unlock anything here.** `Gioca` only fades the overlay and
 	 * calls `onPlay`; the audio unlock and the landscape-lock attempt belong to
 	 * the page (`+page.svelte`), which owns the process-wide gesture listener.
 	 */
-	import { onMount } from 'svelte';
+	import { onMount, tick } from 'svelte';
 	import { crashlog } from '$lib/diagnostics/crashlog';
 	import { settings } from '$lib/persist/settings';
 	import type { Lang } from '$lib/sim/loop';
 	import CrashBanner from './CrashBanner.svelte';
+	import InstallGuide from './InstallGuide.svelte';
 	import LogPanel from './LogPanel.svelte';
 	import Settings from './Settings.svelte';
+	import { isInstalled } from './install-target';
 	import { openLogs } from './log-panel-state.svelte';
 	import { menuState, closeMenu } from './menu-state.svelte';
 
@@ -52,6 +61,10 @@
 
 	/** Which card shows: the home card or the settings card. */
 	let panel = $state<'home' | 'settings'>('home');
+	/** T45 — the install guide overlay. */
+	let installOpen = $state(false);
+	/** The pill that opened it, so closing can put the focus back. */
+	let installButton = $state<HTMLButtonElement | null>(null);
 	/** The live language; the settings envelope holds it, `Settings` writes it. */
 	let lang = $state<Lang>(settings.read().lang);
 
@@ -88,7 +101,10 @@
 
 	/** A reopened menu always comes back to the home card. */
 	$effect(() => {
-		if (menuState.open) panel = 'home';
+		if (menuState.open) {
+			panel = 'home';
+			installOpen = false;
+		}
 	});
 
 	const copy = $derived(
@@ -97,6 +113,7 @@
 					eyebrow: '🎃 Una notte di caramelle',
 					play: 'Gioca ▶',
 					settings: '⚙️ Impostazioni',
+					install: '📲 Installa sul telefono',
 					menu: 'Menu principale',
 					build: 'Diario di bordo — tocca tre volte'
 				}
@@ -104,6 +121,7 @@
 					eyebrow: '🎃 A night of candy',
 					play: 'Play ▶',
 					settings: '⚙️ Settings',
+					install: '📲 Install on phone',
 					menu: 'Main menu',
 					build: 'Flight log — tap 3 times'
 				}
@@ -124,6 +142,18 @@
 	function showHome(): void {
 		panel = 'home';
 	}
+
+	/** T45: open the install guide, and put the focus back when it closes. */
+	function openInstall(): void {
+		installOpen = true;
+	}
+
+	function closeInstall(): void {
+		installOpen = false;
+		// The card is `inert` while the guide is open, so the focus can only
+		// return after Svelte has flushed that attribute.
+		void tick().then(() => installButton?.focus({ preventScroll: true }));
+	}
 </script>
 
 <div
@@ -136,7 +166,7 @@
 	<!-- T29 — the flux2 key-art band (decorative). -->
 	<img class="menu-hero" src="/art/hero.v1.webp" alt="" aria-hidden="true" />
 
-	<div class="menu-card" hidden={panel !== 'home'}>
+	<div class="menu-card" hidden={panel !== 'home'} inert={installOpen}>
 		{#if crashInfo.crashed && !crashDismissed}
 			<CrashBanner onDismiss={() => (crashDismissed = true)} onOpenLogs={() => openLogs()} />
 		{/if}
@@ -144,14 +174,23 @@
 		<h1 class="menu-title">Dolcetto o Scherzetto</h1>
 		<button type="button" class="menu-play reduce-motion-off" onclick={play}>{copy.play}</button>
 		<button type="button" class="menu-settings" onclick={showSettings}>{copy.settings}</button>
+		{#if !isInstalled()}
+			<button bind:this={installButton} type="button" class="menu-install" onclick={openInstall}
+				>{copy.install}</button
+			>
+		{/if}
 		<button type="button" class="menu-build" aria-label={copy.build} onclick={tapVersion}
 			>build {crashInfo.meta.v}</button
 		>
 	</div>
 
-	<div class="menu-card" hidden={panel !== 'settings'}>
+	<div class="menu-card" hidden={panel !== 'settings'} inert={installOpen}>
 		<Settings {lang} onLang={(next) => (lang = next)} onBack={showHome} />
 	</div>
+
+	{#if installOpen}
+		<InstallGuide {lang} onClose={closeInstall} />
+	{/if}
 
 	<LogPanel />
 </div>
@@ -250,8 +289,11 @@
 		animation: menuInvite 1.6s ease-in-out infinite alternate;
 	}
 
-	/* `.menu-settings` (prototype ~347-350): the ghost settings pill. */
-	.menu-settings {
+	/* `.menu-settings` (prototype ~347-350): the ghost settings pill. T45's
+	   install pill borrows the exact same skin, but keeps its own class so the
+	   e2e helper that clicks "Impostazioni" still matches one button. */
+	.menu-settings,
+	.menu-install {
 		font-family: inherit;
 		font-size: 15px;
 		font-weight: 600;
@@ -263,7 +305,8 @@
 		cursor: pointer;
 	}
 
-	.menu-settings:hover {
+	.menu-settings:hover,
+	.menu-install:hover {
 		background: rgba(247, 236, 217, 0.18);
 	}
 
@@ -283,6 +326,7 @@
 	/* T32 focus rings (amber on the night card). */
 	.menu-play:focus-visible,
 	.menu-settings:focus-visible,
+	.menu-install:focus-visible,
 	.menu-build:focus-visible {
 		outline: 3px solid var(--amber);
 		outline-offset: 3px;

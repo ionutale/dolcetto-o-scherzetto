@@ -219,6 +219,16 @@ shown once, only on iOS builds without `navigator.audioSession` (iOS 16 and olde
 remembered as `audioHintSeen` in `dos.settings.v1`. iOS 17+ ignores the switch instead
 (`audioSession.type = 'playback'` set on the first gesture).
 
+**Install guide** (T45): the home card's pill is `📲 Installa sul telefono` / `📲 Install on
+phone`, hidden when the game already runs from the Home Screen. It opens
+`InstallGuide.svelte`: badge `iPhone · iOS 18 · iOS 27`, title `Installa sul telefono` /
+`Install on your phone`, intro `Safari non ha un pulsante «Installa»: il gioco si aggiunge
+alla schermata Home.` / `Safari has no “Install” button: the game is added to your Home
+Screen.`, four steps — open in **Safari**, tap **Condividi** / **Share**, tap **Aggiungi
+alla schermata Home** / **Add to Home Screen**, tap **Aggiungi** / **Add** — two notes (the
+iOS 18 `Apri come app web` / `Open as Web App` switch, and `Modifica azioni…` /
+`Edit Actions…` when the row is hidden), and the close pill `Ho capito` / `Got it`.
+
 **The candy boss** (T42) — the three display names live in `BOSS_META` and the fight's four
 chrome strings in `BOSS_COPY` (`src/lib/play/boss-art.ts`; `Boss.svelte` renders them and
 picks the language live). None of it is voiced, and the boss art itself carries no text.
